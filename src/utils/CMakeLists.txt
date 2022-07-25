@@ -1,0 +1,2 @@
+target_sources(rppg PRIVATE cnpy.cpp cnpy.h window.h qcustomplot.cpp qcustomplot.h ppg.h ppg.cpp serialport.cpp serialport.h respi.cpp respi.h)
+target_include_directories(rppg PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
