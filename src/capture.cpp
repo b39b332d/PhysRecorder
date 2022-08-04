@@ -72,8 +72,8 @@ void Capture::wait_for_rec_save() {
     (*rec).release();
     delete rec;
     rec = NULL;
-    string fname = PROJECT_ROOT_PATH;
-    cnpy::npy_save(fname+"rec/"+ string(save_path) + "vid_ts.npy", rec_ts);
+    string fname = "./rec/";
+    cnpy::npy_save(fname+ string(save_path) + "vid_ts.npy", rec_ts);
     rec_ts.clear();
     recorder_lock.unlock();
 }
@@ -142,8 +142,8 @@ void Capture::run()
         recorder_lock.lock();
         if (isRecording) {
             if (rec == NULL) {
-                string fname = PROJECT_ROOT_PATH;
-                rec = new VideoWriter(fname + "rec/" + string(save_path) + "vid.avi", cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), rec_fps, color_mat.size());
+                string fname = "./rec/";
+                rec = new VideoWriter(fname + string(save_path) + "vid.avi", cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), rec_fps, color_mat.size());
             }
             (*rec).write(color_mat);
             rec_ts.push_back(color_mat_ts- signalProcess->cam_ofs);

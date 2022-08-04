@@ -71,7 +71,7 @@ set(INSTALL_EXECUTABLE rppg)
 install(TARGETS ${INSTALL_EXECUTABLE} RUNTIME_DEPENDENCY_SET set_name)
 install(RUNTIME_DEPENDENCY_SET set_name 
     DIRECTORIES ${INSTALL_DEP_PATHS}
-    PRE_EXCLUDE_REGEXES "^qt6.*\.dll" "^api-ms-win-crt-.*\.dll"
+    PRE_EXCLUDE_REGEXES "^qt6.*\.dll" "^api-ms-win-crt-.*\.dll" "*\.exe"
     POST_INCLUDE_REGEXES "[/\/]msvc[^/\/]*$" "[/\/]vc[^/\/]*$" 
     POST_EXCLUDE_REGEXES [[.*[/\/]system32[/\/].*\.dll]] [[.*[/\/]qt[/\/].*\.dll]]
 )

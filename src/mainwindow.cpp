@@ -113,8 +113,8 @@ void MainWindow::saveSignals() {
     ui->toolBarRC->setDisabled(true);
     isRecording = false;
     QThread* thread = QThread::create([this]() {
-        std::string fname = PROJECT_ROOT_PATH;
-        fname += "rec/" + std::string(capture->save_path);
+        std::string fname = "./rec/";
+        fname += std::string(capture->save_path);
         cnpy::npy_save(fname+"ppg_sig.npy", ppg_sig_rec);
         ppg_sig_rec.clear();
         cnpy::npy_save(fname + "ppg_ts.npy", ppg_ts_rec);
@@ -389,8 +389,8 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
         capture->is_flipud = checked;
         });
     ui->VideoBox->setDisabled(true);
-    if(!QDir(PROJECT_ROOT_PATH"rec/").exists())
-        QDir().mkdir(PROJECT_ROOT_PATH"rec/");
+    if(!QDir("./rec").exists())
+        QDir().mkdir("./rec");
     //connect(capture->signalProcess, &SignalProcess::signalReady, this, &MainWindow::addSignal);
 
     //connect(capture, &Capture::finished, this, &MainWindow::on_stopButton_clicked);

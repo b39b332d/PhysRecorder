@@ -1,2 +1,8 @@
 out
 .vs
+CMakeLists.txt.user
+CMakePresets.json
+*.manifest
+*~
+.*
+!.gitignore
