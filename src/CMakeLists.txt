@@ -94,4 +94,4 @@ install(SCRIPT  ${CMAKE_CURRENT_BINARY_DIR}/DeployDep.cmake)
 
 set(DEPLOY_OPTIONS "rppg.exe -verbose 0 --no-translations")
 install(SCRIPT  ${CMAKE_CURRENT_BINARY_DIR}/DeployQt.cmake)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/data DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/data TYPE BIN)
