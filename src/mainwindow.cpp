@@ -317,6 +317,10 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     connect(capture, &Capture::signalReady, capture->signalProcess, &SignalProcess::processSignal);
     connect(ui->actionTracking, &QPushButton::toggled, this, [this](bool checked) {
         capture->tracking = checked;
+        if (checked)
+            ui->actionTracking->setText("Tracking");
+        else
+            ui->actionTracking->setText("Untracked");
         });
     connect(ui->slider_exposure, &QSlider::valueChanged, this, [this](int val) {
         ui->label->setText(QString::number(val));
@@ -561,7 +565,7 @@ void MainWindow::on_actionRecord_triggered() {
             char* fname = (char*)malloc(fn_str.size() + 1);
             strcpy(fname, fn_str.c_str());
             capture->save_path = fname;
-            QDir().mkdir((std::string(PROJECT_ROOT_PATH"rec/") + ss.str()).c_str());
+            QDir().mkdir((std::string("./rec/") + ss.str()).c_str());
             isRecording = true;
             });
         connect(thread, &QThread::finished, this, [this]() {
