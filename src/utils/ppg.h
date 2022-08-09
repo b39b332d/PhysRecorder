@@ -6,7 +6,8 @@ class PPGReader :public QThread {
 	Q_OBJECT
 public:
 	PPGReader();
-	bool setPortName(const QString& portNames);
+	bool setPort(const serial::PortInfo&);
+	bool setPortName(const std::string& portNames);
 	bool start_reading();
 	bool stop_reading();
 	Q_SIGNAL void ppgReady(uint16_t,double);

@@ -42,7 +42,7 @@ add_subdirectory(utils)
 target_include_directories(rppg PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 
-target_link_libraries(rppg PRIVATE Qt6::SerialPort Qt6::Widgets ${OpenCV_LIBS} realsense "Setupapi.lib")
+target_link_libraries(rppg PRIVATE Qt6::Widgets ${OpenCV_LIBS} realsense "Setupapi.lib")
 
 if(EIGEN3_FOUND)
     target_link_libraries(rppg PRIVATE Eigen3::Eigen)

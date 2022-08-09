@@ -7,7 +7,8 @@ class RESPIReader :public QThread {
 	Q_OBJECT
 public:
 	RESPIReader();
-	bool setPortName(const QString& portNames);
+	bool setPort(const serial::PortInfo&);
+	bool setPortName(const std::string& portNames);
 	bool start_reading();
 	bool stop_reading();
 	Q_SIGNAL void respiReady(uchar,double);

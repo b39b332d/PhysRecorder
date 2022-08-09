@@ -23,13 +23,20 @@ uint32_t validate_data(std::string& data) {
         return out;
     return 0xFFFFFFFF;
 }
-bool PPGReader::setPortName(const QString& portName) {
+bool PPGReader::setPort(const serial::PortInfo& device) {
+    if (device.description.find("Silicon Labs CP210x USB to UART Bridge") != std::string::npos) {
+        return setPortName(device.port);
+    }
+    else
+        return false;
+}
+bool PPGReader::setPortName(const std::string& portName) {
     std::string read_data;
     uint32_t parsed_data;
     if (serial_reader.isOpen())
         serial_reader.close();
     try {
-        serial_reader.setPort(portName.toStdString());
+        serial_reader.setPort(portName.c_str());
         serial_reader.setTimeout(100, 100, 0, 100, 0);
         serial_reader.open();
     }
@@ -76,31 +83,36 @@ void PPGReader::run() {
     serial_reader.write("\xff\xcb\x03\xa3\xa0");
     serial_reader.flush();
     serial_reader.setTimeout(5, 5, 0, 5, 0);
-    while (true) {
-        read_data = serial_reader.readline(7,"\xff\xcb");
-        double time_ofs = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count()-1.0/fs*((-5 + serial_reader.available()) / 7 + 1);
-        if (read_data.size() != 7 || (uchar)read_data[5] != 0xff || (uchar)read_data[6] != 0xcb) {
-            if(read_data.size() == 7)
-                qDebug() << (uchar)read_data[0] << (uchar)read_data[1] << (uchar)read_data[2] << (uchar)read_data[3] << (uchar)read_data[4] << (uchar)read_data[5] << (uchar)read_data[6]  ;
-            error_num++;
-        }
-        else {
-            uint32_t parsed_data = validate_data(read_data.erase(5,2));
-            if (parsed_data != 0xFFFFFFFF) {
-                error_num = 0;
-                emit ppgReady((uint16_t)parsed_data, time_ofs);
-            }
-            else {
+    try {
+        while (true) {
+            read_data = serial_reader.readline(7, "\xff\xcb");
+            double time_ofs = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count() - 1.0 / fs * ((-5 + serial_reader.available()) / 7 + 1);
+            if (read_data.size() != 7 || (uchar)read_data[5] != 0xff || (uchar)read_data[6] != 0xcb) {
+                if (read_data.size() == 7)
+                    qDebug() << (uchar)read_data[0] << (uchar)read_data[1] << (uchar)read_data[2] << (uchar)read_data[3] << (uchar)read_data[4] << (uchar)read_data[5] << (uchar)read_data[6];
                 error_num++;
             }
+            else {
+                uint32_t parsed_data = validate_data(read_data.erase(5, 2));
+                if (parsed_data != 0xFFFFFFFF) {
+                    error_num = 0;
+                    emit ppgReady((uint16_t)parsed_data, time_ofs);
+                }
+                else {
+                    error_num++;
+                }
+            }
+            if (error_num == 50 || stop_read_sig == true)
+                break;
         }
-        if (error_num == 50 || stop_read_sig == true)
-            break;
+        serial_reader.write("\xff\xcb\x03\xa4\xa1");
+        serial_reader.flush();
+        serial_reader.setTimeout(100, 100, 0, 100, 0);
+        serial_reader.readline(100, "\xff\xcb\x03\xa4\xa1");
     }
-    serial_reader.write("\xff\xcb\x03\xa4\xa1");
-    serial_reader.flush();
-    serial_reader.setTimeout(100, 100, 0, 100, 0);
-    serial_reader.readline(100, "\xff\xcb\x03\xa4\xa1");
+    catch (IOException e) {
+        serial_reader.close();
+    }
 }
 bool PPGReader::start_reading() {
     if (!serial_reader.isOpen() || this->isRunning())

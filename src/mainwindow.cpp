@@ -5,35 +5,31 @@
 #include <QtWidgets>
 #include <string>
 #include <thread>
-#include <QSerialPortInfo>
 
 void MainWindow::refresh_plot() {
     static uchar ref_cnt = 0;
     static bool r_status = true , g_status=true, b_status = true;
     static bool ppgStatusFinished = true;
     static bool respiStatusFinished = true;
-    if (ppg->isFinished()) {
-        if (!ppgStatusFinished) {
-            ppgStatusFinished = true;
-            ui->plot_ppg->graph(0)->removeFromLegend();
-        }
-    }else{
+    if (ppg->isRunning() ){
         if (ppgStatusFinished) {
             ppgStatusFinished = false;
             ui->plot_ppg->graph(0)->addToLegend();
         }
     }
-    if (respi->isFinished()) {
-        if (!respiStatusFinished) {
-            respiStatusFinished = true;
-            ui->plot_ppg->graph(1)->removeFromLegend();
-        }
+    else if(!ppgStatusFinished) {
+        ppgStatusFinished = true;
+        ui->plot_ppg->graph(0)->removeFromLegend();
     }
-    else {
+    if (respi->isRunning()){
         if (respiStatusFinished) {
             respiStatusFinished = false;
-            ui->plot_ppg->graph(1)->addToLegend();
+                ui->plot_ppg->graph(1)->addToLegend();
         }
+    }
+    else if (!respiStatusFinished) {
+        respiStatusFinished = true;
+        ui->plot_ppg->graph(1)->removeFromLegend();
     }
     double ts = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count() + 0.1;
     ui->plot_ppg->xAxis->setRange(ts, show_window_length, Qt::AlignRight);
@@ -503,12 +499,11 @@ void MainWindow::on_actionstopSerial_triggered() {
         });
     thread->start();
 }
-
 void MainWindow::freshSerialDevices() {
-    const auto infos = QSerialPortInfo::availablePorts();
-    for (const QSerialPortInfo& info : infos) {
-        if (!ppg->isRunning() && ppg->setPortName(info.portName()) ||
-            !respi->isRunning() && respi->setPortName(info.portName())) {
+    std::vector<serial::PortInfo> devices_found = serial::list_ports();
+    for (const auto& dev : devices_found) {
+        if (!ppg->isRunning() && ppg->setPort(dev) ||
+            !respi->isRunning() && respi->setPort(dev)) {
             continue;
         }
         else if (ppg->isRunning() && respi->isRunning()) {
@@ -531,6 +526,7 @@ void MainWindow::on_actionrefreshSerial_triggered() {
 void MainWindow::setfft(QImage image) {
     ui->fftLabel->setPixmap(QPixmap::fromImage(image));
 }
+
 void MainWindow::on_actionRecord_triggered() {
     if (capture->isRecording) {
         if (record_timer->isActive())
@@ -609,30 +605,3 @@ void MainWindow::on_actionStartTrigger_triggered() {
         ui->VideoBox->setDisabled(false);
     }
 }
-
-//void MainWindow::capFinished() {
-//    capStopped = true;
-//    //ui->statusIndicatorLabel->setText("Stopped");
-//    ui->sourceTab->setDisabled(false);
-//    ui->sourceTab->setDisabled(false);
-//
-//    ui->changeRateLabel->setDisabled(false);
-//    ui->alphaLabel->setDisabled(false);
-//    ui->betaLabel->setDisabled(false);
-//    ui->camDelayLabel->setDisabled(false);
-//    ui->box_group->setDisabled(false);
-//    if (setSource) {
-//        setSource = false;
-//        if (!capture->setCapture(ui->videoComboBox->currentText().toStdString())) {
-//            ui->videoComboBox->removeItem(ui->videoComboBox->currentIndex());
-//        }
-//        else {
-//            totalSourceFileCanBeIndexed++;
-//            QFileInfo fileInfo(ui->videoComboBox->currentText());
-//            QString tsFilename = fileInfo.absolutePath() + '/' + fileInfo.completeBaseName() + "_ts.npy";
-//            if (ui->tsComboBox->findText(tsFilename) == -1)
-//                ui->tsComboBox->addItem(tsFilename);
-//            ui->tsComboBox->setCurrentIndex(ui->tsComboBox->findText(tsFilename));
-//        }
-//    }
-//}

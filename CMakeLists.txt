@@ -69,7 +69,7 @@ if(NOT USE_EIGEN)
 endif()
 
 ####### FIND Qt
-find_package(Qt6 COMPONENTS Widgets Gui Core Charts Multimedia SerialPort REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
+find_package(Qt6 COMPONENTS Widgets Gui Core REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
 get_target_property(mocExe Qt6::moc IMPORTED_LOCATION)
 get_filename_component(qtBinDir "${mocExe}" DIRECTORY)
 find_program(DEPLOYQT_EXECUTABLE windeployqt PATHS "${qtBinDir}" NO_DEFAULT_PATH)
