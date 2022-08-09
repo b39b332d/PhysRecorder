@@ -536,6 +536,7 @@ void MainWindow::on_actionRecord_triggered() {
         ui->actionRecord->setIcon(style()->standardIcon(QStyle::SP_DialogYesButton));
         ui->actionRecord->setToolTip("Start Recording");
         saveSignals();
+        MessageBeep(MB_OK);
         spinRecordTime->setValue(spin_record_last_time);
         spinRecordTime->setDisabled(false);
     }
