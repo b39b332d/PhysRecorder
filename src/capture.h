@@ -10,6 +10,7 @@
 #include <atomic>
 #include "converter.h"
 #include <librealsense2/rs.hpp>
+#include <opencv2/objdetect.hpp>
 struct CameraInfo
 {
     double fps;
@@ -41,12 +42,15 @@ class Capture : public QThread
     cv::VideoWriter* rec=NULL;
     std::vector<double> rec_ts;
     int rec_fps ;
+    cv::QRCodeDetector qrDecoder;
+    cv::Mat sync_stage1, sync_stage2, depthLUT;
+    cv::Mat LUT_16_reinterpret_cast(cv::Mat mat, cv::Mat dst);
 
 public:
     std::atomic<bool> isRecording = false;
     std::atomic<bool> isRunning = false;
     SignalProcess* signalProcess;
-    std::atomic<bool> tracking = true; // can only be set to false
+    std::atomic<bool> tracking = false; // can only be set to false
     std::atomic<int> detect_mode;
     std::atomic<int> speed;
     std::atomic<bool> pause = false;
@@ -54,6 +58,7 @@ public:
     std::atomic<int> rot = 0;
     std::atomic<bool> is_fliplr = false;
     std::atomic<bool> is_flipud = false;
+    std::atomic<bool> is_syncing = false;
     Capture(Converter& converter, SignalProcess*);
     Q_SIGNAL void facesReady(const cv::Mat&, std::vector<cv::Rect>*);
     Q_SIGNAL void faceReady(const cv::Mat&, cv::Rect);
@@ -62,6 +67,7 @@ public:
     Q_SIGNAL void capInfoReady(float, float, float);
     Q_SIGNAL void updateFrame(const cv::Mat&);
     Q_SIGNAL void fpsReady(double);
+    Q_SIGNAL void tsofsReady(double);
     void setCapture(rs2::sensor& sensor,int,int,int);
     void stop();
     int total_time = 0;

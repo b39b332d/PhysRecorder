@@ -28,11 +28,11 @@ endif()
 #### DOWNLOAD OPENCV REALSENSE QT DEVELOPMENT RUNTIME LIBRARY
 set(USE_EIGEN off)
 # CHECK THESE VARIABLES BEFORE CONFIGURE
-set(OpenCV_DIR "C:/Users/b39b3/Documents/SRC/opencv/opencv-${Porject_BUILD_TYPE}/build/cmake" CACHE PATH "OpenCV cmake directory" FORCE)
+set(OpenCV_DIR "D:/Users/b39b3/Source/SRC/opencv/opencv-${Porject_BUILD_TYPE}/build/cmake" CACHE PATH "OpenCV cmake directory" FORCE)
 set(Qt6_ROOT "D:/Qt/6.3.1/msvc2019_64" CACHE PATH "Qt root directory" FORCE)
 set(REALSENSE_DIR "C:/Program Files (x86)/Intel RealSense SDK 2.0" CACHE PATH "RealSense root directory" FORCE)
 
-set(Eigen3_DIR "C:/Users/b39b3/Documents/SRC/SignalProcessor/lib/share/eigen3" CACHE PATH "Eigen root directory" FORCE)
+set(Eigen3_DIR "D:/Users/b39b3/Source/SRC/SignalProcessor/lib/share/eigen3/cmake" CACHE PATH "Eigen root directory" FORCE)
 set(MKL_DIR "C:/Program Files (x86)/Intel/oneAPI/mkl/2022.1.0" CACHE PATH "Qt root directory" FORCE)
 set(MKL_LINK dynamic)
 set(INSTALL_DEP_PATHS "")

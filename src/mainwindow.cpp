@@ -64,16 +64,16 @@ void MainWindow::refresh_plot() {
 void MainWindow::set_profile(int idx) {
     ui->toolBarRS->setDisabled(true);
     QThread* thread = QThread::create([this,idx]() {
-        if (is_opened)
+        if (is_opened) {
             sensor.close();
-        profile = profiles[idx];
+            is_opened = false;
+        }
+        profile = profiles[profiles_ofs[comboBox_stream->currentIndex()]+idx];
         rs2::video_stream_profile video_stream_profile = profile.as<rs2::video_stream_profile>();
         is_opened = true;
         sensor.open(profile);
         cam_option_changed=0xFFFF;
         set_sensor_property();
-        sensor.set_option(RS2_OPTION_FRAMES_QUEUE_SIZE, 1);
-        sensor.set_option(RS2_OPTION_AUTO_EXPOSURE_PRIORITY, 0);
         capture->setCapture(sensor, video_stream_profile.width(), video_stream_profile.height(), video_stream_profile.fps());
         });
     connect(thread, &QThread::finished, this, [this]() {
@@ -149,39 +149,149 @@ void MainWindow::plotInterpRGB(float r, float g, float b, double ts, float* sqi)
     //if (!refresh_plot_timer->isActive())
     //    refresh_plot_timer->start(20);
 }
-void MainWindow::detect_profiles(int idx) {
-    comboBox_profile->clear();
+void MainWindow::detect_sensors(int idx) {
+    comboBox_sensor->clear();
     ui->actionStartTrigger->setDisabled(true);
-    device = devices[idx];
+    device = devices[idx]; 
     std::thread* th = new std::thread([this]() {
-        if (is_opened)
+        if (is_opened) {
             sensor.close();
-        is_opened = false;
-        std::vector<rs2::sensor> sensors = device.query_sensors();
+            is_opened = false;
+        }
+        sensors = device.query_sensors();
         for (rs2::sensor sensor : sensors)
         {
-            if (sensor.supports(RS2_CAMERA_INFO_NAME) && std::string("RGB Camera") == sensor.get_info(RS2_CAMERA_INFO_NAME)) {
-                this->sensor = sensor;
-                std::vector<rs2::stream_profile> stream_profiles = sensor.get_stream_profiles();
-                int profile_num = 0;
-                profiles.clear();
-                for (rs2::stream_profile stream_profile : stream_profiles)
-                {
-                    rs2_stream stream_data_type = stream_profile.stream_type();
-                    std::string stream_name = stream_profile.stream_name();
-                    rs2::video_stream_profile video_stream_profile = stream_profile.as<rs2::video_stream_profile>();
-                    if (stream_name == "Color" && video_stream_profile.format() == rs2_format::RS2_FORMAT_BGR8) {
-                        profiles.push_back(stream_profile);
-                        comboBox_profile->addItem(QString::fromStdString((std::ostringstream() << video_stream_profile.width() << "x" << video_stream_profile.height() << "@ " << video_stream_profile.fps() << "Hz").str()));
-                        comboBox_profile->setCurrentIndex(-1);
-                    }
-                    profile_num++;
-                }
-                break;
+            if (sensor.supports(RS2_CAMERA_INFO_NAME)&&
+                (std::string("RGB Camera") == sensor.get_info(RS2_CAMERA_INFO_NAME)|| std::string("Stereo Module") == sensor.get_info(RS2_CAMERA_INFO_NAME))) {
+
+
+                comboBox_sensor->addItem(QString::fromStdString(sensor.get_info(RS2_CAMERA_INFO_NAME)));
+                comboBox_sensor->setCurrentIndex(-1);
+
+                
             }
         }
         }
     );
+}
+void MainWindow::detect_profiles(int idx) {
+    comboBox_stream->clear();
+    comboBox_profile->clear();
+    ui->actionStartTrigger->setDisabled(true);
+
+    std::thread* th = new std::thread([this,idx]() {
+        if (is_opened) {
+            sensor.close();
+            is_opened = false;
+        }
+        sensor = sensors[idx];
+        if (std::string("RGB Camera") == sensor.get_info(RS2_CAMERA_INFO_NAME)) {
+            is_sensor_color = true;
+            ui->box_white->setText("Auto White Balance");
+            ui->slider_white->setMaximum(650);
+            ui->slider_white->setMinimum(280);
+            ui->slider_white->setSingleStep(1);
+            ui->slider_white->setValue(460);
+
+            ui->gainSlider->setMinimum(0);
+            ui->gainSlider->setMaximum(128);
+            ui->gainSlider->setValue(10);
+
+            ui->slider_exposure->setMinimum(1);
+            ui->slider_exposure->setMaximum(1000);
+            ui->slider_exposure->setValue(10);
+        }
+        else if (std::string("Stereo Module") == sensor.get_info(RS2_CAMERA_INFO_NAME)) {
+            is_sensor_color = false;
+            ui->box_white->setText("Disable Laser");
+            ui->slider_white->setMaximum(360);
+            ui->slider_white->setMinimum(0);
+            ui->slider_white->setSingleStep(30);
+            ui->slider_white->setValue(150);
+
+            ui->gainSlider->setMinimum(16);
+            ui->gainSlider->setMaximum(248);
+            ui->gainSlider->setValue(16);
+
+            ui->slider_exposure->setMinimum(1);
+            ui->slider_exposure->setMaximum(100000);
+            ui->slider_exposure->setValue(33000);
+        }
+
+        ui->AFcomboBox->setEnabled(is_sensor_color);
+
+        std::vector<rs2::stream_profile> stream_profiles = sensor.get_stream_profiles();
+        profiles.clear();
+        stream_names.clear();
+        profiles_ofs.clear();
+        int i = 0;
+        for (rs2::stream_profile stream_profile : stream_profiles)
+        {
+            rs2_stream stream_data_type = stream_profile.stream_type();
+            std::string stream_name = stream_profile.stream_name();
+            rs2::video_stream_profile video_stream_profile = stream_profile.as<rs2::video_stream_profile>();
+
+            qDebug() << "asdhuhu3" << sensor.get_info(RS2_CAMERA_INFO_NAME) << stream_name.c_str() << stream_data_type << video_stream_profile.format();
+
+            if (video_stream_profile.format() == rs2_format::RS2_FORMAT_BGR8 || 
+                video_stream_profile.format() == rs2_format::RS2_FORMAT_Y8 ||
+                video_stream_profile.format() == rs2_format::RS2_FORMAT_Z16) {
+                bool contain_stream_name=false;
+                for (auto str : stream_names) {
+                    if (str == stream_name) {
+                        contain_stream_name = true;
+                        break;
+                    }
+                }
+                if (!contain_stream_name) {
+                    stream_names.push_back(stream_name);
+                    comboBox_stream->addItem(QString::fromStdString(stream_name));
+                    comboBox_stream->setCurrentIndex(-1);
+                    profiles_ofs.push_back(i);
+                }
+                profiles.push_back(stream_profile);
+                i++;
+            }
+        }
+        if (comboBox_stream->count() == 1) {
+            comboBox_stream->setCurrentIndex(1);
+            set_stream(1);
+        }
+        }
+        );
+}
+
+
+void MainWindow::set_stream(int idx) {
+
+    comboBox_profile->clear();
+    ui->actionStartTrigger->setDisabled(true);
+
+    std::thread* th = new std::thread([this,idx]() {
+        for (rs2::stream_profile profile : profiles)
+        {
+            rs2_stream stream_data_type = profile.stream_type();
+            std::string stream_name = profile.stream_name();
+            rs2::video_stream_profile video_stream_profile = profile.as<rs2::video_stream_profile>();
+
+            if (stream_name == stream_names[idx]) {
+                comboBox_profile->addItem(QString::fromStdString((std::ostringstream() << video_stream_profile.width() << "x" << video_stream_profile.height() << "@" << video_stream_profile.fps() << "Hz").str()));
+                comboBox_profile->setCurrentIndex(-1);
+            }
+        }
+
+        if (stream_names[idx] == "Depth") {
+            is_profile_depth = true;
+            ui->box_white->setDisabled(true);
+            ui->box_white->setChecked(true);
+            ui->slider_white->setDisabled(true);
+        }
+        else {
+            is_profile_depth = false;
+            ui->box_white->setDisabled(false);
+            ui->slider_white->setDisabled(true);
+        }
+        });
 }
 MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
 //use reference instead of pointer
@@ -205,12 +315,20 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     //connect(ui->speed_spin, &QSpinBox::valueChanged, ui->videospeed, &QSlider::setValue);
 
     comboBox_cameras = new QComboBox(ui->toolBarRS);
+    comboBox_sensor = new QComboBox(ui->toolBarRS);
     comboBox_profile = new QComboBox(ui->toolBarRS);
+    comboBox_stream = new QComboBox(ui->toolBarRS);
     comboBox_cameras->setFixedWidth(225);
+    comboBox_sensor->setFixedWidth(100);
     comboBox_profile->setFixedWidth(130);
+    comboBox_stream->setFixedWidth(100);
     ui->toolBarRS->addWidget(comboBox_cameras);
-    ui->toolBarRS->addWidget( comboBox_profile);
-    connect(comboBox_cameras, &QComboBox::activated, this, &MainWindow::detect_profiles);
+    ui->toolBarRS->addWidget(comboBox_sensor);
+    ui->toolBarRS->addWidget(comboBox_stream);
+    ui->toolBarRS->addWidget(comboBox_profile);
+    connect(comboBox_cameras, &QComboBox::activated, this, &MainWindow::detect_sensors);
+    connect(comboBox_sensor, &QComboBox::activated, this, &MainWindow::detect_profiles);
+    connect(comboBox_stream, &QComboBox::activated, this, &MainWindow::set_stream);
     connect(comboBox_profile, &QComboBox::activated, this, &MainWindow::set_profile);
     ui->actionStartTrigger->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
     ui->actionRecord->setIcon(style()->standardIcon(QStyle::SP_DialogYesButton));
@@ -218,11 +336,26 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     ui->actionrefreshSerial->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
     ui->actionstopSerial->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
 
+
+    auto labelname1 = new QLabel(ui->toolBarRC);
+    labelname1->setText("time(s):");
+    labelname1->setAttribute(Qt::WA_TranslucentBackground);
+    ui->toolBarRC->addWidget(labelname1);
+
     spinRecordTime = new QSpinBox(ui->toolBarRC);
     spinRecordTime->setMaximum(9999);
     spinRecordTime->setMinimum(0);
     spinRecordTime->setValue(9999);
     ui->toolBarRC->addWidget(spinRecordTime);
+
+    auto labelname2 = new QLabel(ui->toolBarRC);
+    labelname2->setText("filename:");
+    labelname2->setAttribute(Qt::WA_TranslucentBackground);
+    ui->toolBarRC->addWidget(labelname2);
+    filenameLineEdit = new QLineEdit(ui->toolBarRC);
+    ui->toolBarRC->addWidget(filenameLineEdit);
+
+
     record_timer = new QTimer(this);
     record_timer->setSingleShot(false);
     record_timer->setInterval(1000);
@@ -328,9 +461,16 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
         if (!cam_option_changed_timer.isActive())cam_option_changed_timer.start(100);
         });
     connect(ui->slider_white, &QSlider::valueChanged, this, [this](int val) {
-        ui->label_6->setText(QString::number(val * 10)+"k");
-        cam_option_changed |= 0x0020;
-        if (!cam_option_changed_timer.isActive())cam_option_changed_timer.start(100);
+        if (is_sensor_color) {
+            ui->label_6->setText(QString::number(val * 10) + "k");
+            cam_option_changed |= 0x0020;
+            if (!cam_option_changed_timer.isActive())cam_option_changed_timer.start(100);
+        }
+        else {
+            ui->label_6->setText(QString::number(val * 10) + "k");
+            cam_option_changed |= 0x0020;
+            if (!cam_option_changed_timer.isActive())cam_option_changed_timer.start(100);
+        }
         });
     connect(ui->gainSlider, &QSlider::valueChanged, this, [this](int val) {
         ui->label_4->setText(QString::number(val));
@@ -388,6 +528,11 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     connect(ui->checkBox_flipud, &QCheckBox::toggled, this, [this](bool checked) {
         capture->is_flipud = checked;
         });
+    connect(ui->pushButton_sync, &QPushButton::clicked, this, [this](bool checked) {
+        capture->is_syncing = checked;
+        });
+    connect(capture, &Capture::tsofsReady, this, &MainWindow::set_time_offset);
+    
     ui->VideoBox->setDisabled(true);
     if(!QDir("./rec").exists())
         QDir().mkdir("./rec");
@@ -401,7 +546,55 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     splash.showMessage("Done");
 }
 
+void MainWindow::set_time_offset(double ts_ofs) {
+    ui->sliderCamOfs->setValue(int(ts_ofs * 10000));
+    ui->pushButton_sync->setChecked(false);
+    signalProcess->cam_ofs = ts_ofs;
+    capture->is_syncing = false;
+    ui->labelCamOfs->setText(QString::number((float)ts_ofs * 1000, 'f', 1) + "ms");
+}
+
 void MainWindow::set_sensor_property() {
+    sensor.set_option(RS2_OPTION_FRAMES_QUEUE_SIZE, 1);
+
+    if (is_sensor_color) {
+        sensor.set_option(RS2_OPTION_AUTO_EXPOSURE_PRIORITY, 0);
+
+        if ((cam_option_changed & 0x0002) != 0) { //powerline
+            sensor.set_option(RS2_OPTION_POWER_LINE_FREQUENCY, ui->AFcomboBox->currentIndex());
+        }
+        if ((cam_option_changed & 0x0010) != 0) { //auto white balance
+            if (ui->box_white->isChecked()) {
+                sensor.set_option(RS2_OPTION_ENABLE_AUTO_WHITE_BALANCE, 1);
+            }
+            else {
+                sensor.set_option(RS2_OPTION_WHITE_BALANCE, ui->slider_white->value() * 10);
+            }
+        }
+        if ((cam_option_changed & 0x0020) != 0) { //gain
+            if (!ui->box_white->isChecked()) {
+                sensor.set_option(RS2_OPTION_WHITE_BALANCE, ui->slider_white->value() * 10);
+            }
+        }
+    }
+    else {
+        if ((cam_option_changed & 0x0010) != 0 && !is_profile_depth) { //disable Laser
+            if (ui->box_white->isChecked()) {
+                sensor.set_option(RS2_OPTION_EMITTER_ENABLED, 0);
+            }
+            else {
+                sensor.set_option(RS2_OPTION_EMITTER_ENABLED, 1);
+                sensor.set_option(RS2_OPTION_LASER_POWER, ui->slider_white->value());
+            }
+
+            if ((cam_option_changed & 0x0020) != 0) { //Laser
+                if (!ui->box_white->isChecked()) {
+                    sensor.set_option(RS2_OPTION_LASER_POWER, ui->slider_white->value());
+                }
+            }
+        }
+    }
+
     if ((cam_option_changed & 0x0001) != 0) { //auto
         if (ui->box_auto_exposure->isChecked()) {
             sensor.set_option(RS2_OPTION_ENABLE_AUTO_EXPOSURE, 1);
@@ -411,31 +604,17 @@ void MainWindow::set_sensor_property() {
             sensor.set_option(RS2_OPTION_GAIN, ui->gainSlider->value());
         }
     }
-    if ((cam_option_changed & 0x0002) != 0) { //powerline
-        sensor.set_option(RS2_OPTION_POWER_LINE_FREQUENCY, ui->AFcomboBox->currentIndex());
-    }
+
     if ((cam_option_changed & 0x0004) != 0) { //exposure
-        if (!ui->box_auto_exposure->isChecked()){
+        if (!ui->box_auto_exposure->isChecked()) {
             sensor.set_option(RS2_OPTION_EXPOSURE, ui->slider_exposure->value());
-            }
+        }
     }
     if ((cam_option_changed & 0x0008) != 0) { //gain
         if (!ui->box_auto_exposure->isChecked())
             sensor.set_option(RS2_OPTION_GAIN, ui->gainSlider->value());
     }
-    if ((cam_option_changed & 0x0010) != 0) { //auto white balance
-        if (ui->box_white->isChecked()) {
-            sensor.set_option(RS2_OPTION_ENABLE_AUTO_WHITE_BALANCE, 1);
-        }
-        else {
-            sensor.set_option(RS2_OPTION_WHITE_BALANCE, ui->slider_white->value() * 10);
-        }
-    }
-    if ((cam_option_changed & 0x0020) != 0) { //gain
-        if (!ui->box_white->isChecked()) {
-            sensor.set_option(RS2_OPTION_WHITE_BALANCE, ui->slider_white->value() * 10);
-        }
-    }
+
     cam_option_changed = 0;
 }
 
@@ -480,6 +659,10 @@ void MainWindow::on_actionrefreshRealsense_triggered() {
     comboBox_cameras->setCurrentIndex(-1);
     comboBox_profile->clear();
     comboBox_profile->setCurrentIndex(-1);
+    comboBox_stream->clear();
+    comboBox_stream->setCurrentIndex(-1);
+    comboBox_sensor->clear();
+    comboBox_sensor->setCurrentIndex(-1);
     comboBox_cameras->setDisabled(true);
     QThread* thread = QThread::create([this]() {
         refreshRealsenseDevices();
@@ -543,6 +726,7 @@ void MainWindow::on_actionRecord_triggered() {
         MessageBeep(MB_OK);
         spinRecordTime->setValue(spin_record_last_time);
         spinRecordTime->setDisabled(false);
+        filenameLineEdit->setDisabled(false);
     }
     else {
         ui->toolBarRC->setDisabled(true);
@@ -550,6 +734,7 @@ void MainWindow::on_actionRecord_triggered() {
         ui->actionRecord->setToolTip("Stop Recording");
         spinRecordTime->setDisabled(true);
         ui->boxCamOfs->setDisabled(true);
+        filenameLineEdit->setDisabled(true);
         ui->VideoBox->setDisabled(true);
         int time = spinRecordTime->value();
         spin_record_last_time = time;
@@ -559,7 +744,11 @@ void MainWindow::on_actionRecord_triggered() {
         }
         QThread* thread = QThread::create([this]() {
             auto ts = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-            std::stringstream ss; ss << ts << "/";
+            std::stringstream ss;
+            if(filenameLineEdit->text().length() !=0 )
+                ss << ts <<"_" << filenameLineEdit->text().toStdString() << "/";
+            else
+                ss << ts << "/";
             if (capture->save_path != NULL) free(capture->save_path);
             std::string fn_str = ss.str();
             char* fname = (char*)malloc(fn_str.size() + 1);
@@ -586,6 +775,8 @@ void MainWindow::on_actionStartTrigger_triggered() {
         ui->actionrefreshRealsense->setDisabled(false);
         comboBox_cameras->setDisabled(false);
         comboBox_profile->setDisabled(false);
+        comboBox_stream->setDisabled(false);
+        comboBox_sensor->setDisabled(false);
         ui->actionStartTrigger->setToolTip("Play");
         QThread* thread = QThread::create([this]() {
             capture->isRunning = false;
@@ -605,7 +796,9 @@ void MainWindow::on_actionStartTrigger_triggered() {
         ui->actionStartTrigger->setToolTip("Stop");
         ui->actionrefreshRealsense->setDisabled(true);
         comboBox_cameras->setDisabled(true);
+        comboBox_sensor->setDisabled(true);
         comboBox_profile->setDisabled(true);
+        comboBox_stream->setDisabled(true);
         capture->start();
         ui->VideoBox->setDisabled(false);
     }

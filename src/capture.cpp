@@ -13,10 +13,13 @@ using namespace cnpy;
 using namespace cv::dnn;
 
 
+uchar depthr_p[] = { 255,255,255,0,0,64 };
+uchar depthg_p[] = { 0,165,255,255,0,64 };
+uchar depthb_p[] = { 0,0,0,255,255,128 };
 
 Capture::Capture(Converter& converter, SignalProcess* sp) :
     converter(converter),
-    tracking(true),
+    tracking(false),
     detect_mode(0), // 0->manual 1->center 2-> auto
     cap(),
     interp_cyc(10),
@@ -37,6 +40,18 @@ Capture::Capture(Converter& converter, SignalProcess* sp) :
 
     //In order to begin getting data from the sensor, we need to register a class to handle frames, 
     // in our case we provide the frame_queue when starting the sensor.
+    depthLUT = Mat(Size(1, 256*256), CV_8UC4);
+    int j = 0,i=0;
+    for (; j < 5; j++) {
+        for (; i < 13107; i++) {
+            depthLUT.data[(j * 13107 + i) * 4 + 0] = (depthb_p[j + 1] - depthb_p[j]) * ((double)i / 13107) + depthb_p[j];
+            depthLUT.data[(j * 13107 + i) * 4 + 1] = (depthg_p[j + 1] - depthg_p[j]) * ((double)i / 13107) + depthg_p[j];
+            depthLUT.data[(j * 13107 + i) * 4 + 2] = (depthr_p[j + 1] - depthr_p[j]) * ((double)i / 13107) + depthr_p[j];
+        }
+    }
+    depthLUT.data[(j * 13107 + i) * 4 + 0] = depthb_p[5];
+    depthLUT.data[(j * 13107 + i) * 4 + 1] = depthg_p[5];
+    depthLUT.data[(j * 13107 + i) * 4 + 2] = depthr_p[5];
 }
 
 
@@ -77,10 +92,26 @@ void Capture::wait_for_rec_save() {
     rec_ts.clear();
     recorder_lock.unlock();
 }
+
+cv::Mat Capture::LUT_16_reinterpret_cast(cv::Mat mat, cv::Mat dst)
+{
+    int limit = mat.rows * mat.cols;
+    ushort* ptr = reinterpret_cast<ushort*>(mat.data);
+    uchar* ptr_d = reinterpret_cast<uchar*>(dst.data);
+    uint32_t* ptr_t = (uint32_t*)(depthLUT.data);
+    for (int i = 0; i < limit-1; i++, ptr++, ptr_d+=3)
+    {
+        *(uint32_t*)ptr_d = ptr_t[*ptr];
+    }
+    *(ushort*)ptr_d = (ushort)ptr_t[*ptr];
+    *(ptr_d+2) = *( (uchar*)(ptr_t+*ptr) + 2);
+    return mat;
+}
 void Capture::run()
 {
     int i_loop = 0;
     double last_ts = 0;
+    double last_ts2 = 0;
     double fps = 0;
     int rot_prev = 0;
     cv::Size2i vid_size_rot = vid_size;
@@ -90,6 +121,17 @@ void Capture::run()
     int error_cnt = 0;
     static bool last_tracking_status = true;
     emit loseTracking();
+
+    int sync_stage = 0;
+    bool is_sync_generated = false;
+    cv::Mat sync_pic;
+    int sync_width;
+    vector<double> sync_ofs;
+    double sync_ts_save = 0;
+    bool last_sync_status = false;
+
+    int f_cnt = 0;
+    cv::Mat color_mat(vid_size,CV_8UC3);
     while (true)
     {
 
@@ -97,15 +139,84 @@ void Capture::run()
             break;
         }
         rs2::frame f = fq.wait_for_frame();
-        auto color_mat = Mat(this->vid_size, CV_8UC3, (void*)f.get_data(), Mat::AUTO_STEP);
+        auto fmt = f.get_profile().format();
+        if (fmt == rs2_format::RS2_FORMAT_BGR8)
+            color_mat = Mat(this->vid_size, CV_8UC3, (void*)f.get_data(), Mat::AUTO_STEP);
+        else if (fmt == rs2_format::RS2_FORMAT_Y8)
+             cvtColor(Mat(this->vid_size, CV_8UC1, (void*)f.get_data(), Mat::AUTO_STEP), color_mat, cv::COLOR_GRAY2BGR);
+        else if (fmt == rs2_format::RS2_FORMAT_Z16) {
+            //convertScaleAbs(Mat(this->vid_size, CV_16UC1, (void*)f.get_data(), Mat::AUTO_STEP), color_mat, 0.03);
+            //applyColorMap(color_mat, color_mat, COLORMAP_JET);
+            Mat different_Channels[2];
+            split( Mat(this->vid_size, CV_8UC2, (void*)f.get_data(), Mat::AUTO_STEP), different_Channels);
+            merge(vector<Mat>{different_Channels[0], different_Channels[1], (different_Channels[0] + different_Channels[1]) / 2}, color_mat);
+             //LUT_16_reinterpret_cast(Mat(this->vid_size, CV_16UC1, (void*)f.get_data(), Mat::AUTO_STEP), color_mat);
+             //imshow("", color_mat);
+             //waitKey(1);
+        }
         double color_mat_ts = f.get_timestamp() / 1000.0;
-
         i_loop++;
         if (i_loop % 10 == 0) {
             fps = 10.0 / (color_mat_ts - last_ts);
             last_ts = color_mat_ts;
             emit fpsReady(fps);
         }
+        // syncing
+        if (is_syncing) {
+            last_sync_status = true;
+            if (sync_stage%2 == 0) {
+                if (!is_sync_generated) {
+                    sync_pic = Mat::zeros(color_mat.size(), CV_8UC3);
+                    sync_width = min(color_mat.rows, color_mat.cols);
+                    cv::resize(sync_stage1, Mat(sync_pic, cv::Rect(0, 0, sync_width, sync_width)), Size(sync_width, sync_width));
+                    emit updateFrame(sync_pic);
+                    is_sync_generated = true;
+                }
+                cv::cvtColor(color_mat, color_mat, COLOR_BGR2GRAY);
+                cv::resize(color_mat, color_mat, Size(), 0.25, 0.25);
+                std::string data = qrDecoder.detectAndDecode(color_mat);
+                
+                if (data == "stage1") {
+                    if(sync_ts_save!=0 ){
+                        sync_ofs.push_back((color_mat_ts - sync_ts_save) - 1.0/ rec_fps);
+                        sync_ts_save = color_mat_ts;
+                    }
+                    sync_stage++;
+                    cv::resize(sync_stage2, Mat(sync_pic, cv::Rect(0, 0, sync_width, sync_width)), Size(sync_width, sync_width));
+                    emit updateFrame(sync_pic);
+                    sync_ts_save = color_mat_ts;
+                }
+            }
+            else{
+                cv::cvtColor(color_mat, color_mat, COLOR_BGR2GRAY);
+                cv::resize(color_mat, color_mat,Size(),0.25,0.25);
+                std::string data = qrDecoder.detectAndDecode(color_mat);
+                if (data == "2stage_sync") {
+                    sync_stage++;
+                    sync_ofs.push_back((color_mat_ts - sync_ts_save) - 1.0 / rec_fps);
+                    sync_ts_save = color_mat_ts;
+                    if (sync_stage == 10) {
+                        is_sync_generated = false;
+                        emit tsofsReady(*min_element(sync_ofs.begin(), sync_ofs.end()));
+                    }
+                    else {
+                        cv::resize(sync_stage1, Mat(sync_pic, cv::Rect(0, 0, sync_width, sync_width)), Size(sync_width, sync_width));
+                        emit updateFrame(sync_pic);
+
+                    }
+                }
+            }
+            continue;
+        }
+        else if (last_sync_status) {
+            last_sync_status = false;
+            sync_ofs.clear();
+            sync_stage = 0;
+            is_sync_generated = false;
+        }
+
+
+
 
         int rot_current = rot;
         if (rot_current != rot_prev) {
@@ -265,4 +376,7 @@ void Capture::initInferenceEngine() {
     Mat test_face = imread(resource_path + "face.jpg");
     net_landmarks.setInput(dnn::blobFromImage(test_face, 1, Size(60, 60)));
     net_landmarks.forward();
+
+    sync_stage1 = cv::imread(PROJECT_ROOT_PATH"resources/sync_stage1.png");
+    sync_stage2 = cv::imread(PROJECT_ROOT_PATH"resources/2stage_sync.png");
 }

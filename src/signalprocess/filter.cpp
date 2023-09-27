@@ -1,5 +1,3 @@
-#ifndef FILTER_H
-#define FILTER_H
 #include "filter.h"
 BiquadFilter::BiquadFilter(const double* a, const double* b) :
 	a1(a[1]), a2(a[2]), b1(b[1]), b2(b[2]), b0(b[0]), l0(0), l1(0) {}
@@ -27,10 +25,10 @@ FilterIIR::FilterIIR(unsigned long long w[][6], int order)
 	}
 }
 double FilterIIR::filter(double x) {
-	for (int i = cascade - 1; i > 0; i--) {
+	l[0] = biquadFilter[0]->filter(x);
+	for (int i = 1; i < cascade; i++) {
 		l[i] = biquadFilter[i]->filter(l[i - 1]);
 	}
-	l[0] = biquadFilter[0]->filter(x);
 	return l[cascade - 1];
 }
 
@@ -40,4 +38,3 @@ void FilterIIR::reset() {
 		l[i] = 0;
 	}
 }
-#endif

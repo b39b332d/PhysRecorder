@@ -40,14 +40,20 @@ private:
     bool setTsSource;
     bool waitAnalyzing = false;
     bool isCamInfoUpdated = false;
+    bool is_sensor_color;
+    bool is_profile_depth;
+    int stereo_profile_cam_number;
     int totalSourceFileCanBeIndexed;
     CameraInfo* cameras[10];
     int current_camera_idx = 0;
     SignalProcess* signalProcess;
     QLatin1Char zeropad;
     QComboBox* comboBox_profile;
-    QComboBox* comboBox_cameras; 
+    QComboBox* comboBox_stream;
+    QComboBox* comboBox_cameras;
+    QComboBox* comboBox_sensor;
     QSpinBox* spinRecordTime;
+    QLineEdit* filenameLineEdit;
     PPGReader* ppg;
     RESPIReader* respi;
     QTimer* record_timer;
@@ -60,6 +66,7 @@ private:
     uint16_t cam_option_changed = 0;
     void set_sensor_property();
 
+    std::vector<std::string>stream_names;
     std::vector<uint16_t> ppg_sig_rec;
     std::vector<uchar> respi_sig_rec;
     std::vector<double> ppg_ts_rec;
@@ -68,7 +75,9 @@ private:
 
     rs2::device_list devices;
     rs2::device device;
+    std::vector<int> profiles_ofs;
     std::vector<rs2::stream_profile> profiles;
+    std::vector<rs2::sensor> sensors;
     rs2::stream_profile profile;
     rs2::sensor sensor;
     QTimer* refresh_plot_timer;
@@ -78,6 +87,7 @@ private:
     //void setCamInfo(CameraInfo*);
     //Q_SIGNAL void setColorReady(uint8_t, uint8_t, uint8_t);
 private slots:
+    void set_time_offset(double);
     void setfft(QImage);
     void refresh_plot();
     void plotPPG(uint16_t,double);
@@ -85,7 +95,9 @@ private slots:
     void on_actionStartTrigger_triggered();
     void on_actionRecord_triggered();
     void detect_profiles(int);
+    void detect_sensors(int);
     void set_profile(int);
+    void set_stream(int);
     void on_actionrefreshSerial_triggered();
     void on_actionrefreshRealsense_triggered();
     void on_actionstopSerial_triggered();

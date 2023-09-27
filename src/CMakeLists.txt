@@ -76,6 +76,7 @@ install(RUNTIME_DEPENDENCY_SET set_name
     POST_EXCLUDE_REGEXES [[.*[/\/]system32[/\/].*\.dll]] [[.*[/\/]qt[/\/].*\.dll]]
 )
 get_target_property(OUT rppg LINK_LIBRARIES)
+message(${OUT})
 if("opencv_dnn" IN_LIST OUT)
     unset(debug_postfix)
     if(Porject_BUILD_TYPE STREQUAL debug)
