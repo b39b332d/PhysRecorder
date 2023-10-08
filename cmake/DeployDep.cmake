@@ -1,3 +1,4 @@
+
 foreach(_TMP_dep IN LISTS _CMAKE_DEPS)
     if(CMAKE_INSTALL_CONFIG_NAME STREQUAL "Debug")
         foreach(_deppath @INSTALL_DEP_PATHS@)
@@ -16,7 +17,7 @@ foreach(_TMP_dep IN LISTS _CMAKE_DEPS)
             endif()
         endif()
     else()
-        if(_TMP_dep MATCHES ".*[/\/]msvcp[0-9]*\.dll$")
+        if(_TMP_dep MATCHES ".*[/\\\\]msvcp[0-9]*\\.dll$")
             cmake_path(REMOVE_EXTENSION _TMP_dep OUTPUT_VARIABLE MSVCP_DLL_NAME)
             set(MSVCP_DLLS_NAME "${MSVCP_DLL_NAME}_1.dll;${MSVCP_DLL_NAME}_2.dll")
             foreach(_TMP_dep IN LISTS MSVCP_DLLS_NAME)

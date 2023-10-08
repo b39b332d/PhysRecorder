@@ -116,7 +116,7 @@ void SignalProcess::processSignal(cv::Scalar bgr_signal, double ts) {
             int win_len = win_length*100;
             if (current_ts_ppg - last_rqi_ts > 0.1) {
                 last_rqi_ts = current_ts_ppg;
-                int ts_ofs = round((current_ts_ppg - current_ts) * 100+ cam_ofs*100);
+                int ts_ofs = round((current_ts_ppg - current_ts) * 100 + cam_ofs * 100);
                 if (ts_ofs > 0) {
                     ppg_vec[3] = cv::Mat(win_len, 1, CV_32F, window_ppg[3]->backp - win_len - ts_ofs);
                     ppg_vec[0] = cv::Mat(win_len, 1, CV_32F, window_ppg[0]->backp - win_len);
@@ -129,83 +129,92 @@ void SignalProcess::processSignal(cv::Scalar bgr_signal, double ts) {
                     ppg_vec[1] = cv::Mat(win_len, 1, CV_32F, window_ppg[1]->backp - win_len + ts_ofs);
                     ppg_vec[2] = cv::Mat(win_len, 1, CV_32F, window_ppg[2]->backp - win_len + ts_ofs);
                 }
-                float* sqi = new float[6];
-                Mat norm_ppg;
-                cv::normalize(ppg_vec[3], norm_ppg, 1.0, -1.0, NORM_MINMAX);
 
-                int y_true_max = videoLabel->height();
-                Mat(canvas, Rect2i(0,MAX_SPECTRUM- y_true_max, canvas.cols, y_true_max)).copyTo(canvas_spectrum);
-                Mat ppg_fft_padding = Mat::zeros(fft_length, 1, CV_32F);
-                std::memcpy(ppg_fft_padding.data, norm_ppg.data, 4 * norm_ppg.rows);
-                Mat fft_out;
-                cv::dft(ppg_fft_padding, fft_out);
-                const float* fft_p = fft_out.ptr<float>(fft_front_index*2);
-                int max_idx = 0, max_val = 0;
-                for (int i = 0; i < fft_filter_length; i++) {
-                    double val = fft_p[0] * fft_p[0] + fft_p[1] * fft_p[1];
-                    if (max_val < val) {
-                        max_val = val;
-                        max_idx = i;
-                    }
-                    fft_p += 2;
+            }
+            else if (current_ts_ppg == 0 && current_ts - last_rqi_ts > 0.1) {
+                last_rqi_ts = current_ts_ppg;
+                ppg_vec[0] = cv::Mat(win_len, 1, CV_32F, window_ppg[0]->backp - win_len);
+                ppg_vec[1] = cv::Mat(win_len, 1, CV_32F, window_ppg[1]->backp - win_len);
+                ppg_vec[2] = cv::Mat(win_len, 1, CV_32F, window_ppg[2]->backp - win_len);
+                ppg_vec[3] = ppg_vec[1];
+            }
+            else
+                continue;
+
+            float* sqi = new float[6];
+            Mat norm_ppg;
+            cv::normalize(ppg_vec[3], norm_ppg, 1.0, -1.0, NORM_MINMAX);
+
+            int y_true_max = videoLabel->height();
+            Mat(canvas, Rect2i(0,MAX_SPECTRUM- y_true_max, canvas.cols, y_true_max)).copyTo(canvas_spectrum);
+            Mat ppg_fft_padding = Mat::zeros(fft_length, 1, CV_32F);
+            std::memcpy(ppg_fft_padding.data, norm_ppg.data, 4 * norm_ppg.rows);
+            Mat fft_out;
+            cv::dft(ppg_fft_padding, fft_out);
+            const float* fft_p = fft_out.ptr<float>(fft_front_index*2);
+            int max_idx = 0, max_val = 0;
+            for (int i = 0; i < fft_filter_length; i++) {
+                double val = fft_p[0] * fft_p[0] + fft_p[1] * fft_p[1];
+                if (max_val < val) {
+                    max_val = val;
+                    max_idx = i;
                 }
-                int hormonic_idx = ((max_idx + fft_front_index) * 2 - fft_front_index) ;
+                fft_p += 2;
+            }
+            int hormonic_idx = ((max_idx + fft_front_index) * 2 - fft_front_index) ;
 
 
 
-                Mat fft_padding[3];// = { Mat::zeros(fft_length, 1, CV_64F),Mat::zeros(fft_length, 1, CV_64F),Mat::zeros(fft_length, 1, CV_64F) };
-                Mat spectrum[3];
-                //std::vector<double> vec = fft_padding;
-                //cnpy::npy_save("E:/avaa/heartRate/filter/sig.npy", vec);
+            Mat fft_padding[3];// = { Mat::zeros(fft_length, 1, CV_64F),Mat::zeros(fft_length, 1, CV_64F),Mat::zeros(fft_length, 1, CV_64F) };
+            Mat spectrum[3];
+            //std::vector<double> vec = fft_padding;
+            //cnpy::npy_save("E:/avaa/heartRate/filter/sig.npy", vec);
 
-                float sig_power[3] = { 0,0,0 }, all_power[3] = {0,0,0};
-                std::for_each(std::execution::par,
-                    itor_rgb.begin(), itor_rgb.end(),
-                    [&](auto i_rgb) {
-                        sqi[i_rgb] = cv::sum(norm_ppg.mul(ppg_vec[i_rgb]))[0];
-                        fft_padding[i_rgb] = Mat::zeros(fft_length, 1, CV_32F);
-                        memcpy(fft_padding[i_rgb].data, ppg_vec[i_rgb].data, 4 * ppg_vec[i_rgb].rows);
-                        Mat fft_out;
-                        dft(fft_padding[i_rgb], fft_out);
-                        spectrum[i_rgb] = Mat (fft_filter_length, 1, CV_32F);
-                        const float* fft_p = fft_out.ptr<float>(fft_front_index*2);
-                        float* spec_p = spectrum[i_rgb].ptr<float>(0);
-                        for (int i = 0; i < fft_filter_length; i++) {
-                            *spec_p = sqrt(fft_p[0] * fft_p[0] + fft_p[1] * fft_p[1]);
-                            all_power[i_rgb] += *spec_p;
-                            if (abs(i - max_idx) < 5 ){//|| abs(i - hormonic_idx) < 3) {
-                                sig_power[i_rgb] += *spec_p;
-                            }
-                            fftPoints[i_rgb]->operator[](i).y = y_true_max -*spec_p;
-                            fftPoints[i_rgb]->operator[](i).x = i * 2;
-                            spec_p += 1;
-                            fft_p += 2;
+            float sig_power[3] = { 0,0,0 }, all_power[3] = {0,0,0};
+            std::for_each(std::execution::par,
+                itor_rgb.begin(), itor_rgb.end(),
+                [&](auto i_rgb) {
+                    sqi[i_rgb] = cv::sum(norm_ppg.mul(ppg_vec[i_rgb]))[0];
+                    fft_padding[i_rgb] = Mat::zeros(fft_length, 1, CV_32F);
+                    memcpy(fft_padding[i_rgb].data, ppg_vec[i_rgb].data, 4 * ppg_vec[i_rgb].rows);
+                    Mat fft_out;
+                    dft(fft_padding[i_rgb], fft_out);
+                    spectrum[i_rgb] = Mat (fft_filter_length, 1, CV_32F);
+                    const float* fft_p = fft_out.ptr<float>(fft_front_index*2);
+                    float* spec_p = spectrum[i_rgb].ptr<float>(0);
+                    for (int i = 0; i < fft_filter_length; i++) {
+                        *spec_p = sqrt(fft_p[0] * fft_p[0] + fft_p[1] * fft_p[1]);
+                        all_power[i_rgb] += *spec_p;
+                        if (abs(i - max_idx) < 5 ){//|| abs(i - hormonic_idx) < 3) {
+                            sig_power[i_rgb] += *spec_p;
                         }
-                        sqi[i_rgb+3] = sig_power[i_rgb] / all_power[i_rgb];
-                    });
-                emit interpRGBReady(raw_r, raw_g, raw_b, current_ts, sqi);
-                if (show_r)
-                polylines(canvas_spectrum, *(fftPoints[0]), false, Scalar_<uint8_t>(0, 0, 255));
-                if (show_g)
-                polylines(canvas_spectrum, *(fftPoints[1]), false, Scalar_<uint8_t>(0, 255, 0));
-                if (show_b)
-                polylines(canvas_spectrum, *(fftPoints[2]), false, Scalar_<uint8_t>(255, 0, 0));
+                        fftPoints[i_rgb]->operator[](i).y = y_true_max -*spec_p;
+                        fftPoints[i_rgb]->operator[](i).x = i * 2;
+                        spec_p += 1;
+                        fft_p += 2;
+                    }
+                    sqi[i_rgb+3] = sig_power[i_rgb] / all_power[i_rgb];
+                });
+            emit interpRGBReady(raw_r, raw_g, raw_b, current_ts, sqi);
+            if (show_r)
+            polylines(canvas_spectrum, *(fftPoints[0]), false, Scalar_<uint8_t>(0, 0, 255));
+            if (show_g)
+            polylines(canvas_spectrum, *(fftPoints[1]), false, Scalar_<uint8_t>(0, 255, 0));
+            if (show_b)
+            polylines(canvas_spectrum, *(fftPoints[2]), false, Scalar_<uint8_t>(255, 0, 0));
 
-                cv::line(canvas_spectrum, Point2i(max_idx * 2, 0), Point2i(max_idx * 2, y_true_max), Scalar_<uint8_t>(0, 0, 0),2);
-                cv::line(canvas_spectrum, Point2i(hormonic_idx*2, 0), Point2i(hormonic_idx*2, y_true_max), Scalar_<uint8_t>(0, 0, 0),1);
+            cv::line(canvas_spectrum, Point2i(max_idx * 2, 0), Point2i(max_idx * 2, y_true_max), Scalar_<uint8_t>(0, 0, 0),2);
+            cv::line(canvas_spectrum, Point2i(hormonic_idx*2, 0), Point2i(hormonic_idx*2, y_true_max), Scalar_<uint8_t>(0, 0, 0),1);
 
-                //auto p_canvas_spectrum = QSharedPointer<QImage>(new QImage(canvas_spectrum.data,
-                //    fft_filter_length * 2, y_true_max * 2,
-                //    fft_filter_length * 6, QImage::Format_BGR888), [](QImage* obj) {
-                //        delete obj;
-                //    });
-                emit fftReady(QImage(canvas_spectrum.data,
-                    fft_filter_length * 2, y_true_max,
-                    fft_filter_length * 6, QImage::Format_BGR888));
-
-
-            }else
-                emit interpRGBReady(raw_r, raw_g, raw_b, current_ts,NULL);
+            //auto p_canvas_spectrum = QSharedPointer<QImage>(new QImage(canvas_spectrum.data,
+            //    fft_filter_length * 2, y_true_max * 2,
+            //    fft_filter_length * 6, QImage::Format_BGR888), [](QImage* obj) {
+            //        delete obj;
+            //    });
+            emit fftReady(QImage(canvas_spectrum.data,
+                fft_filter_length * 2, y_true_max,
+                fft_filter_length * 6, QImage::Format_BGR888));
+            emit interpRGBReady(raw_r, raw_g, raw_b, current_ts, NULL);
         }
         previous_mean_BGR = bgr_signal;
         previous_rgb_ts = ts;

@@ -3,9 +3,8 @@ cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE  ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin)
-set(CMAKE_INSTALL_PREFIX  ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE})
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  ${CMAKE_INSTALL_PREFIX}/bin)
 SET(CMAKE_CXX_FLAGS_RELEASE "/O2")
 set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD on)
 
@@ -28,7 +27,7 @@ endif()
 #### DOWNLOAD OPENCV REALSENSE QT DEVELOPMENT RUNTIME LIBRARY
 set(USE_EIGEN off)
 # CHECK THESE VARIABLES BEFORE CONFIGURE
-set(OpenCV_DIR "D:/Users/b39b3/Source/SRC/opencv/opencv-${Porject_BUILD_TYPE}/build/cmake" CACHE PATH "OpenCV cmake directory" FORCE)
+set(OpenCV_DIR "D:/Users/b39b3/Source/opencv/${Porject_BUILD_TYPE}" CACHE PATH "OpenCV cmake directory" FORCE)
 set(Qt6_ROOT "D:/Qt/6.3.1/msvc2019_64" CACHE PATH "Qt root directory" FORCE)
 set(REALSENSE_DIR "C:/Program Files (x86)/Intel RealSense SDK 2.0" CACHE PATH "RealSense root directory" FORCE)
 
@@ -69,7 +68,7 @@ if(NOT USE_EIGEN)
 endif()
 
 ####### FIND Qt
-find_package(Qt6 COMPONENTS Widgets Gui Core REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
+find_package(Qt6 COMPONENTS Widgets Gui Core Multimedia REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
 get_target_property(mocExe Qt6::moc IMPORTED_LOCATION)
 get_filename_component(qtBinDir "${mocExe}" DIRECTORY)
 find_program(DEPLOYQT_EXECUTABLE windeployqt PATHS "${qtBinDir}" NO_DEFAULT_PATH)
@@ -82,6 +81,9 @@ set_target_properties(realsense PROPERTIES
 target_include_directories(realsense INTERFACE "C:/Program Files (x86)/Intel RealSense SDK 2.0/include")
 set(INSTALL_REALSENSE_BIN ${REALSENSE_DIR}/bin/x64/)
 list(APPEND INSTALL_DEP_PATHS ${INSTALL_REALSENSE_BIN})
+list(APPEND INSTALL_DEP_PATHS "D:/Users/b39b3/Source/opencv/w_openvino_toolkit_windows_2023.0.1.11005.fa1c41994f3_x86_64/runtime/bin/intel64/${CMAKE_BUILD_TYPE}")
+list(APPEND INSTALL_DEP_PATHS "D:/Users/b39b3/Source/opencv/w_openvino_toolkit_windows_2023.0.1.11005.fa1c41994f3_x86_64/runtime/3rdparty/tbb/bin")
 
+include(cmake/install_target.cmake)
 add_subdirectory(src)
 add_subdirectory(data)

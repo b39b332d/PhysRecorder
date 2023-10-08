@@ -7,6 +7,7 @@
 #include <QSharedPointer>
 #include <algorithm>
 #include <librealsense2/h/rs_types.h>
+#include <windows.h>
 using namespace std;
 using namespace cv;
 using namespace cnpy;
@@ -21,7 +22,6 @@ Capture::Capture(Converter& converter, SignalProcess* sp) :
     converter(converter),
     tracking(false),
     detect_mode(0), // 0->manual 1->center 2-> auto
-    cap(),
     interp_cyc(10),
     timestamp_line_count(0),
     capture_ready(0),
@@ -56,8 +56,22 @@ Capture::Capture(Converter& converter, SignalProcess* sp) :
 
 
 void Capture::setCapture(rs2::sensor& sensor,int width,int height,int fps) {
+    use_camera = false;
     this->sensor = &sensor;
     this->vid_size = Size2i(width, height);
+    this->rec_fps = fps;
+}
+
+void Capture::setCVCamProperty(int propId, double value)
+{
+    cam_cap.set(propId, value);
+}
+
+void Capture::setCamera(int cam_idx, int width, int height, float fps)
+{
+    use_camera = true;
+    this->cam_idx = cam_idx;
+    vid_size = Size2i(width, height);
     this->rec_fps = fps;
 }
 
@@ -117,7 +131,17 @@ void Capture::run()
     cv::Size2i vid_size_rot = vid_size;
     cv::Mat rot_mat;
     Rect2i* rect_face=NULL;
-    sensor->start(fq);
+    double ts_offset_boot;
+    if (use_camera) {
+        cam_cap.open(cam_idx, cv::CAP_MSMF);
+        cam_cap.set(cv::CAP_PROP_FRAME_WIDTH, vid_size.width);
+        cam_cap.set(cv::CAP_PROP_FRAME_HEIGHT, vid_size.height);
+        cam_cap.set(cv::CAP_PROP_FPS, rec_fps);
+        ts_offset_boot = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count() - 1.0 * GetTickCount64() / 1000;
+    }
+    else {
+        sensor->start(fq);
+    }
     int error_cnt = 0;
     static bool last_tracking_status = true;
     emit loseTracking();
@@ -132,34 +156,43 @@ void Capture::run()
 
     int f_cnt = 0;
     cv::Mat color_mat(vid_size,CV_8UC3);
+    bool first_image = false;
+
     while (true)
     {
 
         if (isRunning == false) {
             break;
         }
-        rs2::frame f = fq.wait_for_frame();
-        auto fmt = f.get_profile().format();
-        if (fmt == rs2_format::RS2_FORMAT_BGR8)
-            color_mat = Mat(this->vid_size, CV_8UC3, (void*)f.get_data(), Mat::AUTO_STEP);
-        else if (fmt == rs2_format::RS2_FORMAT_Y8)
-             cvtColor(Mat(this->vid_size, CV_8UC1, (void*)f.get_data(), Mat::AUTO_STEP), color_mat, cv::COLOR_GRAY2BGR);
-        else if (fmt == rs2_format::RS2_FORMAT_Z16) {
-            //convertScaleAbs(Mat(this->vid_size, CV_16UC1, (void*)f.get_data(), Mat::AUTO_STEP), color_mat, 0.03);
-            //applyColorMap(color_mat, color_mat, COLORMAP_JET);
-            Mat different_Channels[2];
-            split( Mat(this->vid_size, CV_8UC2, (void*)f.get_data(), Mat::AUTO_STEP), different_Channels);
-            merge(vector<Mat>{different_Channels[0], different_Channels[1], (different_Channels[0] + different_Channels[1]) / 2}, color_mat);
-             //LUT_16_reinterpret_cast(Mat(this->vid_size, CV_16UC1, (void*)f.get_data(), Mat::AUTO_STEP), color_mat);
-             //imshow("", color_mat);
-             //waitKey(1);
+        double color_mat_ts;
+        if (use_camera) {
+            bool read_success = cam_cap.read(color_mat);
+            if (!read_success)
+                break;
+            color_mat_ts = cam_cap.get(cv::CAP_PROP_POS_MSEC) / 1000.0 + ts_offset_boot;
         }
-        double color_mat_ts = f.get_timestamp() / 1000.0;
-        i_loop++;
-        if (i_loop % 10 == 0) {
-            fps = 10.0 / (color_mat_ts - last_ts);
-            last_ts = color_mat_ts;
-            emit fpsReady(fps);
+        else {
+            rs2::frame f = fq.wait_for_frame();
+            auto fmt = f.get_profile().format();
+            if (fmt == rs2_format::RS2_FORMAT_BGR8)
+                color_mat = Mat(this->vid_size, CV_8UC3, (void*)f.get_data(), Mat::AUTO_STEP);
+            else if (fmt == rs2_format::RS2_FORMAT_Y8)
+                cvtColor(Mat(this->vid_size, CV_8UC1, (void*)f.get_data(), Mat::AUTO_STEP), color_mat, cv::COLOR_GRAY2BGR);
+            else if (fmt == rs2_format::RS2_FORMAT_Z16) {
+                //convertScaleAbs(Mat(this->vid_size, CV_16UC1, (void*)f.get_data(), Mat::AUTO_STEP), color_mat, 0.03);
+                //applyColorMap(color_mat, color_mat, COLORMAP_JET);
+                Mat different_Channels[2];
+                split(Mat(this->vid_size, CV_8UC2, (void*)f.get_data(), Mat::AUTO_STEP), different_Channels);
+                merge(vector<Mat>{different_Channels[0], different_Channels[1], (different_Channels[0] + different_Channels[1]) / 2}, color_mat);
+                //LUT_16_reinterpret_cast(Mat(this->vid_size, CV_16UC1, (void*)f.get_data(), Mat::AUTO_STEP), color_mat);
+                //imshow("", color_mat);
+                //waitKey(1);
+            }
+            color_mat_ts = f.get_timestamp() / 1000.0;
+        }
+        if (!first_image) {
+            first_image = true;
+            emit cap_started();
         }
         // syncing
         if (is_syncing) {
@@ -250,6 +283,12 @@ void Capture::run()
         //std::cout << std::chrono::duration<double, std::milli>(std::chrono::system_clock::now().time_since_epoch()).count() - f.get_timestamp();
         //std::cout << f.get_frame_timestamp_domain() << std::endl;
         // Do something with the received frame
+        i_loop++;
+        if (i_loop % 10 == 0) {
+            fps = 10.0 / (color_mat_ts - last_ts);
+            last_ts = color_mat_ts;
+            emit fpsReady(fps, color_mat.rows, color_mat.cols);
+        }
         recorder_lock.lock();
         if (isRecording) {
             if (rec == NULL) {
@@ -350,9 +389,14 @@ void Capture::run()
             emit updateFrame(color_mat);
         }
     }
-    sensor->stop();
-    rs2::frame f;
-    fq.try_wait_for_frame(&f,1);
+    if (use_camera) {
+        cam_cap.release();
+    }
+    else {
+        sensor->stop();
+        rs2::frame f;
+        fq.try_wait_for_frame(&f, 1);
+    }
 }
 
 

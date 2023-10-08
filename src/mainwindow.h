@@ -10,6 +10,7 @@
 #include <vector>
 #include<qcombobox.h>
 #include <librealsense2/rs.hpp>
+#include <qt_match_cam_msmf.h>
 #include "ppg.h"
 #include "respi.h"
 #include "cnpy.h"
@@ -42,8 +43,10 @@ private:
     bool isCamInfoUpdated = false;
     bool is_sensor_color;
     bool is_profile_depth;
+    bool use_camera;
     int stereo_profile_cam_number;
     int totalSourceFileCanBeIndexed;
+    QList<CamInfo> cam_list;
     CameraInfo* cameras[10];
     int current_camera_idx = 0;
     SignalProcess* signalProcess;

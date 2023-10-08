@@ -6,6 +6,7 @@
 #include <QWindow>
 int main(int argc, char *argv[])
 {
+    putenv("OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS=0");
     QApplication app(argc, argv);
 
     QFile f(":qdarkstyle/dark/darkstyle.qss");

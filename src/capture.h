@@ -22,7 +22,6 @@ class Capture : public QThread
 {
     Q_OBJECT
         cv::Mat m_frame;
-    cv::VideoCapture cap;
     std::vector<double> timestamp;
     int timestamp_method;
     int capture_ready;
@@ -41,10 +40,13 @@ class Capture : public QThread
     std::mutex recorder_lock;
     cv::VideoWriter* rec=NULL;
     std::vector<double> rec_ts;
-    int rec_fps ;
+    float rec_fps ;
     cv::QRCodeDetector qrDecoder;
     cv::Mat sync_stage1, sync_stage2, depthLUT;
     cv::Mat LUT_16_reinterpret_cast(cv::Mat mat, cv::Mat dst);
+    int cam_idx;
+    cv::VideoCapture cam_cap;
+    std::mutex cv_cap_lock;
 
 public:
     std::atomic<bool> isRecording = false;
@@ -66,13 +68,17 @@ public:
     Q_SIGNAL void loseTracking();
     Q_SIGNAL void capInfoReady(float, float, float);
     Q_SIGNAL void updateFrame(const cv::Mat&);
-    Q_SIGNAL void fpsReady(double);
+    Q_SIGNAL void fpsReady(double,int,int);
     Q_SIGNAL void tsofsReady(double);
+    Q_SIGNAL void cap_started();
     void setCapture(rs2::sensor& sensor,int,int,int);
+    void setCVCamProperty(int propId, double value);
+    void setCamera(int cam_idx,int width,int height,float fps);
     void stop();
     int total_time = 0;
     std::atomic<char*> save_path=NULL;
     void wait_for_rec_save();
+    bool use_camera;
 
 private:
     void run();
