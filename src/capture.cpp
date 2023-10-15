@@ -97,6 +97,8 @@ cv::Rect2i getSquareBox(cv::Rect2i& face, cv::Size frame_size, double scale = 1.
 }
 
 void Capture::wait_for_rec_save() {
+    if (this->isRunning == false)
+        return;
     recorder_lock.lock();
     (*rec).release();
     delete rec;

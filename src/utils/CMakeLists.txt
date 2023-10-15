@@ -1,2 +1,2 @@
-target_sources(PhyRecorder PRIVATE cnpy.cpp cnpy.h window.h qcustomplot.cpp qcustomplot.h ppg.h ppg.cpp serialport.cpp serialport.h respi.cpp respi.h)
+target_sources(PhyRecorder PRIVATE cnpy.cpp cnpy.h window.h qcustomplot.cpp qcustomplot.h ppg.h ppg.cpp serialport.cpp serialport.h respi.cpp respi.h custom_serial.cpp)
 target_include_directories(PhyRecorder PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

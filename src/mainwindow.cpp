@@ -11,6 +11,7 @@ void MainWindow::refresh_plot() {
     static bool r_status = true , g_status=true, b_status = true;
     static bool ppgStatusFinished = true;
     static bool respiStatusFinished = true;
+    static bool serialStatusFinished = true;
     if (ppg->isRunning() ){
         if (ppgStatusFinished) {
             ppgStatusFinished = false;
@@ -31,9 +32,20 @@ void MainWindow::refresh_plot() {
         respiStatusFinished = true;
         ui->plot_ppg->graph(1)->removeFromLegend();
     }
+    if (custom_serial->isRunning()) {
+        if (serialStatusFinished) {
+            serialStatusFinished = false;
+            ui->plot_ppg->graph(2)->addToLegend();
+        }
+    }
+    else if (!serialStatusFinished) {
+        serialStatusFinished = true;
+        ui->plot_ppg->graph(2)->removeFromLegend();
+    }
     double ts = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count() + 0.1;
     ui->plot_ppg->xAxis->setRange(ts, show_window_length, Qt::AlignRight);
     if (ref_cnt++ % 10 == 0) {
+        ui->plot_ppg->graph(2)->data()->removeBefore(ts - show_window_length);
         ui->plot_ppg->graph(1)->data()->removeBefore(ts - show_window_length);
         ui->plot_ppg->graph(0)->data()->removeBefore(ts - show_window_length);
         ui->plot_interp->graph(0)->data()->removeBefore(ts - show_window_length);
@@ -53,13 +65,14 @@ void MainWindow::refresh_plot() {
             ui->plot_interp->graph(2)->setVisible(b_status);
         }
     }
-    ui->plot_ppg->replot();
 
     ui->plot_interp->xAxis->setRange(ts + signalProcess->cam_ofs, show_window_length, Qt::AlignRight);
     ui->plot_interp->xAxis2->setRange(ts, show_window_length, Qt::AlignRight);
     ui->plot_interp->yAxis->rescale();
     ui->plot_interp->yAxis2->rescale();
+    ui->plot_ppg->yAxis2->rescale();
     ui->plot_interp->replot();
+    ui->plot_ppg->replot();
 }
 void MainWindow::set_profile(int idx) {
     setCursor(Qt::WaitCursor);
@@ -99,6 +112,15 @@ void MainWindow::set_profile(int idx) {
         });
     th->start();
 
+}
+
+void MainWindow::plotCustomSerial(uint32_t signal, double ts) {
+    ui->plot_ppg->graph(2)->addData(ts, (double)signal / 0xFFFFFFFF);
+    if (isRecording) {
+        serial_ts_rec.push_back(ts);
+        serial_sig_rec.push_back(signal);
+    }
+    
 }
 void MainWindow::plotPPG(uint16_t signal,double ts) {
     ui->plot_ppg->graph(0)->addData(ts, (double)signal/1024);
@@ -143,6 +165,10 @@ void MainWindow::saveSignals() {
         respi_sig_rec.clear();
         cnpy::npy_save(fname + "respi_ts.npy", respi_ts_rec);
         respi_ts_rec.clear();
+        cnpy::npy_save(fname + "serial_sig.npy", serial_sig_rec);
+        serial_sig_rec.clear();
+        cnpy::npy_save(fname + "serial_ts.npy", serial_ts_rec);
+        serial_ts_rec.clear();
         capture->wait_for_rec_save();
         });
     connect(th, &QThread::finished, this, [this]() {
@@ -443,8 +469,15 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     ui->actionstopSerial->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
 
 
+    comboBox_serial = new QComboBox(ui->toolBarSD);
+    comboBox_serial->setFixedWidth(150);
+    ui->toolBarSD->insertWidget(ui->actionstopSerial, comboBox_serial);
+    connect(comboBox_serial, &QComboBox::activated, this, &MainWindow::select_serial);
+
+
     auto labelname1 = new QLabel(ui->toolBarRC);
     labelname1->setText("time(s):");
+    //labelname1->setFixedWidth(80);
     labelname1->setAttribute(Qt::WA_TranslucentBackground);
     ui->toolBarRC->addWidget(labelname1);
 
@@ -491,8 +524,14 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     ui->plot_ppg->addGraph();
     ui->plot_ppg->graph(1)->setPen(QPen(QColor(255, 110, 40)));
     ui->plot_ppg->graph(1)->setName("RESPI");
+
+    ui->plot_ppg->addGraph(ui->plot_ppg->xAxis, ui->plot_ppg->yAxis2);
+    ui->plot_ppg->graph(2)->setName("SERIAL");
+    ui->plot_ppg->graph(2)->setPen(QPen(QColor(10, 255, 40)));
+    ui->plot_ppg->yAxis2->setVisible(false);
     ui->plot_ppg->graph(0)->removeFromLegend();
     ui->plot_ppg->graph(1)->removeFromLegend();
+    ui->plot_ppg->graph(2)->removeFromLegend();
 
 
 /*    ui->plot_interp->legend->setVisible(true);
@@ -541,6 +580,9 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     connect(ppg, &PPGReader::ppgReady, this, &MainWindow::plotPPG);
     connect(ppg, &PPGReader::ppgReady, capture->signalProcess, &SignalProcess::processPPG);
 
+    custom_serial = new CustomSerialReader();
+    connect(custom_serial, &CustomSerialReader::serialReady, this, &MainWindow::plotCustomSerial);
+    
     freshSerialDevices();
 
 
@@ -653,6 +695,13 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
         });
     splash.showMessage("Init capture");
     splash.showMessage("Done");
+}
+
+void MainWindow::select_serial(int idx) {
+    custom_serial->stop_reading();
+    if (!custom_serial->setPort(serial_devices[idx])) {
+        comboBox_serial->setCurrentIndex(-1);
+    }
 }
 
 void MainWindow::set_time_offset(double ts_ofs) {
@@ -848,6 +897,7 @@ void MainWindow::on_actionstopSerial_triggered() {
     th = QThread::create([this]() {
         ppg->stop_reading();
         respi->stop_reading();
+        custom_serial->stop_reading();
         });
     connect(th, &QThread::finished, this, [this]() {
         ui->actionstopSerial->setDisabled(false);
@@ -856,16 +906,22 @@ void MainWindow::on_actionstopSerial_triggered() {
     th->start();
 }
 void MainWindow::freshSerialDevices() {
-    std::vector<serial::PortInfo> devices_found = serial::list_ports();
+    serial_devices.clear();
+    std::vector<serial::PortInfo>devices_found = serial::list_ports();
     for (const auto& dev : devices_found) {
         if (!ppg->isRunning() && ppg->setPort(dev) ||
             !respi->isRunning() && respi->setPort(dev)) {
             continue;
         }
-        else if (ppg->isRunning() && respi->isRunning()) {
-            break;
+        else {
+            comboBox_serial->addItem(QString::fromStdString(dev.description));
+            serial_devices.push_back(dev);
         }
+        //else if (ppg->isRunning() && respi->isRunning()) {
+        //    break;
+        //}
     }
+    comboBox_serial->setCurrentIndex(-1);
 }
 void MainWindow::on_actionrefreshSerial_triggered() {
     setCursor(Qt::WaitCursor);
@@ -956,7 +1012,6 @@ void MainWindow::on_actionStartTrigger_triggered() {
         setCursor(Qt::WaitCursor);
         ui->VideoBox->setDisabled(true);
         ui->toolBarRS->setDisabled(true);
-        ui->actionRecord->setDisabled(true);
         ui->actionStartTrigger->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
         ui->actionrefreshRealsense->setDisabled(false);
         comboBox_cameras->setDisabled(false);
@@ -984,7 +1039,6 @@ void MainWindow::on_actionStartTrigger_triggered() {
         //check is runnable
         setCursor(Qt::WaitCursor);
         if (capture->isRecording) on_actionRecord_triggered();
-        ui->actionRecord->setDisabled(false);
         capture->isRunning = true;
         ui->actionStartTrigger->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
         ui->actionStartTrigger->setToolTip("Stop");

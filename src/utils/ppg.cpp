@@ -88,8 +88,8 @@ void PPGReader::run() {
             read_data = serial_reader.readline(7, "\xff\xcb");
             double time_ofs = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count() - 1.0 / fs * ((-5 + serial_reader.available()) / 7 + 1);
             if (read_data.size() != 7 || (uchar)read_data[5] != 0xff || (uchar)read_data[6] != 0xcb) {
-                if (read_data.size() == 7)
-                    qDebug() << (uchar)read_data[0] << (uchar)read_data[1] << (uchar)read_data[2] << (uchar)read_data[3] << (uchar)read_data[4] << (uchar)read_data[5] << (uchar)read_data[6];
+                //if (read_data.size() == 7)
+                //    qDebug() << (uchar)read_data[0] << (uchar)read_data[1] << (uchar)read_data[2] << (uchar)read_data[3] << (uchar)read_data[4] << (uchar)read_data[5] << (uchar)read_data[6];
                 error_num++;
             }
             else {

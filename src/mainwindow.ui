@@ -30,7 +30,7 @@
           <rect>
            <x>11</x>
            <y>11</y>
-           <width>130</width>
+           <width>120</width>
            <height>20</height>
           </rect>
          </property>
@@ -883,7 +883,7 @@
   </action>
   <action name="actionRecord">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Record</string>

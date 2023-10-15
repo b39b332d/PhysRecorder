@@ -13,6 +13,7 @@
 #include <qt_match_cam_msmf.h>
 #include "ppg.h"
 #include "respi.h"
+#include "custom_serial.h"
 #include "cnpy.h"
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -55,10 +56,13 @@ private:
     QComboBox* comboBox_stream;
     QComboBox* comboBox_cameras;
     QComboBox* comboBox_sensor;
+    QComboBox* comboBox_serial;
     QSpinBox* spinRecordTime;
     QLineEdit* filenameLineEdit;
     PPGReader* ppg;
     RESPIReader* respi;
+    CustomSerialReader* custom_serial;
+    std::vector<serial::PortInfo> serial_devices;
     QTimer* record_timer;
     bool isRecording = false;
     int spin_record_last_time;
@@ -74,6 +78,9 @@ private:
     std::vector<uchar> respi_sig_rec;
     std::vector<double> ppg_ts_rec;
     std::vector<double> respi_ts_rec;
+
+    std::vector<uint32_t> serial_sig_rec;
+    std::vector<double> serial_ts_rec;
     bool is_opened = false;
 
     rs2::device_list devices;
@@ -90,11 +97,13 @@ private:
     //void setCamInfo(CameraInfo*);
     //Q_SIGNAL void setColorReady(uint8_t, uint8_t, uint8_t);
 private slots:
+    void select_serial(int);
     void set_time_offset(double);
     void setfft(QImage);
     void refresh_plot();
     void plotPPG(uint16_t,double);
     void plotRESPI(uchar,double);
+    void plotCustomSerial(uint32_t, double);
     void on_actionStartTrigger_triggered();
     void on_actionRecord_triggered();
     void detect_profiles(int);

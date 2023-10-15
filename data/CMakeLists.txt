@@ -9,14 +9,16 @@ MACRO(SUBDIRLIST result curdir)
   SET(${result} ${dirlist})
 ENDMACRO()
 
-SUBDIRLIST(SUBDIRS ${CMAKE_CURRENT_SOURCE_DIR}/modules/intel)
+SUBDIRLIST(SUBDIRS ${CMAKE_CURRENT_SOURCE_DIR}/models/intel)
 foreach(net_name IN LISTS SUBDIRS)
-    if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/modules/intel/${net_name}/FP32/${net_name}.xml AND 
-        (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/modules/intel/${net_name}/FP32/${net_name}.bin))
-        file(DOWNLOAD "https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/${net_name}/FP32/${net_name}.xml"
-                ${CMAKE_CURRENT_SOURCE_DIR}/modules/intel/${net_name}/FP32/${net_name}.xml INACTIVITY_TIMEOUT 10 SHOW_PROGRESS)
-        file(DOWNLOAD "https://storage.openvinotoolkit.org/repositories/open_model_zoo/2021.4/models_bin/3/${net_name}/FP32/${net_name}.bin"
-                ${CMAKE_CURRENT_SOURCE_DIR}/modules/intel/${net_name}/FP32/${net_name}.bin INACTIVITY_TIMEOUT 10 SHOW_PROGRESS)
+    SUBDIRLIST(SUBDIRS_ACC ${CMAKE_CURRENT_SOURCE_DIR}/models/intel/${net_name})
+    foreach(net_acc IN LISTS SUBDIRS_ACC)
+    if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/models/intel/${net_name}/${net_acc}/${net_name}.xml AND 
+        (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/models/intel/${net_name}/${net_acc}/${net_name}.bin))
+        file(DOWNLOAD "https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.0/models_bin/1/${net_name}/${net_acc}/${net_name}.xml"
+                ${CMAKE_CURRENT_SOURCE_DIR}/models/intel/${net_name}/${net_acc}/${net_name}.xml INACTIVITY_TIMEOUT 10 SHOW_PROGRESS)
+        file(DOWNLOAD "https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.0/models_bin/1/${net_name}/${net_acc}/${net_name}.bin"
+                ${CMAKE_CURRENT_SOURCE_DIR}/models/intel/${net_name}/${net_acc}/${net_name}.bin INACTIVITY_TIMEOUT 10 SHOW_PROGRESS)
     endif()
-    message(INFO ${net_name} download failed!)
+endforeach()
 endforeach()
