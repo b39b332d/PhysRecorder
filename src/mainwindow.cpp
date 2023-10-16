@@ -901,21 +901,24 @@ void MainWindow::on_actionstopSerial_triggered() {
         });
     connect(th, &QThread::finished, this, [this]() {
         ui->actionstopSerial->setDisabled(false);
+        comboBox_serial->setCurrentIndex(-1);
         setCursor(Qt::ArrowCursor);
         });
     th->start();
 }
 void MainWindow::freshSerialDevices() {
     serial_devices.clear();
+    comboBox_serial->clear();
+    comboBox_serial->setCurrentIndex(-1);
     std::vector<serial::PortInfo>devices_found = serial::list_ports();
     for (const auto& dev : devices_found) {
-        if (!ppg->isRunning() && ppg->setPort(dev) ||
-            !respi->isRunning() && respi->setPort(dev)) {
-            continue;
-        }
-        else {
+
+        if (dev.description.find("Silicon Labs CP210x USB to UART Bridge") == std::string::npos) {
             comboBox_serial->addItem(QString::fromStdString(dev.description));
             serial_devices.push_back(dev);
+        }else if (!ppg->isRunning() && ppg->setPort(dev) ||
+            !respi->isRunning() && respi->setPort(dev)) {
+            continue;
         }
         //else if (ppg->isRunning() && respi->isRunning()) {
         //    break;

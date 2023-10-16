@@ -27,12 +27,14 @@ endif()
 #### DOWNLOAD OPENCV REALSENSE QT DEVELOPMENT RUNTIME LIBRARY
 set(USE_EIGEN off)
 # CHECK THESE VARIABLES BEFORE CONFIGURE
-set(OpenCV_DIR "D:/Users/b39b3/Source/opencv/${Porject_BUILD_TYPE}" CACHE PATH "OpenCV cmake directory" FORCE)
-set(Qt6_ROOT "D:/Qt/6.3.1/msvc2019_64" CACHE PATH "Qt root directory" FORCE)
-set(REALSENSE_DIR "C:/Program Files (x86)/Intel RealSense SDK 2.0" CACHE PATH "RealSense root directory" FORCE)
+set(OpenCV_BUILD_Path "D:/Users/b39b3/Source/opencv" CACHE PATH "OpenCV cmake directory")
+set(OpenCV_DIR "${OpenCV_BUILD_Path}/${Porject_BUILD_TYPE}")
+set(Qt6_ROOT "D:/Qt/6.3.1/msvc2019_64" CACHE PATH "Qt root directory")
+set(REALSENSE_DIR "C:/Program Files (x86)/Intel RealSense SDK 2.0" CACHE PATH "RealSense root directory")
 
-set(Eigen3_DIR "D:/Users/b39b3/Source/SRC/SignalProcessor/lib/share/eigen3/cmake" CACHE PATH "Eigen root directory" FORCE)
-set(MKL_DIR "C:/Program Files (x86)/Intel/oneAPI/mkl/2022.1.0" CACHE PATH "Qt root directory" FORCE)
+set(Eigen3_DIR "D:/Users/b39b3/Source/SRC/SignalProcessor/lib/share/eigen3/cmake" CACHE PATH "Eigen root directory")
+set(MKL_DIR "C:/Program Files (x86)/Intel/oneAPI/mkl/2022.1.0" CACHE PATH "Qt root directory")
+set(OpenVINO_DIR "D:/Users/b39b3/Source/opencv/w_openvino_toolkit_windows_2023.0.1.11005.fa1c41994f3_x86_64/runtime" CACHE PATH "OpenVINO Runtime directory")
 set(MKL_LINK dynamic)
 set(INSTALL_DEP_PATHS "")
 ####### FIND OPENCV
@@ -78,11 +80,11 @@ add_library(realsense SHARED IMPORTED )
 set_target_properties(realsense PROPERTIES
              IMPORTED_LOCATION ${REALSENSE_DIR}/bin/x64/realsense2.dll
              IMPORTED_IMPLIB ${REALSENSE_DIR}/lib/x64/realsense2.lib)
-target_include_directories(realsense INTERFACE "C:/Program Files (x86)/Intel RealSense SDK 2.0/include")
-set(INSTALL_REALSENSE_BIN ${REALSENSE_DIR}/bin/x64/)
-list(APPEND INSTALL_DEP_PATHS ${INSTALL_REALSENSE_BIN})
-list(APPEND INSTALL_DEP_PATHS "D:/Users/b39b3/Source/opencv/w_openvino_toolkit_windows_2023.0.1.11005.fa1c41994f3_x86_64/runtime/bin/intel64/${CMAKE_BUILD_TYPE}")
-list(APPEND INSTALL_DEP_PATHS "D:/Users/b39b3/Source/opencv/w_openvino_toolkit_windows_2023.0.1.11005.fa1c41994f3_x86_64/runtime/3rdparty/tbb/bin")
+target_include_directories(realsense INTERFACE ${REALSENSE_DIR}/include)
+set(INSTALL_REALSENSE_BIN "${REALSENSE_DIR}/bin/x64/")
+list(APPEND INSTALL_DEP_PATHS "${INSTALL_REALSENSE_BIN}")
+list(APPEND INSTALL_DEP_PATHS "${OpenVINO_DIR}/bin/intel64/${CMAKE_BUILD_TYPE}")
+list(APPEND INSTALL_DEP_PATHS "${OpenVINO_DIR}/3rdparty/tbb/bin")
 
 include(cmake/install_target.cmake)
 add_subdirectory(src)
