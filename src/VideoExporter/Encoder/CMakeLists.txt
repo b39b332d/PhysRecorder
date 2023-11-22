@@ -1,0 +1,13 @@
+if (MSVC)
+add_library(Encoder STATIC EncoderWIC.cpp)
+else()
+add_library(Encoder STATIC EncoderOpenCV.cpp)
+endif()
+target_link_libraries(Encoder PUBLIC opencv_imgcodecs opencv_core)
+target_include_directories(Encoder PUBLIC ./  ../../camera/)
+target_compile_definitions(Encoder PRIVATE CPU_COUNT=${ProcessorCount_N})
+
+add_executable(encoder_test EXCLUDE_FROM_ALL encoder_test.cc )
+target_link_libraries(encoder_test PRIVATE ${OpenCV_LIBS} Encoder)
+target_include_directories(encoder_test PRIVATE ./)
+target_compile_definitions(encoder_test PRIVATE CPU_COUNT=${ProcessorCount_N})

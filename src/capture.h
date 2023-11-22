@@ -11,6 +11,7 @@
 #include "converter.h"
 #include <librealsense2/rs.hpp>
 #include <opencv2/objdetect.hpp>
+#include <MediaWriter.h>
 struct CameraInfo
 {
     double fps;
@@ -38,7 +39,7 @@ class Capture : public QThread
     rs2::frame_queue fq;
     cv::Size2i vid_size;
     std::mutex recorder_lock;
-    cv::VideoWriter* rec=NULL;
+    MediaWriter* rec=NULL;
     std::vector<double> rec_ts;
     float rec_fps ;
     cv::QRCodeDetector qrDecoder;

@@ -35,11 +35,16 @@ target_compile_definitions( PhyRecorder
 add_subdirectory(camera)
 add_subdirectory(signalprocess)
 add_subdirectory(utils)
+add_subdirectory(VideoExporter)
 
 target_include_directories(PhyRecorder PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 
-target_link_libraries(PhyRecorder PRIVATE Qt6::Widgets ${OpenCV_LIBS} realsense "Setupapi.lib" cam_detect)
+target_link_libraries(PhyRecorder PRIVATE Qt6::Widgets ${OpenCV_LIBS} realsense  cam_detect MediaWriter)
+
+if(MSVC)
+target_link_libraries(PhyRecorder PRIVATE "Setupapi.lib") # Serial
+endif()
 
 if(EIGEN3_FOUND)
     target_link_libraries(PhyRecorder PRIVATE Eigen3::Eigen)
@@ -53,9 +58,5 @@ endif()
         
 
 set_target_properties(PhyRecorder PROPERTIES WIN32_EXECUTABLE TRUE)
-
-
-add_executable(RealsenseCam_test "RealsenseCam_test.cpp" )
-target_link_libraries(RealsenseCam_test realsense )
 
 custom_target_install(PhyRecorder)

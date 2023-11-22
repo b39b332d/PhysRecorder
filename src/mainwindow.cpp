@@ -583,6 +583,11 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     custom_serial = new CustomSerialReader();
     connect(custom_serial, &CustomSerialReader::serialReady, this, &MainWindow::plotCustomSerial);
     
+
+    connect(custom_serial, &PPGReader::finished, this, [this] {
+        comboBox_serial->setCurrentIndex(-1);
+        });
+
     freshSerialDevices();
 
 
@@ -924,7 +929,6 @@ void MainWindow::freshSerialDevices() {
         //    break;
         //}
     }
-    comboBox_serial->setCurrentIndex(-1);
 }
 void MainWindow::on_actionrefreshSerial_triggered() {
     setCursor(Qt::WaitCursor);
@@ -940,6 +944,7 @@ void MainWindow::on_actionrefreshSerial_triggered() {
         });
     connect(th, &QThread::finished, this, [this]() {
         ui->actionrefreshSerial->setDisabled(false);
+        comboBox_serial->setCurrentIndex(-1);
         setCursor(Qt::ArrowCursor);
         });
     th->start();

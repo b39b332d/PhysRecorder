@@ -24,6 +24,13 @@ else()
 endif()
 
 
+
+cmake_host_system_information(RESULT ProcessorCount_N QUERY NUMBER_OF_PHYSICAL_CORES)
+message(STATUS "CMake ${CMAKE_VERSION} using ${Ncpu} threads")
+if(ProcessorCount_N EQUAL 0)
+	set(ProcessorCount_N 4)
+endif()
+
 #### DOWNLOAD OPENCV REALSENSE QT DEVELOPMENT RUNTIME LIBRARY
 set(USE_EIGEN off)
 # CHECK THESE VARIABLES BEFORE CONFIGURE

@@ -100,7 +100,7 @@ void Capture::wait_for_rec_save() {
     if (this->isRunning == false)
         return;
     recorder_lock.lock();
-    (*rec).release();
+    rec->close();
     delete rec;
     rec = NULL;
     string fname = "./rec/";
@@ -295,13 +295,12 @@ void Capture::run()
         if (isRecording) {
             if (rec == NULL) {
                 string fname = "./rec/";
-                rec = new VideoWriter(fname + string(save_path) + "vid.avi", cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), rec_fps, color_mat.size());
+                rec = new MediaWriter(fname + string(save_path) + "vid.avi", color_mat.size(), rec_fps);
             }
-            (*rec).write(color_mat);
+            rec->write(color_mat);
             rec_ts.push_back(color_mat_ts- signalProcess->cam_ofs);
         }
         recorder_lock.unlock();
-
         if (tracking) {
             if (!last_tracking_status) {
                 emit loseTracking(); last_tracking_status = true;
@@ -406,8 +405,8 @@ void Capture::initInferenceEngine() {
     // command of downloading from open_model_zoo: 
     // omz_downloader  --name face-detection-retail-0005 --output_dir C:\Users\b39b3\Documents\src\opencv\modules --precisions FP16,FP16-INT8,FP32
     string root_path = PROJECT_ROOT_PATH;
-    string path_net_facedetect = root_path + "modules/intel/face-detection-retail-0005/FP32/face-detection-retail-0005";
-    string path_net_landmarks = root_path + "modules/intel/facial-landmarks-35-adas-0002/FP32/facial-landmarks-35-adas-0002";
+    string path_net_facedetect = root_path + "models/intel/face-detection-retail-0005/FP32/face-detection-retail-0005";
+    string path_net_landmarks = root_path + "models/intel/facial-landmarks-35-adas-0002/FP32/facial-landmarks-35-adas-0002";
     string resource_path = root_path + "resources/";
 
     net_face = readNetFromModelOptimizer(path_net_facedetect + ".xml", path_net_facedetect + ".bin");
@@ -422,7 +421,4 @@ void Capture::initInferenceEngine() {
     Mat test_face = imread(resource_path + "face.jpg");
     net_landmarks.setInput(dnn::blobFromImage(test_face, 1, Size(60, 60)));
     net_landmarks.forward();
-
-    sync_stage1 = cv::imread(PROJECT_ROOT_PATH"resources/sync_stage1.png");
-    sync_stage2 = cv::imread(PROJECT_ROOT_PATH"resources/2stage_sync.png");
 }
