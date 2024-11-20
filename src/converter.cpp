@@ -5,89 +5,200 @@
 
 #include <opencv2/highgui.hpp>
 using namespace cv;
+static int show_matirx[][2] = { {1,1},{1,1},{1,2},{2,2},{2,2},{2,3},{2,3},{3,3},{3,3},{3,3}
+,{ 3,4 },{3,4},{3,4},{4,4},{4,4},{4,4},{4,4},{4,5},{4,5},{4,5},{4,5},{5,5},{5,5},{5,5},{5,5},{5,5}};
 Converter::Converter(ImageViewer* videoLabel, QObject* parent) :
     QObject(parent),
     videoLabel(videoLabel),
-    scale(0),
-    mouse(NULL),
-    isMouseEventProcessed(true)
+    scale(0)
 {
 }
 
-void Converter::start() {
-    refresh_time = new QTimer();
-    refresh_time->stop();
-    connect(refresh_time, &QTimer::timeout, this, &Converter::refresh);
-}
-
-
-void Converter::processFaces(const cv::Mat& frame, std::vector<cv::Rect>* faces)
-{
-    QPoint globalCursorPos = videoLabel->mapFromGlobal(QCursor::pos());
-    Point2i cursorPos = Point2i(globalCursorPos.x(), globalCursorPos.y()) - offset;
-    generate_m_frame(frame);
-    for (cv::Rect& face : *faces) {
-        Rect scaled_face = Rect(face.tl() * scale, face.br() * scale);
-        if (scaled_face.contains(cursorPos))
-            rectangle(m_frame, scaled_face, Scalar_<int>(0, 255, 0));
-        else
-            rectangle(m_frame, scaled_face, Scalar_<int>(0, 0, 255));
+inline void cvt_puttext(capture::CameraStream*stream, cv::Mat& m_frame, std::chrono::steady_clock::time_point& current_time) {
+    if ((current_time - stream->previous_fps_time) > std::chrono::seconds(1)) {
+        int elapsed = std::chrono::duration_cast<std::chrono::microseconds>((current_time - (stream->previous_fps_time))).count();
+        stream->previous_fps = (float)((stream->count)) * 1e6 / elapsed;
+        stream->previous_fps_time = current_time;
+        stream->count = 0;
     }
-    delete faces;
-    q_frame = QImage(m_canves.data, m_canves.cols, m_canves.rows, m_canves.step, QImage::Format_RGB888).rgbSwapped();
-    emit frameReady(q_frame);
-}
-void Converter::processFace(const cv::Mat& frame, cv::Rect face)
-{
-    generate_m_frame(frame);
-    rectangle(m_frame, Rect(face.tl() * scale, face.br() * scale), Scalar_<int>(255, 0, 0));
+    cv::putText(m_frame, std::format("{:.2f}fps",
+        stream->previous_fps),
+        { 30, 30 }, cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1);
 
-    q_frame = QImage(m_canves.data, m_canves.cols, m_canves.rows, m_canves.step, QImage::Format_RGB888).rgbSwapped();
-    emit frameReady(q_frame);
 }
 
-void Converter::updateFrame(const cv::Mat& frame) {
-    generate_m_frame(frame);
-    q_frame = QImage(m_canves.data, m_canves.cols, m_canves.rows, m_canves.step, QImage::Format_RGB888).rgbSwapped();
-    emit frameReady(q_frame);
-}
 
-void Converter::refresh() {
-    Size2i widget_size(videoLabel->width(), videoLabel->height());
+QSet<capture::CameraProfile*> previous_profiles;
+QSet<capture::CameraProfile*> previous_main;
+std::chrono::steady_clock::time_point previous_time = std::chrono::steady_clock::now();
+
+
+#define Rawframe_cv_img(frame) *((cv::Mat*)(frame->bgr_frame))
+void Converter::frame_ready(QList<RawFrame*> main_frames,QList<RawFrame*> other_frames,Rect2i face) {
+    auto current_time = std::chrono::steady_clock::now();
+    int total_width = videoLabel->width();
+    int total_height = videoLabel->height();
+    QSet<capture::CameraProfile*> current_profiles;
+    QSet<capture::CameraProfile*> current_main;
+    videoLabel->event_lock.lock();
+    int click_event_type = videoLabel->click_event_type;
+    Point2i click_point(videoLabel->click_point.x(), videoLabel->click_point.y());
+    videoLabel->click_event_type = 0;
+    videoLabel->event_lock.unlock();
+
+
+
+
+    for (auto frame : main_frames) {
+        current_profiles.insert((capture::CameraProfile*)(frame->profile));
+        current_main.insert((capture::CameraProfile*)(frame->profile));
+    }
+    for (auto frame : other_frames) {
+        current_profiles.insert((capture::CameraProfile*)(frame->profile));
+    }
+    QSet<capture::CameraProfile*> new_profiles = current_profiles - previous_profiles;
+    QSet<capture::CameraProfile*> orig_profiles = current_profiles & previous_profiles;
+
+
+    Size2i widget_size(total_width, total_height);
     if (dst_size != widget_size) {
-        updateFrame(previous_frame);
-    }
-}
-
-
-void Converter::generate_m_frame(const cv::Mat& frame) {
-    refresh_time->start(100);
-    previous_frame = frame;
-    bool changed = false;
-    Size2i widget_size(videoLabel->width(), videoLabel->height());
-    Size2i frame_size = frame.size();
-
-    if (dst_size != widget_size || cur_size != frame_size) {
-        changed = true;
         dst_size = widget_size;
-        cur_size = frame_size;
         m_canves = Mat::zeros(dst_size, CV_8UC3);
-
-        scale = ((double)dst_size.width) / cur_size.width;
-        if (scale * cur_size.height > dst_size.height) {
-            scale = ((double)dst_size.height) / cur_size.height;
-            scaled_size.height = dst_size.height;
-            scaled_size.width = scale * cur_size.width;
-            offset.x = (dst_size.width - scaled_size.width) / 2;
-            offset.y = 0;
+    }
+    if (current_profiles != previous_profiles || current_main != previous_main) {
+        m_canves = Mat::zeros(dst_size, CV_8UC3);
+    }
+    if (main_frames.size() != 0) {
+        int other_height = 100;
+        int main_dst_height = total_height - other_height;
+        int main_width = 0;
+        int max_width = 0;
+        for (auto pframe : main_frames) {
+            main_width += (float)(RawFrame_WIDTH_(pframe)) * main_dst_height / RawFrame_HEIGHT_(pframe);
+        }
+        int dst_height; Point2i start_point;
+        if (main_width <= total_width) {
+            dst_height = main_dst_height;
+            start_point = Point2i((total_width - main_width) / 2, 0);
         }
         else {
-            scaled_size.width = dst_size.width;
-            scaled_size.height = scale * cur_size.height;
-            offset.y = (dst_size.height - scaled_size.height) / 2;
-            offset.x = 0;
+            dst_height = (float)main_dst_height / main_width * total_width;
+            start_point = Point2i(0, (main_dst_height - dst_height) / 2);
+        }            
+        for (auto pframe : main_frames) {
+            float scaled = (float)dst_height / RawFrame_HEIGHT_(pframe);
+            Size2i scaled_size(scaled * RawFrame_WIDTH_(pframe), dst_height);
+            Rect2i start_pt(start_point, scaled_size);
+            m_frame = Mat(m_canves, start_pt);
+            if (pframe->bgr_frame != nullptr) {
+                cv::resize(Rawframe_cv_img(pframe),
+                    m_frame, scaled_size, 0, 0, INTER_NEAREST);
+            }
+            else if (new_profiles.contains(RawFrame_PROFILE_(pframe))) {
+                m_frame.setTo(cv::Scalar::all(0));
+                int baseline = 0;
+                cv::Size textSize = cv::getTextSize("no signal", cv::FONT_HERSHEY_SIMPLEX, 1.0, 1, &baseline);
+                cv::Point textOrg((m_frame.cols - textSize.width) / 2, (m_frame.rows + textSize.height) / 2);
+                cv::putText(m_frame, "no signal", textOrg, cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 255, 255), 1);
+            }            
+            if (face.area() != 0) {
+                rectangle(m_frame, Rect(face.tl() * scaled, face.br() * scaled), Scalar_<int>(255, 0, 0));
+            }
+            cvt_puttext(RawFrame_PROFILE_(pframe)->stream, m_frame, current_time);
+            if (click_event_type == -1)
+                emit device_selected(nullptr);
+            pframe->release();
+            start_point.x += scaled_size.width;
         }
-        m_frame = Mat(m_canves, Rect2i(offset, scaled_size));
+
+        start_point = Point2i (0, main_dst_height);
+        for (auto pframe : other_frames) {
+
+            if (start_point.x < total_width) {
+                float scaled = (float)other_height / RawFrame_HEIGHT_(pframe);
+                Size2i scaled_size(scaled * RawFrame_WIDTH_(pframe), other_height);
+                if (pframe->bgr_frame != nullptr) {
+                    int residual_width = total_width - start_point.x;
+                    if (residual_width >= scaled_size.width) {
+                        Rect2i start_pt(start_point, scaled_size);
+                        m_frame = Mat(m_canves, start_pt);
+                        cv::resize(Rawframe_cv_img( pframe),
+                            m_frame, scaled_size, 0, 0, INTER_NEAREST);
+                        cvt_puttext(RawFrame_PROFILE_(pframe)->stream, m_frame, current_time);
+
+                        if (click_event_type == 1 && start_pt.contains(click_point))
+                            emit device_selected(RawFrame_PROFILE_(pframe)->stream->device);
+                        else if (click_event_type == -1)
+                            emit device_selected(nullptr);
+                    }
+                    else {
+                        Rect2i start_pt(start_point, Size2i( residual_width ,scaled_size.height ));
+                        m_frame = Mat(m_canves, start_pt);
+                        cv::resize(cv::Mat(RawFrame_HEIGHT_(pframe),
+                            residual_width / scaled,
+                            CV_8UC3, pframe->bgr_frame, RawFrame_WIDTH_(pframe)*3),
+                            m_frame, m_frame.size(), 0, 0, INTER_NEAREST);
+
+                        if (click_event_type == 1 && start_pt.contains(click_point))
+                            emit device_selected(RawFrame_PROFILE_(pframe)->stream->device);
+                        else if (click_event_type == -1)
+                            emit device_selected(nullptr);
+                    }
+                }
+                start_point.x += scaled_size.width;
+            }
+            pframe->release();
+        }
     }
-    resize(frame, m_frame, scaled_size);
+    else {
+        int n_hori, n_vert,n_total= other_frames.size();
+        if (total_width < total_height) {
+            n_hori = show_matirx[n_total][0];
+            n_vert = show_matirx[n_total][1];
+        }
+        else {
+            n_hori = show_matirx[n_total][1];
+            n_vert = show_matirx[n_total][0];
+        }
+        int hori_size = total_width / n_hori;
+        int vert_size = total_height / n_vert;
+        int hori_n = 0, vert_n = 0;
+        for (auto frame : other_frames) {
+            float scaleh = (float)hori_size / RawFrame_WIDTH_(frame);
+            float scalev = (float)vert_size / RawFrame_HEIGHT_(frame);
+            Rect2i start_pt;
+            if (scalev > scaleh) {
+                int frame_v_size = scaleh * RawFrame_HEIGHT_(frame);
+                int height_ofs = (vert_size - frame_v_size) / 2;
+                start_pt = Rect2i(hori_n * hori_size, vert_n * vert_size+ height_ofs, hori_size, frame_v_size);
+            }
+            else {
+                int frame_h_size = scalev * RawFrame_WIDTH_(frame);
+                int width_ofs = (hori_size - frame_h_size) / 2;
+                start_pt = Rect2i(hori_n * hori_size+ width_ofs, vert_n * vert_size, frame_h_size, vert_size);
+            }
+            m_frame = Mat(m_canves, start_pt);
+
+
+            if (frame->bgr_frame != nullptr)
+                cv::resize(Rawframe_cv_img(frame),
+                    m_frame, m_frame.size(),0,0, INTER_NEAREST);
+            cvt_puttext(RawFrame_PROFILE_(frame)->stream, m_frame, current_time);
+
+            if (click_event_type == 1 && start_pt.contains(click_point))
+                emit device_selected(RawFrame_PROFILE_(frame)->stream->device);
+            frame->release();
+
+            hori_n++;
+            if (hori_n == n_hori) {
+                vert_n++;
+                hori_n = 0;
+            }
+        }
+    }
+    previous_main = current_main;
+    previous_profiles = current_profiles;
+    previous_time = current_time;
+    q_frame = QImage(m_canves.data, m_canves.cols, m_canves.rows, m_canves.step, QImage::Format_RGB888).rgbSwapped();
+    emit frameReady(q_frame);
 }

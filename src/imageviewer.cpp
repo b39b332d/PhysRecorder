@@ -6,7 +6,6 @@
 ImageViewer::ImageViewer(QWidget* parent) : QWidget(parent)
 {
    save_parent = parent;
-   is_maximized = false;
 }
 
 void ImageViewer::paintEvent(QPaintEvent *)
@@ -19,7 +18,20 @@ void ImageViewer::paintEvent(QPaintEvent *)
     }
 
 }
-
+void ImageViewer::mousePressEvent(QMouseEvent* event)
+{
+    if (event->button() == Qt::LeftButton) {
+        event_lock.lock();
+        click_point = event->pos();
+        click_event_type = 1;
+        event_lock.unlock();
+    }
+    else if (event->button() == Qt::RightButton) {
+        event_lock.lock();
+        click_event_type = -1;
+        event_lock.unlock();
+    }
+}
 
 void ImageViewer::setImage(const QImage &img)
 { 

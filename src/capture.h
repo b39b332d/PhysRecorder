@@ -5,20 +5,19 @@
 #include <string>
 #include <vector>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
 #include <opencv2/dnn.hpp>
 #include <atomic>
 #include "converter.h"
-#include <librealsense2/rs.hpp>
-#include <opencv2/objdetect.hpp>
 #include <MediaWriter.h>
-struct CameraInfo
-{
-    double fps;
-    int width;
-    int height;
-    bool useCameraTimestamp;
-};
+#include <CameraCapture.h>
+
+
+
+extern std::mutex recorder_lock;
+extern std::string record_prefix;
+extern bool is_recording;
+extern std::unordered_map<capture::CameraStream*, std::pair<MediaWriter*, std::vector<double>*>> rec_maps;
+
 class Capture : public QThread
 {
     Q_OBJECT
@@ -35,23 +34,17 @@ class Capture : public QThread
     const double interp_cyc;
     double fps = 0;
     int total_frames = 0;
-    rs2::sensor* sensor;
-    rs2::frame_queue fq;
     cv::Size2i vid_size;
-    std::mutex recorder_lock;
     MediaWriter* rec=NULL;
     std::vector<double> rec_ts;
     float rec_fps ;
-    cv::QRCodeDetector qrDecoder;
     cv::Mat sync_stage1, sync_stage2, depthLUT;
     cv::Mat LUT_16_reinterpret_cast(cv::Mat mat, cv::Mat dst);
     int cam_idx;
-    cv::VideoCapture cam_cap;
     std::mutex cv_cap_lock;
 
 public:
-    std::atomic<bool> isRecording = false;
-    std::atomic<bool> isRunning = false;
+
     SignalProcess* signalProcess;
     std::atomic<bool> tracking = false; // can only be set to false
     std::atomic<int> detect_mode;
@@ -61,23 +54,15 @@ public:
     std::atomic<int> rot = 0;
     std::atomic<bool> is_fliplr = false;
     std::atomic<bool> is_flipud = false;
-    std::atomic<bool> is_syncing = false;
+    std::atomic<int> quality = -1;
+    capture::CameraDevice* selected_device = nullptr;
     Capture(Converter& converter, SignalProcess*);
-    Q_SIGNAL void facesReady(const cv::Mat&, std::vector<cv::Rect>*);
-    Q_SIGNAL void faceReady(const cv::Mat&, cv::Rect);
+
     Q_SIGNAL void signalReady(cv::Scalar, double);
     Q_SIGNAL void loseTracking();
-    Q_SIGNAL void capInfoReady(float, float, float);
-    Q_SIGNAL void updateFrame(const cv::Mat&);
-    Q_SIGNAL void fpsReady(double,int,int);
-    Q_SIGNAL void tsofsReady(double);
-    Q_SIGNAL void cap_started();
-    void setCapture(rs2::sensor& sensor,int,int,int);
-    void setCVCamProperty(int propId, double value);
-    void setCamera(int cam_idx,int width,int height,float fps);
-    void stop();
+    Q_SIGNAL void updateFrame(QList<RawFrame*> main_frames, QList<RawFrame*> other_frames, cv::Rect2i);
+    Q_SIGNAL void device_disabled(capture::CameraDevice*);
     int total_time = 0;
-    std::atomic<char*> save_path=NULL;
     void wait_for_rec_save();
     bool use_camera;
 

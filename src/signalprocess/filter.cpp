@@ -13,10 +13,12 @@ void BiquadFilter::reset() {
 }
 
 
-FilterIIR::FilterIIR(unsigned long long w[][6], int order)
+FilterIIR::FilterIIR(unsigned long long w[][6], int order,bool is_highpass)
 	: order(order)
 	, cascade(order / 2)
+	, is_highpass(is_highpass)
 {
+	first_input = true;
 	biquadFilter = new BiquadFilter * [cascade];
 	l = new double[cascade]();
 
@@ -25,6 +27,14 @@ FilterIIR::FilterIIR(unsigned long long w[][6], int order)
 	}
 }
 double FilterIIR::filter(double x) {
+	if (is_highpass) {
+		if (first_input) {
+			first_input = false;
+			first_val = x;
+			return 0;
+		}
+		x -= first_val;
+	}
 	l[0] = biquadFilter[0]->filter(x);
 	for (int i = 1; i < cascade; i++) {
 		l[i] = biquadFilter[i]->filter(l[i - 1]);
@@ -33,6 +43,7 @@ double FilterIIR::filter(double x) {
 }
 
 void FilterIIR::reset() {
+	first_input = true;
 	for (int i = 0; i < cascade; i++) {
 		biquadFilter[i]->reset();
 		l[i] = 0;

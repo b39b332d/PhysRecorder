@@ -14,8 +14,10 @@ class FilterIIR {
 	int cascade;
 	BiquadFilter** biquadFilter;
 	double* l;
+	bool first_input,is_highpass;
+	double first_val;
 public:
-	FilterIIR(unsigned long long[][6], int);
+	FilterIIR(unsigned long long[][6], int, bool is_highpass=true);
 	double filter(double x);
 	void reset();
 };

@@ -8,13 +8,16 @@
 #include <QDir>
 #include <QSplashScreen>
 #include <vector>
-#include<qcombobox.h>
-#include <librealsense2/rs.hpp>
-#include <qt_match_cam_msmf.h>
+#include <qcombobox.h>
+#include <QFileSystemWatcher>
 #include "ppg.h"
 #include "respi.h"
 #include "custom_serial.h"
 #include "cnpy.h"
+#include <CameraCapture.h>
+#include <MultiSelectComboBox.h>
+#include<QCheckBox>
+#include<QPushButton>
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
@@ -47,15 +50,14 @@ private:
     bool use_camera;
     int stereo_profile_cam_number;
     int totalSourceFileCanBeIndexed;
-    QList<CamInfo> cam_list;
-    CameraInfo* cameras[10];
+
     int current_camera_idx = 0;
     SignalProcess* signalProcess;
     QLatin1Char zeropad;
     QComboBox* comboBox_profile;
-    QComboBox* comboBox_stream;
+    QComboBox* comboBox_profile_type;
     QComboBox* comboBox_cameras;
-    QComboBox* comboBox_sensor;
+    MultiSelectComboBox* comboBox_stream;
     QComboBox* comboBox_serial;
     QSpinBox* spinRecordTime;
     QLineEdit* filenameLineEdit;
@@ -64,7 +66,6 @@ private:
     CustomSerialReader* custom_serial;
     std::vector<serial::PortInfo> serial_devices;
     QTimer* record_timer;
-    bool isRecording = false;
     int spin_record_last_time;
     double show_window_length = 6.0;
     double cam_ofs = 0;
@@ -83,22 +84,22 @@ private:
     std::vector<double> serial_ts_rec;
     bool is_opened = false;
 
-    rs2::device_list devices;
-    rs2::device device;
-    std::vector<int> profiles_ofs;
-    std::vector<rs2::stream_profile> profiles;
-    std::vector<rs2::sensor> sensors;
-    rs2::stream_profile profile;
-    rs2::sensor sensor;
     QTimer* refresh_plot_timer;
-    void refreshRealsenseDevices();
+    void refreshCameras();
     void freshSerialDevices();
     void saveSignals();
     //void setCamInfo(CameraInfo*);
     //Q_SIGNAL void setColorReady(uint8_t, uint8_t, uint8_t);
+    QFileSystemWatcher watcher;
+    QString sharedFilePath;
+    bool is_signal_processed = true;
+    std::string start_record(std::string save_prefix);
+    void stop_record();
+    QMetaObject::Connection comp_conn;
 private slots:
+    void onFileChanged(const QString& path);
+    bool emitFileSignal(bool,QString p="");
     void select_serial(int);
-    void set_time_offset(double);
     void setfft(QImage);
     void refresh_plot();
     void plotPPG(uint16_t,double);
@@ -106,17 +107,38 @@ private slots:
     void plotCustomSerial(uint32_t, double);
     void on_actionStartTrigger_triggered();
     void on_actionRecord_triggered();
-    void detect_profiles(int);
-    void detect_sensors(int);
-    void set_profile(int);
-    void set_stream(int);
     void on_actionrefreshSerial_triggered();
-    void on_actionrefreshRealsense_triggered();
+    void on_actionrefreshCamera_triggered();
     void on_actionstopSerial_triggered();
     void plotInterpPPG(double,double);
     void plotInterpRGB(float, float, float, double, float*);
+    void comb_comp_changed(int index);
     //void on_startButton_clicked();
 //void on_stopButton_clicked();
     //void capFinished();
+    //void detect_sensors(int);
+    //void set_stream(int);
+    //void detect_profiles(int);
+    //void set_profile(int);
+
+    void onCameraSelected(int);
+    void onStreamSelected(int, bool is_selected);
+    void onStreamHighted(int, bool);
+    void onProfileTypeSelected(int);
+    void onProfileSelected(int);
+
+    void on_device_disabled(capture::CameraDevice*);
+    void on_device_selected(capture::CameraDevice*);
+    private:
+        void run_with_call_back(const std::function<void()>& run_in_thread, const std::function<void()>& call_back);
+        void lock_camera_info_play(bool lock=true);
+        void loadCameraOptions(capture::CameraDevice* device);
+        inline void loadCameraOption(capture::CameraDevice* device, capture::CameraDevice::DEVICE_OPTION opt);
+
+    private:
+        QCheckBox* camopt_checkBox[(int)capture::CameraDevice::DEVICE_OPTION_CNT];
+        QPushButton* camopt_pushButton[(int)capture::CameraDevice::DEVICE_OPTION_CNT];
+        QSlider* camopt_slider[(int)capture::CameraDevice::DEVICE_OPTION_CNT];
+
 };
 #endif // MAINWINDOW_H

@@ -26,7 +26,7 @@ uint64_t SignalProcess::HEART_COEFF[][6] = {
 
 #define MAX_SPECTRUM 600
 #define X_SCALE  2
-#define interp_cyc 0.01
+#define interp_cyc 0.03
 // double vs. float ??
 SignalProcess::SignalProcess(QLabel* videoLabel)
     : overlap(5)

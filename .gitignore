@@ -7,3 +7,4 @@ CMakePresets.json
 .*
 !.gitignore
 build
+cmake/env.cmake

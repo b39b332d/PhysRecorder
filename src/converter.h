@@ -8,6 +8,8 @@
 #include <opencv2/imgproc.hpp>
 #include <qevent.h>
 #include "imageviewer.h"
+#include <CameraDriver.h>
+#include <frame_types.h>
 
 class Converter : public QObject {
    Q_OBJECT
@@ -33,20 +35,14 @@ class Converter : public QObject {
 
 public:
    Converter(ImageViewer* videoLabel,QObject * parent = nullptr);
-   Q_SLOT void processFaces(const cv::Mat &frame, std::vector<cv::Rect>*);
-   Q_SLOT void processFace(const cv::Mat& frame, cv::Rect);
-   Q_SLOT void updateFrame(const cv::Mat& frame);
-   Q_SLOT void refresh();
-   Q_SLOT void start();
+   void frame_ready(QList<RawFrame*> main_frames, QList<RawFrame*> other_frames, cv::Rect2i face);
+	   
    Q_SIGNAL void frameReady(QImage&);
-
+   Q_SIGNAL void device_selected(capture::CameraDevice*);
 
    std::atomic<bool> isMouseEventProcessed; //lock
    cv::Point2i mouse;
    bool mouseCancel;
 
-private :
-	void rounded_rectangle(cv::Mat&, cv::Point, cv::Point, cv::Scalar, int, int, int);
-	void generate_m_frame(const cv::Mat&);
 };
 #endif // CONVERTER_H
