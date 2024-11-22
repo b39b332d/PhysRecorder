@@ -89,16 +89,20 @@ namespace capture {
         if (enabled_streams.size() == 0)
             return false;
         rs_sensor.open(pfs);
-        long long* since = nullptr;
+        long long* since = new long long(LLONG_MAX);
+        bool first_run = true;
         std::shared_ptr<CameraDeviceRS> t(this, [since](CameraDeviceRS* device) {
-            device->onDeviceReadingFailed(); if(since)delete since; });
+            device->onDeviceReadingFailed(); if (since) { delete since; } });
 
-        rs_sensor.start([this, t, &since](rs2::frame frame) {
+        rs_sensor.start([this, t, since](rs2::frame frame) {
             CameraStream* pts = nullptr;
             long long current_ts = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
             device_lock.lock();
-            if (status != CameraDevice::CS_RUNNING)return;
+            if (status != CameraDevice::CS_RUNNING) {
+                device_lock.unlock();
+                return;
+            }
             for (auto s : enabled_streams) {
                 if (((CameraStreamRS*)s)->stream_index == frame.get_profile().stream_index()) {
                     pts = s;
@@ -109,7 +113,7 @@ namespace capture {
                 stop(false);
                 return;
             }
-            if (since == nullptr) since = new long long(current_ts- frame.get_timestamp() * 1e3);
+            if (*since == LLONG_MAX) *since = current_ts- frame.get_timestamp() * 1e3;
             pts->write(pts->selected_profile->createFrame(
                  frame.get_timestamp() * 1e3+ current_ts, (unsigned char*)(frame.get_data()), frame.get_data_size(), [frame]() {
 
@@ -320,6 +324,9 @@ namespace capture {
             case DEVICE_BACKLIGHT:
                 configurations[i] = get_option_sensor(rs_sensor, RS2_OPTION_BACKLIGHT_COMPENSATION);
                 break;
+            case DEVICE_BRIGHTNESS:
+                configurations[i] = get_option_sensor(rs_sensor, RS2_OPTION_BRIGHTNESS);
+                break;
 
             }
         }
@@ -445,6 +452,9 @@ namespace capture {
             break;
         case DEVICE_BACKLIGHT:
             set_signle_option_native(option, RS2_OPTION_BACKLIGHT_COMPENSATION, value);
+            break;
+        case DEVICE_BRIGHTNESS:
+            set_signle_option_native(option, RS2_OPTION_BRIGHTNESS, value);
             break;
 
         }

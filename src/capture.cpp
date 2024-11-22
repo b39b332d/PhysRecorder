@@ -33,6 +33,8 @@ inline cv::Mat* raw2cvmat_bgr(RawFrame* frame) {
     case PIX_TYPE_UYVY:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC2, frame->raw_frame), *out_image, cv::COLOR_YUV2BGR_UYVY); break;
     case PIX_TYPE_Y12I:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC2, frame->raw_frame), *out_image, cv::COLOR_YUV2BGR_I420); break;
     case PIX_TYPE_L8:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC1, frame->raw_frame), *out_image, cv::COLOR_GRAY2BGR); break;
+    case PIX_TYPE_D16:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_16UC1, frame->raw_frame), *out_image, cv::COLOR_GRAY2BGR); break;
+    case PIX_TYPE_L16:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_16UC1, frame->raw_frame), *out_image, cv::COLOR_GRAY2BGR); break;
     case PIX_TYPE_MJPG:  cv::imdecode(cv::Mat(frame->raw_frame_len, 1, CV_8UC1, frame->raw_frame), cv::IMREAD_COLOR, out_image); break;
     default: return nullptr;
     };
@@ -131,7 +133,7 @@ void Capture::run()
     double fps = 0;
     Rect2i* rect_face=NULL;
 
-    int error_cnt = 0;
+    uint32_t error_cnt = 0;
     static bool last_tracking_status = true;
     emit loseTracking();
 
@@ -199,7 +201,16 @@ void Capture::run()
 
         int rot_current = rot;
         cv::Mat rot_mat;
-        if (color_mat.empty()) {
+        error_cnt++;
+        if (color_mat.empty() ) {
+            if (rect_face && error_cnt >= 10) {
+                if (rect_face) {
+                    delete rect_face;
+                    rect_face = NULL;
+                }
+                error_cnt = 0;
+                last_tracking_status = false;
+            }
             goto track_finish;
         }
         if (rot_current != 0) {
@@ -219,9 +230,13 @@ void Capture::run()
             if(is_flipud)cv::flip(color_mat, color_mat, 0);
 
         if (tracking) {
-            error_cnt++;
             if (!last_tracking_status) {
-                emit loseTracking(); 
+                if (rect_face) {
+                    delete rect_face;
+                    rect_face = NULL;
+                }
+                error_cnt = 0;
+                emit loseTracking();
                 last_tracking_status = true;
             }
             net_face.setInput(dnn::blobFromImage(color_mat, 1, Size(300, 300)));
@@ -234,12 +249,6 @@ void Capture::run()
                     roi_faces.emplace_back(Rect2i(Point2i(pred[3] * color_mat.cols, pred[4] * color_mat.rows), Point2i(pred[5] * color_mat.cols, pred[6] * color_mat.rows)));
                 }
                 else break;
-            }
-            if (error_cnt >= 30) {
-                delete rect_face;
-                rect_face = NULL;
-                error_cnt = 0;
-                emit loseTracking();
             }
             if (roi_faces.size() == 0 && rect_face == NULL) {
                 goto track_finish;
@@ -293,6 +302,10 @@ void Capture::run()
             Point face_right_top(pred[66], pred[67]);
             if (pred[0] < 0.00001 && pred[1] < 0.0001||face_left_top.x - face_right_top.x >= 0) {
                 error_cnt = 30;
+                if (rect_face) {
+                    delete rect_face;
+                    rect_face = NULL;
+                }
                 goto track_finish;
             }
             float k = (face_left_top.y - face_right_top.y) / (face_left_top.x - face_right_top.x);

@@ -489,6 +489,7 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
 
     cam_option_changed_timer.setSingleShot(false);
 #define match_array_qobj_camopts(obj,dev,name) camopt_##obj[capture::CameraDevice::DEVICE_##dev] = ui->obj##_##name
+
 #define  match_array_camopts(obj) \
     match_array_qobj_camopts(##obj, EXPOSURE, exposure);\
     match_array_qobj_camopts(##obj, GAIN, gain);\
@@ -505,11 +506,32 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     match_array_qobj_camopts(##obj, HUE, hue);\
     match_array_qobj_camopts(##obj, SATURATION, saturation);\
     match_array_qobj_camopts(##obj, SHARPNESS, sharpness);\
-    match_array_qobj_camopts(##obj, BACKLIGHT, backlight)
+    match_array_qobj_camopts(##obj, BRIGHTNESS, brightness);
 
     match_array_camopts(checkBox);
     match_array_camopts(pushButton);
     match_array_camopts(slider);
+
+
+    match_array_qobj_camopts(checkBox, BACKLIGHT, backlight);
+    match_array_qobj_camopts(checkBox, COLOR_ENABLED, colorEnabled);
+    match_array_qobj_camopts(pushButton, BACKLIGHT, backlight);
+    match_array_qobj_camopts(pushButton, COLOR_ENABLED, colorEnabled);
+
+    connect(ui->pushButton_resetVideo, &QPushButton::clicked, this, [this]() {
+        for (int opt = 8; opt < capture::CameraDevice::DEVICE_OPTION_CNT; opt++) {
+            if (camopt_pushButton[opt]->isEnabled()) {
+                emit camopt_pushButton[opt]->clicked();
+            }
+        }
+        });
+    connect(ui->pushButton_resetCamera, &QPushButton::clicked, this, [this]() {
+        for (int opt = 0; opt < 8; opt++) {
+            if (camopt_pushButton[opt]->isEnabled()) {
+                emit camopt_pushButton[opt]->clicked();
+            }
+        }
+        });
 
     connect(&cam_option_changed_timer, &QTimer::timeout, this, [this]() {
         cam_option_changed_timer.stop();
@@ -583,30 +605,84 @@ static inline int encode_codec_map(PIX_TYPE format) {
 }
 void MainWindow::loadCameraOptions(capture::CameraDevice *device) {
 
+    ui->lineEdit_cameraName->disconnect(this);
     ui->lineEdit_cameraName->setText(device->device_friendly_name.c_str());
+    connect(ui->lineEdit_cameraName, &QLineEdit::editingFinished, this, [this, device]() {
+        auto text = ui->lineEdit_cameraName->text().replace(QRegularExpression("[/\\\\:*?\"'<>|]"), "-");
+        device->device_friendly_name = text.toStdString();
+        ui->lineEdit_cameraName->setText(text);
+        });
     ui->comboBox_codec->setCurrentIndex(encode_codec_map(device->encoder_method));
     ui->slider_quality->setValue(device->encoder_quality);
+
     for (int opt = 0; opt < capture::CameraDevice::DEVICE_OPTION_CNT; opt++) {
-        auto opt_tange = device->get_option_range((capture::CameraDevice::DEVICE_OPTION)opt);
+        auto opt_range = device->get_option_range((capture::CameraDevice::DEVICE_OPTION)opt);
+
+        if (opt == capture::CameraDevice::DEVICE_BACKLIGHT
+            || opt == capture::CameraDevice::DEVICE_COLOR_ENABLED) {
+            camopt_checkBox[opt]->disconnect(this);
+            camopt_pushButton[opt]->disconnect(this);
+            if (opt_range.is_supported) {
+                camopt_checkBox[opt]->setDisabled(false);
+                camopt_pushButton[opt]->setDisabled(false);
+                auto current_opt = device->get_option((capture::CameraDevice::DEVICE_OPTION)opt);
+                if (current_opt.value == 0)
+                {
+                    camopt_checkBox[opt]->setChecked(false);
+                    camopt_pushButton[opt]->setText("DIS");
+
+                }
+                else
+                {
+                    camopt_checkBox[opt]->setChecked(true);
+                    camopt_pushButton[opt]->setText("EN");
+                }
+                connect(camopt_checkBox[opt], &QCheckBox::toggled, this, [this, opt](bool status) {
+                    cam_option_changed |= (1 << opt);
+                    if (!status)
+                        camopt_pushButton[opt]->setText("DIS");
+                    else
+                        camopt_pushButton[opt]->setText("EN");
+
+                    if (!cam_option_changed_timer.isActive()) cam_option_changed_timer.start(100);
+                    });
+                connect(camopt_pushButton[opt], &QPushButton::clicked, this, [this, opt, device]() {
+                    auto reset_prop = device->get_reset_option((capture::CameraDevice::DEVICE_OPTION)opt);
+                    if (reset_prop.status_type != capture::OPTION_INVALID) {
+                        if ((reset_prop.value == 1) == camopt_checkBox[opt]->isChecked())
+                            emit camopt_checkBox[opt]->toggled(reset_prop.value == 1);
+                        else {
+                            camopt_checkBox[opt]->setChecked(reset_prop.value == 1);
+                        }
+                    }
+                    });
+            }
+            else {
+                camopt_checkBox[opt]->setDisabled(true);
+                camopt_checkBox[opt]->setChecked(true);
+                camopt_pushButton[opt]->setDisabled(true);
+                camopt_pushButton[opt]->setText("NA");
+            }
+            continue;
+        }
         camopt_slider[opt]->disconnect(this);
         camopt_checkBox[opt]->disconnect(this);
         camopt_pushButton[opt]->disconnect(this);
 
 
-        if (opt_tange.is_supported) {
+        if (opt_range.is_supported) {
             camopt_slider[opt]->setDisabled(false);
             camopt_checkBox[opt]->setDisabled(false);
             camopt_pushButton[opt]->setDisabled(false);
-            camopt_slider[opt]->setMinimum(opt_tange.min);
-            camopt_slider[opt]->setMaximum(opt_tange.max);
-            camopt_slider[opt]->setSingleStep(opt_tange.step);
+            camopt_slider[opt]->setMinimum(opt_range.min);
+            camopt_slider[opt]->setMaximum(opt_range.max);
+            camopt_slider[opt]->setSingleStep(opt_range.step);
             auto current_opt = device->get_option((capture::CameraDevice::DEVICE_OPTION)opt);
             if (current_opt.status_type == capture::OPTION_AUTO) {
                 camopt_checkBox[opt]->setChecked(false);
                 camopt_pushButton[opt]->setText("AUTO");
                 camopt_slider[opt]->setEnabled(false);
-                camopt_slider[opt]->setValue(opt_tange.def.value);
-                camopt_pushButton[opt]->setText(QString::number(opt_tange.def.value));
+                camopt_slider[opt]->setValue(opt_range.def.value);
             }
             else {
                 camopt_checkBox[opt]->setChecked(true);
@@ -619,7 +695,7 @@ void MainWindow::loadCameraOptions(capture::CameraDevice *device) {
                 camopt_pushButton[opt]->setText(QString::number(val));
                 if (!cam_option_changed_timer.isActive()) cam_option_changed_timer.start(100);
                 });
-            if (opt_tange.support_type == capture::OPTION_AUTO) {
+            if (opt_range.support_type == capture::OPTION_AUTO) {
 
                 connect(camopt_checkBox[opt], &QCheckBox::toggled, this, [this, opt](bool status) {
                     cam_option_changed |= (1 << opt);
@@ -628,6 +704,7 @@ void MainWindow::loadCameraOptions(capture::CameraDevice *device) {
                         camopt_pushButton[opt]->setText("AUTO");
                     if (!cam_option_changed_timer.isActive()) cam_option_changed_timer.start(100);
                     });
+
             }
             else {
 
@@ -674,6 +751,12 @@ void MainWindow::loadCameraOptions(capture::CameraDevice *device) {
 void MainWindow::set_sensor_property() {
     for (int opt = 0; opt < capture::CameraDevice::DEVICE_OPTION_CNT; opt++) {
         if ((cam_option_changed & (1 << opt)) != 0) {
+            if (opt == capture::CameraDevice::DEVICE_BACKLIGHT
+                || opt == capture::CameraDevice::DEVICE_COLOR_ENABLED) {
+                capture->selected_device->set_option((capture::CameraDevice::DEVICE_OPTION)opt,
+                    { camopt_checkBox[opt]->isChecked() ? 1 : 0,capture::OPTION_MANUAL });
+                continue;
+            }
             if (camopt_checkBox[opt]->isChecked()) {
                 capture->selected_device->set_option((capture::CameraDevice::DEVICE_OPTION)opt,
                     { camopt_slider[opt]->value(),capture::OPTION_MANUAL });
@@ -699,7 +782,7 @@ void MainWindow::comb_comp_changed(int index) {
             if (capture->selected_device != nullptr)capture->selected_device->encoder_quality = val;
             if (val == 100)ui->label_quality->setText("MAX");
             else
-                ui->label_quality->setText(QString::number(val));
+                ui->label_quality->setText(QString::number(val)+"%");
             });
         ui->slider_quality->setValue(90);
     }
@@ -720,7 +803,7 @@ void MainWindow::comb_comp_changed(int index) {
         ui->slider_quality->setMinimum(0);
         ui->slider_quality->setValue(0);
         ui->compress_label->setText("Huffman");
-        ui->label_quality->setText(QString::number(0));
+        ui->label_quality->setText("NA");
     }
     else if (ui->comboBox_codec->currentText() == "RAW ") {
         if (capture->selected_device != nullptr)capture->selected_device->encoder_method = PIX_TYPE_RAW;
@@ -903,8 +986,7 @@ std::string MainWindow::start_record(std::string save_prefix ="") {
                 capture::CameraDevice* device = comboBox_cameras->itemData(i).value<capture::CameraDevice*>();
                 if (device->is_running()) {
                     for (auto stream : device->enabled_streams) {
-                        auto f_name = record_prefix + device->device_name + "_" + stream->stream_name + ".avi";
-                        std::ranges::replace(f_name, ':', '-');
+                        auto f_name = record_prefix + device->device_friendly_name + "_" + stream->stream_name + ".avi";
                         auto v_rec = new MediaWriter(f_name,
                             stream->selected_profile->resolution, stream->selected_profile->ratio, stream->selected_profile->format,
                             device->encoder_method,device->encoder_quality);
@@ -951,7 +1033,7 @@ void MainWindow::stop_record() {
 
         for (auto& [stream, rec]: rec_maps) {
             rec.first->close();
-            auto f_name = record_prefix + stream->device->device_name + "_" + stream->stream_name + "_ts.npy";
+            auto f_name = record_prefix + stream->device->device_friendly_name + "_" + stream->stream_name + "_ts.npy";
             std::ranges::replace(f_name, ':', '-');
             cnpy::npy_save<double>(f_name, *(rec.second));
             delete rec.first;

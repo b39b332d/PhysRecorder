@@ -27,6 +27,8 @@ namespace capture {
             for (auto [_, s] : streams_map) {
                 s->selected_profile = s->default_profile;
             }
+            device_friendly_name = device_name;
+            std::ranges::replace(device_friendly_name, ':', '-');
             return true;
         }
         else

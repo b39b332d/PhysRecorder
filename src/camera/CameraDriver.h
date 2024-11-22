@@ -138,8 +138,10 @@ namespace capture {
             DEVICE_SHARPNESS,
             DEVICE_GAMMA,
             DEVICE_WHITE_BALANCE,
-            DEVICE_BACKLIGHT,
             DEVICE_GAIN,
+            DEVICE_BRIGHTNESS,
+            DEVICE_BACKLIGHT,
+            DEVICE_COLOR_ENABLED,
             DEVICE_OPTION_CNT
         } DEVICE_OPTION;
         option_range configurations[DEVICE_OPTION_CNT] = {0,};

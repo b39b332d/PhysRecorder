@@ -212,10 +212,10 @@ namespace encoder {
 			planes[1].cbStride = width/2;
 			planes[1].cbBufferSize = height * width / 4;
 
-			planes[1].Format = GUID_WICPixelFormat8bppCr;
-			planes[1].pbBuffer = rgbData->raw_frame + int(width * height *1.25);
-			planes[1].cbStride = width/2;
-			planes[1].cbBufferSize = height * width / 4;
+			planes[2].Format = GUID_WICPixelFormat8bppCr;
+			planes[2].pbBuffer = rgbData->raw_frame + int(width * height *1.25);
+			planes[2].cbStride = width/2;
+			planes[2].cbBufferSize = height * width / 4;
 
 			hr = planarFrame->WritePixels(height, planes, 3);
 			pFrameEncode->Commit();

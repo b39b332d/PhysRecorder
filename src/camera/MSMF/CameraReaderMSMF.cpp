@@ -68,6 +68,8 @@ namespace capture {
         read_sample_lock.lock();
         device->onDeviceReadingFailed();
         read_sample_lock.unlock();
-        if(since)delete since;
+        if (since) {
+            delete since;
+        }
     }
 };

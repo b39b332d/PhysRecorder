@@ -23,7 +23,7 @@ namespace encoder {
 			data_size = width * height * 2;
 		}
 		else if(format == PIX_TYPE_I420 || format == PIX_TYPE_NV12 || format == PIX_TYPE_NV21 || format == PIX_TYPE_Y12I){
-			encoder = new ::huffyuv(width, height, height > ::huffyuv::interlaced_threshold, true, ::huffyuv::format_type::yuyv, ::huffyuv::predictor_type::left);
+			encoder = new ::huffyuv(width, height, height > ::huffyuv::interlaced_threshold, false, ::huffyuv::format_type::yuyv, ::huffyuv::predictor_type::left);
 
 			data_size = width * height * 1.5;
 		}

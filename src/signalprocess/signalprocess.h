@@ -10,8 +10,6 @@
 #include "window.h"
 #include <atomic>
 
-#define FS 100 //hz
-
 class SignalProcess : public QThread
 {
     Q_OBJECT

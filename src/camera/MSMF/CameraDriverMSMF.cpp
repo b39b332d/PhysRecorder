@@ -182,55 +182,52 @@ namespace capture {
         for (int i = 0; i < DEVICE_OPTION_CNT; i++) {
             switch ((DEVICE_OPTION)i) {
             case DEVICE_EXPOSURE:
-                configurations[DEVICE_EXPOSURE] = get_option_spCamera(spCameraControl, CameraControl_Exposure);
+                configurations[i] = get_option_spCamera(spCameraControl, CameraControl_Exposure);
                 break;
             case DEVICE_ZOOM:
-                configurations[DEVICE_ZOOM] = get_option_spCamera(spCameraControl, CameraControl_Zoom);
+                configurations[i] = get_option_spCamera(spCameraControl, CameraControl_Zoom);
                 break;
             case DEVICE_PAN:
-                configurations[DEVICE_PAN] = get_option_spCamera(spCameraControl, CameraControl_Pan);
+                configurations[i] = get_option_spCamera(spCameraControl, CameraControl_Pan);
                 break;
             case DEVICE_TILT:
-                configurations[DEVICE_TILT] = get_option_spCamera(spCameraControl, CameraControl_Tilt);
+                configurations[i] = get_option_spCamera(spCameraControl, CameraControl_Tilt);
                 break;
             case DEVICE_IRIS:
-                configurations[DEVICE_IRIS] = get_option_spCamera(spCameraControl, CameraControl_Iris);
+                configurations[i] = get_option_spCamera(spCameraControl, CameraControl_Iris);
                 break;
             case DEVICE_FOCUS:
-                configurations[DEVICE_FOCUS] = get_option_spCamera(spCameraControl, CameraControl_Focus);
+                configurations[i] = get_option_spCamera(spCameraControl, CameraControl_Focus);
                 break;
             case DEVICE_WHITE_BALANCE:
-                configurations[DEVICE_WHITE_BALANCE] = get_option_spCamera(spVideoControl, VideoProcAmp_WhiteBalance);
+                configurations[i] = get_option_spCamera(spVideoControl, VideoProcAmp_WhiteBalance);
                 break;
             case DEVICE_SHARPNESS:
-                configurations[DEVICE_SHARPNESS] = get_option_spCamera(spVideoControl, VideoProcAmp_Sharpness);
+                configurations[i] = get_option_spCamera(spVideoControl, VideoProcAmp_Sharpness);
                 break;
             case DEVICE_CONTRAST:
-                configurations[DEVICE_CONTRAST] = get_option_spCamera(spVideoControl, VideoProcAmp_Contrast);
+                configurations[i] = get_option_spCamera(spVideoControl, VideoProcAmp_Contrast);
                 break;
             case DEVICE_HUE:
-                configurations[DEVICE_HUE] = get_option_spCamera(spVideoControl, VideoProcAmp_Hue);
+                configurations[i] = get_option_spCamera(spVideoControl, VideoProcAmp_Hue);
                 break;
             case DEVICE_SATURATION:
-                configurations[DEVICE_SATURATION] = get_option_spCamera(spVideoControl, VideoProcAmp_Saturation);
+                configurations[i] = get_option_spCamera(spVideoControl, VideoProcAmp_Saturation);
                 break;
             case DEVICE_GAMMA:
-                configurations[DEVICE_GAMMA] = get_option_spCamera(spVideoControl, VideoProcAmp_Gamma);
+                configurations[i] = get_option_spCamera(spVideoControl, VideoProcAmp_Gamma);
                 break;
             case DEVICE_BACKLIGHT:
-                configurations[DEVICE_BACKLIGHT] = get_option_spCamera(spVideoControl, VideoProcAmp_BacklightCompensation);
+                configurations[i] = get_option_spCamera(spVideoControl, VideoProcAmp_BacklightCompensation);
                 break;
             case DEVICE_GAIN:
-                auto gain = get_option_spCamera(spVideoControl, VideoProcAmp_Gain);
-                if (gain.is_supported) {
-                    configurations[DEVICE_GAIN] = gain;
-                    use_gain = true;
-                }
-                else {
-                    auto brightness = get_option_spCamera(spVideoControl, VideoProcAmp_Brightness);
-                    configurations[DEVICE_GAIN] = brightness;
-                    use_gain = false;
-                }
+                configurations[i] = get_option_spCamera(spVideoControl, VideoProcAmp_Gain);
+                break;
+            case DEVICE_BRIGHTNESS:
+                configurations[i] = get_option_spCamera(spVideoControl, VideoProcAmp_Brightness);
+                break;
+            case DEVICE_COLOR_ENABLED:
+                configurations[i] = get_option_spCamera(spVideoControl, VideoProcAmp_ColorEnable);
                 break;
             }
         }
@@ -259,49 +256,36 @@ namespace capture {
         switch (option) {
         case DEVICE_EXPOSURE:
             return get_signle_option_spCamera(spCameraControl,CameraControl_Exposure);
-            break;;
         case DEVICE_ZOOM:
             return get_signle_option_spCamera(spCameraControl, CameraControl_Zoom);
-            break;
         case DEVICE_PAN:
             return get_signle_option_spCamera(spCameraControl, CameraControl_Pan);
-            break;
         case DEVICE_TILT:
             return get_signle_option_spCamera(spCameraControl, CameraControl_Tilt);
-            break;
         case DEVICE_IRIS:
             return get_signle_option_spCamera(spCameraControl, CameraControl_Iris);
-            break;
         case DEVICE_FOCUS:
             return get_signle_option_spCamera(spCameraControl, CameraControl_Focus);
-            break;
         case DEVICE_WHITE_BALANCE:
             return get_signle_option_spCamera(spVideoControl, VideoProcAmp_WhiteBalance);
-            break;
         case DEVICE_SHARPNESS:
             return get_signle_option_spCamera(spVideoControl, VideoProcAmp_Sharpness);
-            break;
         case DEVICE_CONTRAST:
             return get_signle_option_spCamera(spVideoControl, VideoProcAmp_Contrast);
-            break;
         case DEVICE_HUE:
             return get_signle_option_spCamera(spVideoControl, VideoProcAmp_Hue);
-            break;
         case DEVICE_SATURATION:
             return get_signle_option_spCamera(spVideoControl, VideoProcAmp_Saturation);
-            break;
         case DEVICE_GAMMA:
             return get_signle_option_spCamera(spVideoControl, VideoProcAmp_Gamma);
-            break;
         case DEVICE_BACKLIGHT:
             return get_signle_option_spCamera(spVideoControl, VideoProcAmp_BacklightCompensation);
-            break;
         case DEVICE_GAIN:
-            if(use_gain)
-                return get_signle_option_spCamera(spVideoControl, VideoProcAmp_Gain);
-            else
-                return get_signle_option_spCamera(spVideoControl, VideoProcAmp_Brightness);
-            break;
+            return get_signle_option_spCamera(spVideoControl, VideoProcAmp_Gain);
+        case DEVICE_BRIGHTNESS:
+            return get_signle_option_spCamera(spVideoControl, VideoProcAmp_Brightness);
+        case DEVICE_COLOR_ENABLED:
+            return get_signle_option_spCamera(spVideoControl, VideoProcAmp_ColorEnable);
         default:
             return { 0, };
         }
@@ -369,10 +353,13 @@ namespace capture {
             set_signle_option_spCamera(spVideoControl, VideoProcAmp_BacklightCompensation, configurations[option],opt);
             break;
         case DEVICE_GAIN:
-            if (use_gain)
-                set_signle_option_spCamera(spVideoControl, VideoProcAmp_Gain, configurations[option],opt);
-            else
-                set_signle_option_spCamera(spVideoControl, VideoProcAmp_Brightness, configurations[option],opt);
+            set_signle_option_spCamera(spVideoControl, VideoProcAmp_Gain, configurations[option],opt);
+            break;
+        case DEVICE_BRIGHTNESS:
+            set_signle_option_spCamera(spVideoControl, VideoProcAmp_Brightness, configurations[option],opt);
+            break;
+        case DEVICE_COLOR_ENABLED:
+            set_signle_option_spCamera(spVideoControl, VideoProcAmp_ColorEnable, configurations[option], opt);
             break;
         }
         return;

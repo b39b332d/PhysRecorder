@@ -71,7 +71,7 @@ private:
     double cam_ofs = 0;
     
     QTimer cam_option_changed_timer;
-    uint16_t cam_option_changed = 0;
+    uint32_t cam_option_changed = 0;
     void set_sensor_property();
 
     std::vector<std::string>stream_names;

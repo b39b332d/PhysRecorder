@@ -8,24 +8,17 @@ using namespace cv;
 using namespace std;
 
 
-uint64_t SignalProcess::BREATH_COEFF[][6] = {
-{0x3fa06886aab44487,0xbfa31749a10eb943,0x3fa06886aab44485,0x3ff0000000000000,0xbffa5e303e939420,0x3fe6a4edfef97da0,},
-{0x3ff0000000000000,0xbffc739f70a76fe6,0x3ff0000000000000,0x3ff0000000000000,0xbffccf2620fd3656,0x3fed374b4eab4aec,},
-{0x3ff0000000000000,0xbfffff9dce6391a8,0x3feffffffffffffe,0x3ff0000000000000,0xbfff37691b105e90,0x3fee79f5a517b207,},
-{0x3ff0000000000000,0xbffffe45af359465,0x3ff0000000000001,0x3ff0000000000000,0xbfffdd3eb4bda85a,0x3fefc129d2e654c1,},
-};
-
-int SignalProcess::BREATH_ORDER = 8;
 int SignalProcess::HEART_ORDER = 10;
 uint64_t SignalProcess::HEART_COEFF[][6] = { 
-    {0x3eb3d117110c3074,0x3ec3d117110c3074,0x3eb3d117110c3074,0x3ff0000000000000,0xbffd5177efdffb9d,0x3feb5b7839bfa6e5,},
-{0x3ff0000000000000,0x4000000000000000,0x3ff0000000000000,0x3ff0000000000000,0xbffdcf4b9a92aab8,0x3febea564af6718e,},
-{0x3ff0000000000000,0x0,0xbff0000000000000,0x3ff0000000000000,0xbffe76b8bcf57762,0x3fedfc043424716a,},
-{0x3ff0000000000000,0xc000000000000000,0x3ff0000000000000,0x3ff0000000000000,0xbffef3337cc519fe,0x3fee063878219c7d,},
-{0x3ff0000000000000,0xc000000000000000,0x3ff0000000000000,0x3ff0000000000000,0xbfffa7e1ad1072c0,0x3fef66e06d61fcb3,}, };
+    {0x3f382b2577cbd765,0x3f482b2577cbd765,0x3f382b2577cbd765,0x3ff0000000000000,0xbff5bd9470a1b115,0x3fe23a080ddfd37b,},
+{0x3ff0000000000000,0x4000000000000000,0x3ff0000000000000,0x3ff0000000000000,0xbff88499cb72f40a,0x3fe39c106600c4e1,},
+{0x3ff0000000000000,0x0,0xbff0000000000000,0x3ff0000000000000,0xbff780bd5a98c8da,0x3fe9a38ec52fd980,},
+{0x3ff0000000000000,0xc000000000000000,0x3ff0000000000000,0x3ff0000000000000,0xbffc7a1633e421a7,0x3fe9ff7e5e658b99,},
+{0x3ff0000000000000,0xc000000000000000,0x3ff0000000000000,0x3ff0000000000000,0xbffea8a2eb0c569e,0x3fee1c9e54ce9066,}, };
 
 #define MAX_SPECTRUM 600
 #define X_SCALE  2
+#define Y_SCALE  5
 #define interp_cyc 0.03
 // double vs. float ??
 SignalProcess::SignalProcess(QLabel* videoLabel)
@@ -34,23 +27,15 @@ SignalProcess::SignalProcess(QLabel* videoLabel)
     ,videoLabel(videoLabel)
     , previous_mean_BGR(-1,-1,-1,-1)
 {
-    window_ppg[0] = new Window<float>(6000, 3000);
-    window_ppg[1] = new Window<float>(6000, 3000);
-    window_ppg[2] = new Window<float>(6000, 3000);
-    window_ppg[3] = new Window<float>(6000, 3000);
-    filter[0] = new FilterIIR(HEART_COEFF, HEART_ORDER);
-    filter[1] = new FilterIIR(HEART_COEFF, HEART_ORDER);
-    filter[2] = new FilterIIR(HEART_COEFF, HEART_ORDER);
-    filter[3] = new FilterIIR(HEART_COEFF, HEART_ORDER);
 
-    fs = 1000.0 / 10;
+    fs = 1.0 / interp_cyc;
     signal_length = fs * 6; //15s
     i_loop = 0;
 
     phase_slice_time = 5;
     br_signal_length = 30;
 
-    fft_length = 6000; // 1bpm resolution
+    fft_length = fs*60; // 1bpm resolution
     resolution = fs/fft_length;
     fft_front_index = 50.0 / 60 / resolution;  // 52bpm
     fft_back_index = 200.0 / 60 / resolution;
@@ -70,6 +55,14 @@ SignalProcess::SignalProcess(QLabel* videoLabel)
 
     ts0 = 0;
 
+    window_ppg[0] = new Window<float>(6000, 3000);
+    window_ppg[1] = new Window<float>(6000, 3000);
+    window_ppg[2] = new Window<float>(6000, 3000);
+    window_ppg[3] = new Window<float>(6000, 3000);
+    filter[0] = new FilterIIR(HEART_COEFF, HEART_ORDER);
+    filter[1] = new FilterIIR(HEART_COEFF, HEART_ORDER);
+    filter[2] = new FilterIIR(HEART_COEFF, HEART_ORDER);
+    filter[3] = new FilterIIR(HEART_COEFF, HEART_ORDER);
 
     // Estimated heartrate:
     int estimated_heartrate = (70.0 / 60 - fft_front_freq) / resolution;
@@ -88,9 +81,18 @@ SignalProcess::SignalProcess(QLabel* videoLabel)
             cv::line(canvas, Point2i(x_pos, MAX_SPECTRUM), Point2i(x_pos, MAX_SPECTRUM- 1), Scalar_<uint8_t>(0, 0, 0));
     }
     for (int i = 0; i < 600; i += 25) {
-        cv::putText(canvas, QString::number(600-i).toStdString(), Point2i(0, i+1), cv::FONT_HERSHEY_SIMPLEX, 0.25, Scalar_<uint8_t>(0, 0, 0));
+        cv::putText(canvas, QString::number((600-i)/ Y_SCALE).toStdString(), Point2i(0, i+1), cv::FONT_HERSHEY_SIMPLEX, 0.25, Scalar_<uint8_t>(0, 0, 0));
         cv::line(canvas, Point2i(0, i), Point2i(5, i), Scalar_<uint8_t>(0, 0, 0));
     }
+}
+cv::Mat generateHanningWindow1D(int size) {
+    cv::Mat hanningWindow(size, 1, CV_32F); // Create a 1xN matrix for the 1D window
+
+    for (int i = 0; i < size; ++i) {
+        hanningWindow.at<float>(i, 0) = 0.5f * (1 - std::cos(2 * CV_PI * i / (size - 1)));
+    }
+
+    return hanningWindow;
 }
 void SignalProcess::processSignal(cv::Scalar bgr_signal, double ts) {
     static std::vector<cv::Point>* fftPoints[3] = { new std::vector<cv::Point>(fft_filter_length),new std::vector<cv::Point>(fft_filter_length),new std::vector<cv::Point>(fft_filter_length) };
@@ -113,7 +115,7 @@ void SignalProcess::processSignal(cv::Scalar bgr_signal, double ts) {
             window_ppg[1]->shift(raw_g);
             window_ppg[2]->shift(raw_b);
             cv::Mat ppg_vec[4];
-            int win_len = win_length*100;
+            int win_len = win_length*fs;
             if (current_ts_ppg - last_rqi_ts > 0.1) {
                 last_rqi_ts = current_ts_ppg;
                 int ts_ofs = round((current_ts_ppg - current_ts) * 100 + cam_ofs * 100);
@@ -140,7 +142,7 @@ void SignalProcess::processSignal(cv::Scalar bgr_signal, double ts) {
             }
             else
                 continue;
-
+            cv::Mat hanning_mat = generateHanningWindow1D(win_len);
             float* sqi = new float[6];
             Mat norm_ppg;
             cv::normalize(ppg_vec[3], norm_ppg, 1.0, -1.0, NORM_MINMAX);
@@ -151,7 +153,7 @@ void SignalProcess::processSignal(cv::Scalar bgr_signal, double ts) {
             std::memcpy(ppg_fft_padding.data, norm_ppg.data, 4 * norm_ppg.rows);
             Mat fft_out;
             cv::dft(ppg_fft_padding, fft_out);
-            const float* fft_p = fft_out.ptr<float>(fft_front_index*2);
+            const float* fft_p = fft_out.ptr<float>(fft_front_index*2-1); // first value is 0Hz in fft (dft output is rririri...)
             int max_idx = 0, max_val = 0;
             for (int i = 0; i < fft_filter_length; i++) {
                 double val = fft_p[0] * fft_p[0] + fft_p[1] * fft_p[1];
@@ -161,7 +163,7 @@ void SignalProcess::processSignal(cv::Scalar bgr_signal, double ts) {
                 }
                 fft_p += 2;
             }
-            int hormonic_idx = ((max_idx + fft_front_index) * 2 - fft_front_index) ;
+            int hormonic_idx = (max_idx + fft_front_index) * 2 - fft_front_index-1;
 
 
 
@@ -176,11 +178,13 @@ void SignalProcess::processSignal(cv::Scalar bgr_signal, double ts) {
                 [&](auto i_rgb) {
                     sqi[i_rgb] = cv::sum(norm_ppg.mul(ppg_vec[i_rgb]))[0];
                     fft_padding[i_rgb] = Mat::zeros(fft_length, 1, CV_32F);
-                    memcpy(fft_padding[i_rgb].data, ppg_vec[i_rgb].data, 4 * ppg_vec[i_rgb].rows);
+                    cv::Mat win;
+                    cv::multiply(hanning_mat, ppg_vec[i_rgb], win);
+                    memcpy(fft_padding[i_rgb].data, win.data, 4 * win.rows);
                     Mat fft_out;
                     dft(fft_padding[i_rgb], fft_out);
                     spectrum[i_rgb] = Mat (fft_filter_length, 1, CV_32F);
-                    const float* fft_p = fft_out.ptr<float>(fft_front_index*2);
+                    const float* fft_p = fft_out.ptr<float>(fft_front_index*2-1);
                     float* spec_p = spectrum[i_rgb].ptr<float>(0);
                     for (int i = 0; i < fft_filter_length; i++) {
                         *spec_p = sqrt(fft_p[0] * fft_p[0] + fft_p[1] * fft_p[1]);
@@ -188,7 +192,7 @@ void SignalProcess::processSignal(cv::Scalar bgr_signal, double ts) {
                         if (abs(i - max_idx) < 5 ){//|| abs(i - hormonic_idx) < 3) {
                             sig_power[i_rgb] += *spec_p;
                         }
-                        fftPoints[i_rgb]->operator[](i).y = y_true_max -*spec_p;
+                        fftPoints[i_rgb]->operator[](i).y = y_true_max -*spec_p* Y_SCALE;
                         fftPoints[i_rgb]->operator[](i).x = i * 2;
                         spec_p += 1;
                         fft_p += 2;
