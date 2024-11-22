@@ -48,12 +48,14 @@
 
 [![Product Name Screen Shot][product-screenshot]](https://gitee.com/b39b332d/phy_recorder/)
 
-¸ÃÈí¼ş±àĞ´Ê±½öÎªÍê³É¸öÈËÊµÑéÒªÇó£¬Ê±¼ä½ÏÔç£¬´úÂë²¢²»¹æ·¶£¬»¶Ó­´ó¼ÒÍêÉÆÖ¸Õı£¡
+è¯¥è½¯ä»¶ç¼–å†™æ—¶ä»…ä¸ºå®Œæˆä¸ªäººå®éªŒè¦æ±‚ï¼Œæ—¶é—´è¾ƒæ—©ï¼Œä»£ç å¹¶ä¸è§„èŒƒï¼Œæ¬¢è¿å¤§å®¶å®Œå–„æŒ‡æ­£ï¼
+æ”¯æŒçš„ç¼–ç å™¨: MJPG,HuffYUV,Raw
+æ”¯æŒçš„æ‘„åƒå¤´é©±åŠ¨: MSMF, Realsense
 
-¸ÃÈí¼şµÄ±àĞ´Ä¿µÄ£º
-- ÈÃ´ó¼ÒÔÚ½øĞĞÊµÑéÊ±ÓĞ±ê×¼µÄ±£´æ¸ñÊ½ºÍÂ¼ÖÆÁ÷³Ì
-- ÓµÓĞÍ¬²½ĞÅºÅ²É¼¯µÄÊ±¼ä´Á
-- ±ÜÃâÔìÂÖ×Ó
+è¯¥è½¯ä»¶çš„ç¼–å†™ç›®çš„ï¼š
+- è®©å¤§å®¶åœ¨è¿›è¡Œå®éªŒæ—¶æœ‰æ ‡å‡†çš„ä¿å­˜æ ¼å¼å’Œå½•åˆ¶æµç¨‹
+- æ‹¥æœ‰åŒæ­¥ä¿¡å·é‡‡é›†çš„æ—¶é—´æˆ³
+- é¿å…é€ è½®å­
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -61,7 +63,7 @@
 
 ### Built With
 
-ÒÔÏÂÎª¸ÃÈí¼şÒÀÀµµÄ¿âÒÔ¼°¹¹½¨¹¤¾ß
+ä»¥ä¸‹ä¸ºè¯¥è½¯ä»¶ä¾èµ–çš„åº“ä»¥åŠæ„å»ºå·¥å…·
 
 * C++
 * CMake
@@ -76,11 +78,11 @@
 <!-- GETTING STARTED -->
 ## Getting Started
 
-¸ÃÈí¼şÄ¿Ç°¹¹½¨½öÖ§³ÖWindowsÆ½Ì¨¡£
+è¯¥è½¯ä»¶ç›®å‰æ„å»ºä»…æ”¯æŒWindowså¹³å°ã€‚
 
 ### Prerequisites
 
-¹¹½¨ÒÀÀµ¿â¡£
+æ„å»ºä¾èµ–åº“ã€‚
 
 * OpenCV
   ```Powershell
@@ -113,9 +115,9 @@
 
 ### Installation
 
-±àÒë²âÊÔÍ¨¹ı£ºMSVC(Visual Studio 2022) Windows x64
+ç¼–è¯‘æµ‹è¯•é€šè¿‡ï¼šMSVC(Visual Studio 2022) Windows x64
 
-Î´¾­¹ı²âÊÔ£ºMINGW GNU
+æœªç»è¿‡æµ‹è¯•ï¼šMINGW GNU
 
 1. Clone the repo
    ```powershell
@@ -145,24 +147,24 @@
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-½¨ÒéÊ¹ÓÃ[Enigma Virtual Box](https://enigmaprotector.com/en/aboutvb.html)´ò°ü¡£
+å»ºè®®ä½¿ç”¨[Enigma Virtual Box](https://enigmaprotector.com/en/aboutvb.html)æ‰“åŒ…ã€‚
 
-×¢Òâ£¬´ò°üÊ±ÇëÎğ´ò°ü¹¤×÷Â·¾¶ÏÂµÄrecÄ¿Â¼¡£
+æ³¨æ„ï¼Œæ‰“åŒ…æ—¶è¯·å‹¿æ‰“åŒ…å·¥ä½œè·¯å¾„ä¸‹çš„recç›®å½•ã€‚
 
-Â¼ÖÆÎÄ¼şÔÚ¹¤×÷Â·¾¶µÄrecÄ¿Â¼ÏÂµÄÂ¼ÖÆÊ±¿ÌUNIXÊ±¼ä´ÁÎÄ¼ş¼ĞÄÚ
+å½•åˆ¶æ–‡ä»¶åœ¨å·¥ä½œè·¯å¾„çš„recç›®å½•ä¸‹çš„å½•åˆ¶æ—¶åˆ»UNIXæ—¶é—´æˆ³æ–‡ä»¶å¤¹å†…
 
-| ÎÄ¼şÃû        | ÎÄ¼şÄÚÈİ           | ÄÚÈİ¸ñÊ½  |
+| æ–‡ä»¶å        | æ–‡ä»¶å†…å®¹           | å†…å®¹æ ¼å¼  |
 | ------------- |:-------------:| -----:|
-| `vid.avi`      | ÊÓÆµÎÄ¼ş | MJPEG |
-| `vid_ts.npy`      | ÊÓÆµÊ±¼ä´Á | UNIX timestamp (s) |
-| `ppg_sig.npy`    | PPGĞÅºÅ      |   uint16_t |
-| `ppg_ts.npy` | PPGÊ±¼ä´Á      |    UNIX timestamp (s) |
-| `respi_sig.npy` | ºôÎüĞÅºÅ      |    uint8_t |
-| `respi_ts.npy` | ºôÎüĞÅºÅÊ±¼ä´Á      |    UNIX timestamp (s) |
-| `seral_sig.npy` | ´®¿ÚĞÅºÅ      |    uint32_t |
-| `seral_ts.npy` | ´®¿ÚĞÅºÅÊ±¼ä´Á      |   UNIX timestamp (s) |
+| `vid.avi`      | è§†é¢‘æ–‡ä»¶ | MJPEG |
+| `vid_ts.npy`      | è§†é¢‘æ—¶é—´æˆ³ | UNIX timestamp (s) |
+| `ppg_sig.npy`    | PPGä¿¡å·      |   uint16_t |
+| `ppg_ts.npy` | PPGæ—¶é—´æˆ³      |    UNIX timestamp (s) |
+| `respi_sig.npy` | å‘¼å¸ä¿¡å·      |    uint8_t |
+| `respi_ts.npy` | å‘¼å¸ä¿¡å·æ—¶é—´æˆ³      |    UNIX timestamp (s) |
+| `seral_sig.npy` | ä¸²å£ä¿¡å·      |    uint32_t |
+| `seral_ts.npy` | ä¸²å£ä¿¡å·æ—¶é—´æˆ³      |   UNIX timestamp (s) |
 
-ÆäÖĞPPGÓëºôÎüĞÅºÅÎª»ª¿ÆÉè±¸£¬×Ô¶¨ÒåµÄ´®¿ÚĞÅºÅ¶ÁÈë¸ñÊ½ÎªÎŞ·ûºÅÕûÊıµÄ×Ö·û´®¸ñÊ½£¬»»ĞĞ·ûºÅ`\r\n`
+å…¶ä¸­PPGä¸å‘¼å¸ä¿¡å·ä¸ºåç§‘è®¾å¤‡ï¼Œè‡ªå®šä¹‰çš„ä¸²å£ä¿¡å·è¯»å…¥æ ¼å¼ä¸ºæ— ç¬¦å·æ•´æ•°çš„å­—ç¬¦ä¸²æ ¼å¼ï¼Œæ¢è¡Œç¬¦å·`\r\n`
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -171,13 +173,13 @@
 <!-- ROADMAP -->
 ## Roadmap
 
-- [x] Ìí¼Ó README.md
-- [ ] ĞŞ¸ÄBugÒÔ¼°ÍêÉÆ´úÂë
-- [ ] Ìí¼Ó×¢ÊÍ
-- [ ] Ôö¼Ó Linux Ö§³Ö
-- [ ] Ôö¼Ó MINGW Ö§³Ö
-- [ ] ÓïÑÔResourceÌáÊ¾Ö§³Ö
-    - [*] English
+- [x] æ·»åŠ  README.md
+- [ ] ä¿®æ”¹Bugä»¥åŠå®Œå–„ä»£ç 
+- [ ] æ·»åŠ æ³¨é‡Š
+- [ ] å¢åŠ  Linux æ”¯æŒ
+- [ ] å¢åŠ  MINGW æ”¯æŒ
+- [ ] è¯­è¨€Resourceæç¤ºæ”¯æŒ
+    - [x] English
     - [ ] Chinese
 
 See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a full list of proposed features (and known issues).
@@ -194,7 +196,7 @@ Contributions are what make the open source community such an amazing place to l
 If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
 Don't forget to give the project a star! Thanks again!
 
-°´ÕÕ¸ÃÁ÷³ÌÌá½»´úÂë¸üĞÂ
+æŒ‰ç…§è¯¥æµç¨‹æäº¤ä»£ç æ›´æ–°
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
