@@ -47,6 +47,7 @@
 #include "gwavi_private.h"
 #include "avi-utils.h"
 #include "fileio.h"
+#include <frame_types.h>
 
 /**
  * This is the first function you should call when using gwavi library.
@@ -127,10 +128,9 @@ gwavi_open(const char *filename, unsigned int width, unsigned int height,
 	gwavi->stream_format_v.width = width;
 	gwavi->stream_format_v.height = height;
 	gwavi->stream_format_v.num_planes = 1;
-	gwavi->stream_format_v.bits_per_pixel = 24;
 	gwavi_set_codec(gwavi, nullptr);
-
-	gwavi->stream_format_v.image_size = width * height * 3;
+	gwavi->stream_format_v.bits_per_pixel = get_pix_bit_per_pix((PIX_TYPE)gwavi->stream_format_v.compression_type);
+	gwavi->stream_format_v.image_size = width * height * gwavi->stream_format_v.bits_per_pixel / 8;
 	gwavi->stream_format_v.colors_used = 0;
 	gwavi->stream_format_v.colors_important = 0;
 	gwavi->stream_format_v.addtional_data = addtional_header_data;
@@ -493,9 +493,6 @@ gwavi_set_codec(struct gwavi_t *gwavi, const char *fourcc=nullptr)
 		
 	}
 
-	if (strcmp(fc, "DIB ") == 0)
-		gwavi->stream_format_v.compression_type = 0;
-	else
 	gwavi->stream_format_v.compression_type =
 		((unsigned int)fc[3] << 24) +
 		((unsigned int)fc[2] << 16) +

@@ -40,6 +40,7 @@
 
 #include "avi-utils.h"
 #include "fileio.h"
+#include <frame_types.h>
 
 int
 write_avi_header(FILE *out, struct gwavi_header_t *avi_header)
@@ -127,7 +128,7 @@ write_stream_header(FILE *out, struct gwavi_stream_header_t *stream_header)
 
 	if (write_chars_bin(out, stream_header->data_type, 4) == -1)
 		goto write_chars_bin_failed;
-	if (write_chars_bin(out, stream_header->codec, 4) == -1)
+	if (write_chars_bin(out, IS_PIX_CHAR_TYPE_RGB(stream_header->codec)?"\0\0\0\0" : stream_header->codec, 4) == -1)
 		goto write_chars_bin_failed;
 	if (write_int(out, stream_header->flags) == -1)
 		goto write_int_failed;
@@ -201,7 +202,7 @@ write_stream_format_v(FILE *out, struct gwavi_stream_format_v_t *stream_format_v
 		goto write_int_failed;
 	if (write_int(out, stream_format_v->width) == -1)
 		goto write_int_failed;
-	if (write_int(out, stream_format_v->height) == -1)
+	if (write_int(out, IS_PIX_TYPE_RGB(stream_format_v->compression_type) ? -stream_format_v->height : stream_format_v->height ) == -1)
 		goto write_int_failed;
 	if (write_short(out, stream_format_v->num_planes) == -1) {
 		(void)fprintf(stderr, "write_stream_format_v: write_short() "
@@ -213,7 +214,7 @@ write_stream_format_v(FILE *out, struct gwavi_stream_format_v_t *stream_format_v
 			      "failed\n");
 		return -1;
 	}
-	if (write_int(out, stream_format_v->compression_type) == -1)
+	if (write_int(out, IS_PIX_TYPE_RGB(stream_format_v->compression_type)?0: stream_format_v->compression_type) == -1)
 		goto write_int_failed;
 	if (write_int(out, stream_format_v->image_size) == -1)
 		goto write_int_failed;
@@ -520,7 +521,7 @@ check_fourcc(const char *fourcc)
 		"CWLT CXY1 CXY2 CYUV CYUY"
 		"D261 D263 DAVC DCL1 DCL2 DCL3 DCL4 DCL5 DIV3 DIV4 DIV5 DIVX"
 		"DM4V DMB1 DMB2 DMK2 DSVD DUCK DV25 DV50 DVAN DVCS DVE2 DVH1"
-		"DVHD DVSD DVSL DVX1 DVX2 DVX3 DX50 DXGM DXTC DXTN DIB "
+		"DVHD DVSD DVSL DVX1 DVX2 DVX3 DX50 DXGM DXTC DXTN "
 		"EKQ0 ELK0 EM2V ES07 ESCP ETV1 ETV2 ETVC"
 		"FFV1 FLJP FMP4 FMVC FPS1 FRWA FRWD FVF1"
 		"GEOX GJPG GLZW GPEG GWLT"
@@ -560,7 +561,8 @@ check_fourcc(const char *fourcc)
 		"XXAN"
 		"Y16 Y411 Y41P Y444 Y8 YC12 YUV8 YUV9 YUVP YUY2 YUYV YV12 YV16"
 		"YV92"
-		"ZLIB ZMBV ZPEG ZYGO ZYYY";
+		"ZLIB ZMBV ZPEG ZYGO ZYYY"
+		"NV12 NV21 YUY2 UYVY I420 BGR8 Y42B";
 
 	if (!fourcc) {
 		(void)fputs("fourcc cannot be NULL", stderr);

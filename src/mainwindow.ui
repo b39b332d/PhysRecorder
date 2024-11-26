@@ -1178,10 +1178,10 @@
             <item>
              <widget class="QComboBox" name="comboBox_codec">
               <property name="currentText">
-               <string/>
+               <string>MJPG</string>
               </property>
               <property name="currentIndex">
-               <number>-1</number>
+               <number>0</number>
               </property>
               <item>
                <property name="text">
@@ -1191,6 +1191,11 @@
               <item>
                <property name="text">
                 <string>HFYU</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>RAW </string>
                </property>
               </item>
              </widget>

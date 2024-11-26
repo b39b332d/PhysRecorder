@@ -22,7 +22,7 @@ target_compile_definitions(phy_encoder PUBLIC JPEG_ENCODER=${JPEG_ENCODER} PNG_E
 target_include_directories(phy_encoder PUBLIC ${PROJECT_SOURCE_DIR}/libyuv/include/)
 
 target_link_libraries(phy_encoder PUBLIC opencv_imgcodecs opencv_core)
-target_include_directories(phy_encoder PUBLIC ./  ${CMAKE_SOURCE_DIR}/src/utils)
+target_include_directories(phy_encoder PUBLIC ./  ${utils_dir})
 target_compile_definitions(phy_encoder PRIVATE CPU_COUNT=${ProcessorCount_N})
 
 add_executable(encoder_test EXCLUDE_FROM_ALL encoder_test.cc )

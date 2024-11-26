@@ -3,12 +3,14 @@
 #include <queue>
 #include <atomic>
 #define PIX_FOURCC_TO_UINT32(str) \
-    ((static_cast<uint32_t>(str[0]) << 0) | \
+    ((static_cast<uint32_t>(str[0])) | \
      (static_cast<uint32_t>(sizeof(str)>2?str[1]:0x20) << 8) | \
      (static_cast<uint32_t>(sizeof(str)>3?str[2]:0x20) << 16) | \
      (static_cast<uint32_t>(sizeof(str)>4?str[3]:0x20) << 24))
 
 #define PIX_TYPE_DEFINE_MACRO(val) PIX_TYPE_##val = PIX_FOURCC_TO_UINT32(#val)
+#define IS_PIX_TYPE_RGB(PIX) (PIX==PIX_TYPE_RGB8||PIX==PIX_TYPE_BGR8)
+#define IS_PIX_CHAR_TYPE_RGB(PIX) (PIX_FOURCC_TO_UINT32(PIX)==PIX_TYPE_RGB8||PIX_FOURCC_TO_UINT32(PIX)==PIX_TYPE_BGR8)
 
 typedef enum {
 	PIX_TYPE_DEFINE_MACRO(RAW),
@@ -25,15 +27,16 @@ typedef enum {
 	PIX_TYPE_DEFINE_MACRO(L8),
 	PIX_TYPE_DEFINE_MACRO(D16),
 
-	PIX_TYPE_DEFINE_MACRO(I420),
-	PIX_TYPE_DEFINE_MACRO(NV12),
+	// see avi support raw pix types: https://ffmpeg.org/pipermail/ffmpeg-devel/2007-May/035617.html
+	PIX_TYPE_DEFINE_MACRO(I420), //yuv420p
+	PIX_TYPE_DEFINE_MACRO(NV12), 
 	PIX_TYPE_DEFINE_MACRO(NV21),
 	PIX_TYPE_DEFINE_MACRO(Y12I),
 
-	PIX_TYPE_DEFINE_MACRO(I422),
-	PIX_TYPE_DEFINE_MACRO(UYVY),
-	PIX_TYPE_DEFINE_MACRO(YUY2),
-	PIX_TYPE_DEFINE_MACRO(YUYV),
+	PIX_TYPE_DEFINE_MACRO(I422), //yuv422p Y42B
+	PIX_TYPE_DEFINE_MACRO(UYVY), //uyvy422
+	PIX_TYPE_DEFINE_MACRO(YUY2), //yuyv422
+	PIX_TYPE_YUYV = PIX_TYPE_YUY2,
 
 	PIX_TYPE_DEFINE_MACRO(RS10),
 	PIX_TYPE_DEFINE_MACRO(RS16),
@@ -48,7 +51,23 @@ typedef enum {
 	PIX_TYPE_DEFINE_MACRO(UNK),
 	PIX_TYPE_DEFINE_MACRO(ERR)
 } PIX_TYPE;
-
+inline int get_pix_bit_per_pix(PIX_TYPE p) {
+	switch (p) {
+	case PIX_TYPE_RGB8: return 24;
+	case PIX_TYPE_BGR8: return 24;
+	case PIX_TYPE_RGBA: return 32;
+	case PIX_TYPE_BGRA: return 32;
+	case PIX_TYPE_ARGB: return 32;
+	case PIX_TYPE_I420: return 12;
+	case PIX_TYPE_NV12: return 12;
+	case PIX_TYPE_NV21: return 12;
+	case PIX_TYPE_Y12I: return 12;
+	case PIX_TYPE_I422: return 16;
+	case PIX_TYPE_UYVY: return 16;
+	case PIX_TYPE_YUY2: return 16;
+	default: return 24;
+	}
+}
 #define GET_PIX_TYPE_NAME(val) std::string({static_cast<char>((val >> 0) & 0xFF),\
 								static_cast<char>((val >> 8) & 0xFF),\
 								static_cast<char>((val >> 16) & 0xFF),\

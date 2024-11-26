@@ -467,6 +467,7 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
 
     freshSerialDevices();
 
+    ui->VideoBox->hide();
 
 
 
@@ -987,6 +988,7 @@ std::string MainWindow::start_record(std::string save_prefix ="") {
                 if (device->is_running()) {
                     for (auto stream : device->enabled_streams) {
                         auto f_name = record_prefix + device->device_friendly_name + "_" + stream->stream_name + ".avi";
+                        std::ranges::replace(f_name, ':', '-');
                         auto v_rec = new MediaWriter(f_name,
                             stream->selected_profile->resolution, stream->selected_profile->ratio, stream->selected_profile->format,
                             device->encoder_method,device->encoder_quality);

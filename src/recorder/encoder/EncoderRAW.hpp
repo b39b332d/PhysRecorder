@@ -20,12 +20,12 @@ namespace encoder {
 	}
 	EncodedFrame* EncoderRaw::encode(RawFrame* rgbData)
 	{
-		unsigned char*  temp_buf =  (unsigned char*)malloc(size_max);
-		for (int i = 0; i < height; i++) {
-			void* s1 = rgbData->raw_frame + line_width * i, *s2= temp_buf + line_width * (height - i-1);
-			memcpy(s2, s1, line_width);
-		}
-		return new EncodedFrame(temp_buf, size_max);
+		//unsigned char*  temp_buf =  (unsigned char*)malloc(size_max);
+		//for (int i = 0; i < height; i++) {
+		//	void* s1 = rgbData->raw_frame + line_width * i, *s2= temp_buf + line_width * (height - i-1);
+		//	memcpy(s2, s1, line_width);
+		//}
+		return new EncodedFrame(rgbData->raw_frame, rgbData->raw_frame_len, [rgbData]() {rgbData->release(); });
 	}
 
 	EncoderRaw::~EncoderRaw() {
