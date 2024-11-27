@@ -61,8 +61,7 @@ uchar depthb_p[] = { 0,0,0,255,255,128 };
 
 Capture::Capture(Converter& converter, SignalProcess* sp) :
     converter(converter),
-    tracking(false),
-    detect_mode(0), // 0->manual 1->center 2-> auto
+    tracking_mode(NOT_TRACKING),
     interp_cyc(10),
     timestamp_line_count(0),
     capture_ready(0),
@@ -133,16 +132,8 @@ void Capture::run()
     Rect2i* rect_face=NULL;
 
     uint32_t error_cnt = 0;
-    static bool last_tracking_status = true;
+    TRACKING_MODE last_tracking_status = TRACKING_LOSE;
     emit loseTracking();
-
-    int sync_stage = 0;
-    bool is_sync_generated = false;
-    cv::Mat sync_pic;
-    int sync_width;
-    vector<double> sync_ofs;
-    double sync_ts_save = 0;
-    bool last_sync_status = false;
 
     int f_cnt = 0;
     bool first_image = false;
@@ -198,6 +189,7 @@ void Capture::run()
         }
 
 
+        std::unique_lock l(track_lock);
         int rot_current = rot;
         cv::Mat rot_mat;
         error_cnt++;
@@ -208,7 +200,7 @@ void Capture::run()
                     rect_face = NULL;
                 }
                 error_cnt = 0;
-                last_tracking_status = false;
+                last_tracking_status = TRACKING_LOSE;
             }
             goto track_finish;
         }
@@ -227,16 +219,16 @@ void Capture::run()
             else cv::flip(color_mat, color_mat, 1);
         else
             if(is_flipud)cv::flip(color_mat, color_mat, 0);
-
-        if (tracking) {
-            if (!last_tracking_status) {
+        
+        if (tracking_mode == TRACKING_FACE) {
+            if (last_tracking_status!= TRACKING_FACE) {
                 if (rect_face) {
                     delete rect_face;
                     rect_face = NULL;
                 }
                 error_cnt = 0;
                 emit loseTracking();
-                last_tracking_status = true;
+                last_tracking_status = TRACKING_FACE;
             }
             net_face.setInput(dnn::blobFromImage(color_mat, 1, Size(300, 300)));
             Mat prob = net_face.forward();
@@ -330,11 +322,23 @@ void Capture::run()
             emit signalReady(Scalar(mean(face_region, mask)), crop_face_ts);
 
         }
-        else {
+        else if (tracking_mode == STATIC_ROI) {
+            if (last_tracking_status != STATIC_ROI) {
+                if (rect_face) {
+                    delete rect_face;
+                    rect_face = NULL;
+                }
+                emit loseTracking();
+                last_tracking_status = STATIC_ROI;
+            }
+            rect_face = new Rect(roi);
+            emit signalReady(Scalar(mean(color_mat(roi))), (double)(mainFrames.front()->frame_ts) / 1e6);
+        }
+        else{
             if (face_landmarks_last.valid()) {
                 face_landmarks_last.release();
             }
-            last_tracking_status = false;
+            last_tracking_status = TRACKING_LOSE;
             if (rect_face != nullptr) {
                 delete rect_face;
                 rect_face = nullptr;

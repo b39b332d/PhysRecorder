@@ -17,20 +17,59 @@ void ImageViewer::paintEvent(QPaintEvent *)
         painted = true;
     }
 
+    if (isSelecting) {
+        p.drawRect(QRect(startPoint, endPoint));
+    }
 }
+void ImageViewer::mouseMoveEvent(QMouseEvent* event)
+{
+    if (left_key_pressed) {
+        isSelecting = true;
+        endPoint = event->pos();
+        update(); 
+    }
+}
+
 void ImageViewer::mousePressEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::LeftButton) {
-        event_lock.lock();
-        click_point = event->pos();
-        click_event_type = 1;
-        event_lock.unlock();
+        startPoint = event->pos();
+        pressTime.start();
+        left_key_pressed = true;
     }
     else if (event->button() == Qt::RightButton) {
         event_lock.lock();
+        click_point = event->pos();
         click_event_type = -1;
         event_lock.unlock();
     }
+}
+void ImageViewer::mouseReleaseEvent(QMouseEvent* event)
+{
+    if (event->button() == Qt::LeftButton && left_key_pressed) {
+        endPoint = event->pos();
+        left_key_pressed = false;
+        isSelecting = false;
+
+        int elapsedTime = pressTime.elapsed(); 
+        int distance = (endPoint - startPoint).manhattanLength();
+
+        if (elapsedTime < timeThreshold && distance < moveThreshold) {
+            event_lock.lock();
+            click_point = startPoint;
+            click_event_type = 1;
+            event_lock.unlock();
+        }
+        else {
+            event_lock.lock();
+            click_event_type = 2;
+            click_point = startPoint;
+            click_point_end = endPoint;
+            event_lock.unlock();
+        }
+        update();  // ×îÖÕ»æÖÆ
+    }
+
 }
 
 void ImageViewer::setImage(const QImage &img)

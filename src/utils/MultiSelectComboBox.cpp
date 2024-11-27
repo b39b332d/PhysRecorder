@@ -104,19 +104,6 @@ void MultiSelectComboBox::stateChanged(int aState)
             hightLight = sender_idx;
         }
     }
-    //if (selectedData.endsWith(";"))
-    //{
-    //    selectedData.remove(selectedData.count() - 1, 1);
-    //}
-    //if (!selectedData.isEmpty())
-    //{
-    //    mLineEdit->setText(selectedData);
-    //}
-    //else
-    //{
-    //    mLineEdit->clear();
-    //}
-    //mLineEdit->setToolTip(selectedData);
 }
 
 void MultiSelectComboBox::addItem(const QString& aText, const QVariant& aUserData, bool default_checked )
@@ -125,7 +112,10 @@ void MultiSelectComboBox::addItem(const QString& aText, const QVariant& aUserDat
     QListWidgetItem* listWidgetItem = new QListWidgetItem(mListWidget);
     QCheckBox* checkBox = new QCheckBox(this);
     checkBox->setText(aText);
-    if (default_checked) checkBox->setChecked(true);
+    if (default_checked) {
+        checkBox->setChecked(true);
+        current_selected_items->insert(mListWidget->count()-1);
+    }
     mListWidget->addItem(listWidgetItem);
     mListWidget->setItemWidget(listWidgetItem, checkBox);
     connect(checkBox, &QCheckBox::stateChanged, this, &MultiSelectComboBox::stateChanged);

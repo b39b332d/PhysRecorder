@@ -88,13 +88,14 @@ namespace capture {
         }
         if (enabled_streams.size() == 0)
             return false;
-        rs_sensor.open(pfs);
-        long long* since = new long long(LLONG_MAX);
-        bool first_run = true;
-        std::shared_ptr<CameraDeviceRS> t(this, [since](CameraDeviceRS* device) {
-            device->onDeviceReadingFailed(); if (since) { delete since; } });
+        try {
+            rs_sensor.open(pfs);
+            long long* since = new long long(LLONG_MAX);
+            bool first_run = true;
+            std::shared_ptr<CameraDeviceRS> t(this, [since](CameraDeviceRS* device) {
+                device->onDeviceReadingFailed(); if (since) { delete since; } });
 
-        rs_sensor.start([this, t, since](rs2::frame frame) {
+            rs_sensor.start([this, t, since](rs2::frame frame) {
             CameraStream* pts = nullptr;
             long long current_ts = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
@@ -120,6 +121,10 @@ namespace capture {
                 }
             ));
             });
+        }
+        catch (...) {
+            return false;
+        }
         return true;
     }
 

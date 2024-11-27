@@ -40,10 +40,14 @@ void Converter::frame_ready(QList<RawFrame*> main_frames,QList<RawFrame*> other_
     int total_height = videoLabel->height();
     QSet<capture::CameraProfile*> current_profiles;
     QSet<capture::CameraProfile*> current_main;
+    Point2i click_point, click_point_end;
     videoLabel->event_lock.lock();
     int click_event_type = videoLabel->click_event_type;
-    Point2i click_point(videoLabel->click_point.x(), videoLabel->click_point.y());
-    videoLabel->click_event_type = 0;
+    if (click_event_type != 0) {
+        click_point = Point2i(videoLabel->click_point.x(), videoLabel->click_point.y());
+        click_point_end = Point2i(videoLabel->click_point_end.x(), videoLabel->click_point_end.y());
+        videoLabel->click_event_type = 0;
+    }
     videoLabel->event_lock.unlock();
 
 
@@ -107,6 +111,16 @@ void Converter::frame_ready(QList<RawFrame*> main_frames,QList<RawFrame*> other_
             cvt_puttext(RawFrame_PROFILE_(pframe)->stream, m_frame, current_time);
             if (click_event_type == -1)
                 emit device_selected(nullptr);
+            else if (click_event_type == 2) {
+                if (start_pt.contains(click_point) && start_pt.contains(click_point_end)) {
+                    auto p1 = (click_point - start_point) / scaled;
+                    auto p2 = (click_point_end - start_point) / scaled;
+                    emit set_roi(cv::Rect2i(p1,p2));
+                }
+            }
+            else if (click_event_type == 1) {
+                emit set_roi({0,0,0,0});
+            }
             pframe->release();
             start_point.x += scaled_size.width;
         }
@@ -166,13 +180,16 @@ void Converter::frame_ready(QList<RawFrame*> main_frames,QList<RawFrame*> other_
         for (auto frame : other_frames) {
             float scaleh = (float)hori_size / RawFrame_WIDTH_(frame);
             float scalev = (float)vert_size / RawFrame_HEIGHT_(frame);
+            float scale_dst;
             Rect2i start_pt;
             if (scalev > scaleh) {
+                scale_dst = scaleh;
                 int frame_v_size = scaleh * RawFrame_HEIGHT_(frame);
                 int height_ofs = (vert_size - frame_v_size) / 2;
                 start_pt = Rect2i(hori_n * hori_size, vert_n * vert_size+ height_ofs, hori_size, frame_v_size);
             }
             else {
+                scale_dst = scalev;
                 int frame_h_size = scalev * RawFrame_WIDTH_(frame);
                 int width_ofs = (hori_size - frame_h_size) / 2;
                 start_pt = Rect2i(hori_n * hori_size+ width_ofs, vert_n * vert_size, frame_h_size, vert_size);
@@ -187,6 +204,14 @@ void Converter::frame_ready(QList<RawFrame*> main_frames,QList<RawFrame*> other_
 
             if (click_event_type == 1 && start_pt.contains(click_point))
                 emit device_selected(RawFrame_PROFILE_(frame)->stream->device);
+            else if (click_event_type == 2) {
+                if (start_pt.contains(click_point) && start_pt.contains(click_point_end)) {
+                    auto p1 = (click_point - start_pt.tl()) / scale_dst;
+                    auto p2 = (click_point_end - start_pt.tl()) / scale_dst;
+                    emit device_selected(RawFrame_PROFILE_(frame)->stream->device);
+                    emit set_roi(cv::Rect2i(p1, p2));
+                }
+            }
             frame->release();
 
             hori_n++;

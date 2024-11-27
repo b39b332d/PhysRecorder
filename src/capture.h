@@ -45,16 +45,20 @@ class Capture : public QThread
 
 public:
 
+    typedef enum {
+        NOT_TRACKING,
+        TRACKING_FACE,
+        STATIC_ROI,
+        TRACKING_LOSE
+    } TRACKING_MODE;
+    std::mutex track_lock;
+    TRACKING_MODE tracking_mode;
+    cv::Rect2i roi;
+
     SignalProcess* signalProcess;
-    std::atomic<bool> tracking = false; // can only be set to false
-    std::atomic<int> detect_mode;
-    std::atomic<int> speed;
-    std::atomic<bool> pause = false;
-    std::atomic<int> position = -1;
     std::atomic<int> rot = 0;
     std::atomic<bool> is_fliplr = false;
     std::atomic<bool> is_flipud = false;
-    std::atomic<int> quality = -1;
     capture::CameraDevice* selected_device = nullptr;
     Capture(Converter& converter, SignalProcess*);
 

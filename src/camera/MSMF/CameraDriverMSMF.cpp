@@ -419,26 +419,27 @@ namespace capture {
     bool CameraDeviceMSMF::native_start()
     {
         HRESULT hr;
+        IMFAttributes* pAttributes = nullptr;
         hr = m_pDevices->ActivateObject(IID_PPV_ARGS(&pSource));
+        if (FAILED(hr)) goto native_start_failed1;
         cam_reader = new CameraReaderMSMF(this);
 
-        IMFAttributes* pAttributes = nullptr;
         hr = MFCreateAttributes(&pAttributes, 2);  // Create attributes with a capacity of 1
-        THROW_HR(hr, "MFCreateAttributes Error");
+        if (FAILED(hr)) goto native_start_failed2;
 
         // Enable video processing (e.g., color conversion, scaling)
         hr = pAttributes->SetUINT32(MF_READWRITE_DISABLE_CONVERTERS, TRUE);
         hr = pAttributes->SetUnknown(MF_SOURCE_READER_ASYNC_CALLBACK, cam_reader);
-        //hr = pAttributes->SetUINT32(MF_SOURCE_READER_DISCONNECT_MEDIASOURCE_ON_SHUTDOWN, TRUE);
 
         if (FAILED(hr)) {
             pAttributes->Release();
-            THROW_HR(hr, "SetUINT32 Error");
+            goto native_start_failed2;
         }
 
         hr = MFCreateSourceReaderFromMediaSource(pSource, pAttributes, &pReader);
-        THROW_HR(hr, "MFCreateSourceReaderFromMediaSource Error");
+
         pAttributes->Release();
+        if (FAILED(hr)) goto native_start_failed2;
         cam_reader->pReader = pReader;
 
         for (auto s : enabled_streams) {
@@ -447,10 +448,18 @@ namespace capture {
             pReader->SetStreamSelection(((CameraStreamMSMF*)s)->stream_idx, TRUE);
         }
         hr = pReader->ReadSample(MF_SOURCE_READER_ANY_STREAM, 0, NULL, NULL, NULL, NULL);
-        if (FAILED(hr))return false;
+
+        if (FAILED(hr)) goto native_start_failed3;
 
         return true;
 
+    native_start_failed3:
+        pReader->Release();
+        cam_reader->pReader = nullptr;
+    native_start_failed2:
+        pSource->Release();
+    native_start_failed1:
+        return false;
     }
 
     void CameraDeviceMSMF::native_stop()

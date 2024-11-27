@@ -39,6 +39,7 @@ public:
 	   
    Q_SIGNAL void frameReady(QImage&);
    Q_SIGNAL void device_selected(capture::CameraDevice*);
+   Q_SIGNAL void set_roi(cv::Rect2i);
 
    std::atomic<bool> isMouseEventProcessed; //lock
    cv::Point2i mouse;

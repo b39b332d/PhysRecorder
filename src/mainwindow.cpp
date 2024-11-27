@@ -164,7 +164,7 @@ void MainWindow::on_device_selected(capture::CameraDevice* device) {
     }
     else {
         int idx = comboBox_cameras->findData(QVariant::fromValue(device));
-        if (idx >= 0) {
+        if (idx != -1 ) {
             comboBox_cameras->setCurrentIndex(idx);
             onCameraSelected(idx);
         }
@@ -173,7 +173,7 @@ void MainWindow::on_device_selected(capture::CameraDevice* device) {
 
 void MainWindow::on_device_disabled(capture::CameraDevice* device) {
     int idx = comboBox_cameras->findData(QVariant::fromValue(device));
-    if (idx>0 && idx == comboBox_cameras->currentIndex()) {
+    if (idx!=-1 && idx == comboBox_cameras->currentIndex()) {
         lock_camera_info_play(false);
     }
 }
@@ -194,6 +194,7 @@ void MainWindow::onCameraSelected(int idx) {
     capture::CameraDevice* device = comboBox_cameras->itemData(idx).value<capture::CameraDevice*>();
 
     capture->selected_device = device;
+    emit converter->set_roi({ 0,0,0,0 });
     if (device->is_running()) {
         lock_camera_info_play(true);
         ui->actionStartTrigger->setDisabled(false);
@@ -202,7 +203,7 @@ void MainWindow::onCameraSelected(int idx) {
             if(device->enabled_streams.contains(stream))
                 comboBox_stream->addItem(QString::fromStdString(stream_name), QVariant::fromValue(stream), true);
             else
-            comboBox_stream->addItem(QString::fromStdString(stream_name), QVariant::fromValue(stream),false);
+                comboBox_stream->addItem(QString::fromStdString(stream_name), QVariant::fromValue(stream),false);
             
         }
         loadCameraOptions(device);
@@ -324,8 +325,6 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     //ui->statusIndicatorLabel->setStyleSheet("QLabel { color : cyan; }");
 
     this->setWindowTitle("Remote PhotoPlethysmoGraphy");
-    //connect(ui->videospeed, &QSlider::valueChanged, ui->speed_spin, &QSpinBox::setValue);
-    //connect(ui->speed_spin, &QSpinBox::valueChanged, ui->videospeed, &QSlider::setValue);
 
     comboBox_cameras = new QComboBox(ui->toolBarRS);
     comboBox_stream = new MultiSelectComboBox(ui->toolBarRS);
@@ -446,6 +445,7 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     connect(capture->signalProcess, &SignalProcess::fftReady, this, &MainWindow::setfft);
     connect(converter, &Converter::frameReady, ui->q_video, &ImageViewer::setImage);
     connect(converter, &Converter::device_selected, this, &MainWindow::on_device_selected);
+
     converterThread->start();
 
     splash.showMessage("Detecting Serial Device...");
@@ -479,14 +479,39 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     connect(capture->signalProcess, &SignalProcess::interpPPGReady, this, &MainWindow::plotInterpPPG);
     connect(capture->signalProcess, &SignalProcess::interpRGBReady, this, &MainWindow::plotInterpRGB);
     connect(capture, &Capture::signalReady, capture->signalProcess, &SignalProcess::processSignal);
-    connect(ui->actionTracking, &QPushButton::toggled, this, [this](bool checked) {
-        capture->tracking = checked;
-        if (checked)
+    connect(ui->actionTracking, &QPushButton::clicked, this, [this](bool checked) {
+        std::unique_lock l(capture->track_lock);
+        if (checked) {
             ui->actionTracking->setText("Tracking");
-        else
+            capture->tracking_mode = Capture::TRACKING_FACE;
+        }
+        else {
             ui->actionTracking->setText("Untracked");
+            capture->tracking_mode = Capture::NOT_TRACKING;
+        }
         });
-
+    connect(converter, &Converter::set_roi, this, [this](cv::Rect rect) {
+        std::unique_lock l(capture->track_lock);
+        if (rect.area() == 0) {
+            if (capture->tracking_mode == Capture::STATIC_ROI) {
+                ui->actionTracking->setText("Untracked");
+                capture->tracking_mode = Capture::NOT_TRACKING;
+                ui->actionTracking->setChecked(false);
+            }
+        }
+        else {
+            if (capture->tracking_mode == Capture::TRACKING_FACE) {
+                capture->tracking_mode = Capture::STATIC_ROI;
+                ui->actionTracking->setText("ROI");
+            }
+            else if (capture->tracking_mode == Capture::NOT_TRACKING) {
+                capture->tracking_mode = Capture::STATIC_ROI;
+                ui->actionTracking->setText("ROI");
+                ui->actionTracking->setChecked(true);
+            }
+            capture->roi = rect;
+        }
+        });
 
     cam_option_changed_timer.setSingleShot(false);
 #define match_array_qobj_camopts(obj,dev,name) camopt_##obj[capture::CameraDevice::DEVICE_##dev] = ui->obj##_##name
@@ -1091,8 +1116,8 @@ void MainWindow::on_actionStartTrigger_triggered() {
             [this, device]() {
                 if (device_start_successed) {
                     lock_camera_info_play(true);
-                    ui->actionStartTrigger->setDisabled(false);
                 }
+                ui->actionStartTrigger->setDisabled(false);
                     setCursor(Qt::ArrowCursor);
             });
     }

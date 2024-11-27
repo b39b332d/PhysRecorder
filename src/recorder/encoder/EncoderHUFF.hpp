@@ -5,7 +5,7 @@
 #include <EncoderComp.h>
 #include<huffyuv.hpp>
 #include<libyuv.h>
-
+#include<opencv2/imgproc.hpp>
 namespace encoder {
 	class EncoderHUFF :public EncoderComp {
 		::huffyuv* encoder;
@@ -19,13 +19,13 @@ namespace encoder {
 		format = e_type;
 		if (format == PIX_TYPE_YUY2 || format == PIX_TYPE_UYVY || format == PIX_TYPE_YUYV || format == PIX_TYPE_I422 ) {
 			encoder = new ::huffyuv(width, height, height > ::huffyuv::interlaced_threshold, false, ::huffyuv::format_type::yuyv, ::huffyuv::predictor_type::left);
-			encoder->is_uyvy = format == PIX_TYPE_UYVY;
+			encoder->is_uyvy = (format == PIX_TYPE_UYVY);
 			data_size = width * height * 2;
 		}
 		else if(format == PIX_TYPE_I420 || format == PIX_TYPE_NV12 || format == PIX_TYPE_NV21 || format == PIX_TYPE_Y12I){
 			encoder = new ::huffyuv(width, height, height > ::huffyuv::interlaced_threshold, false, ::huffyuv::format_type::yuyv, ::huffyuv::predictor_type::left);
 
-			data_size = width * height * 1.5;
+			data_size = width * height * 2;
 		}
 		else if (format == PIX_TYPE_RGB8 || format == PIX_TYPE_BGR8 || format == PIX_TYPE_L8) {
 			encoder = new ::huffyuv(width, height, height > ::huffyuv::interlaced_threshold, true, ::huffyuv::format_type::bgr, ::huffyuv::predictor_type::left);
@@ -57,7 +57,6 @@ namespace encoder {
 				width, height);
 			rgbData->release();
 			encoder->encode(c[3], width * height * 2, encoded_img, img_size);
-
 			free(c[3]);
 		}
 		else if (format == PIX_TYPE_NV12 || format == PIX_TYPE_NV21 ) {
