@@ -36,10 +36,10 @@ namespace encoder {
 				pencoder = new EncoderHUFF(width, height, e_type, quality);
 			else if (d_type == PIX_TYPE_MPNG)
 				pencoder = new PNG_ENCODER(width, height, e_type, quality);
-			else if(d_type == PIX_TYPE_RAW)
+			else if (d_type == PIX_TYPE_RAW)
 				pencoder = new EncoderRaw(width, height, e_type, quality);
 			else
-				pencoder = new JPEG_ENCODER(width, height, e_type, quality);
+				pencoder = nullptr;
 			return;
 		}
 		~stream_encoder() {

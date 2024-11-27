@@ -1707,10 +1707,10 @@ private:
                     continue;
                 }
                 for (int channel = 0; channel < channels; ++channel) {
-                    if ((stream_index + 32) >= static_cast<unsigned int>(height * width * channels * 8)) {
-                        fprintf(stderr, "Failed to encode frame, result would be larger than original.\n");
-                        return false;
-                    }
+                    //if ((stream_index + 32) >= static_cast<unsigned int>(height * width * channels * 8)) {
+                    //    fprintf(stderr, "Failed to encode frame, result would be larger than original.\n");
+                    //    return false;
+                    //}
                     unsigned char decoded;
                     if (is_uyvy) {
                         decoded = *(decompressed+ uyvymap[channel]);
