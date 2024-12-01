@@ -4,7 +4,8 @@
 
 #ifndef LIBCNPY_H_
 #define LIBCNPY_H_
-
+#pragma warning( push )
+#pragma warning( disable : 4267)
 #include<string>
 #include<stdexcept>
 #include<sstream>
@@ -169,4 +170,5 @@ namespace cnpy {
 
 }
 
+#pragma warning( pop ) 
 #endif

@@ -26,13 +26,13 @@ endif()
 
 
 cmake_host_system_information(RESULT ProcessorCount_N QUERY NUMBER_OF_PHYSICAL_CORES)
-message(STATUS "CMake ${CMAKE_VERSION} using ${Ncpu} threads")
+message(STATUS "CMake ${CMAKE_VERSION} using ${ProcessorCount_N} threads")
 if(ProcessorCount_N EQUAL 0)
 	set(ProcessorCount_N 4)
 endif()
 
 #### DOWNLOAD OPENCV REALSENSE QT DEVELOPMENT RUNTIME LIBRARY
-set(USE_EIGEN off)
+
 # CHECK THESE VARIABLES BEFORE CONFIGURE
 set(OpenCV_BUILD_Path_release CACHE PATH "OpenCV cmake release directory")
 set(OpenCV_BUILD_Path_debug CACHE PATH "OpenCV cmake debug directory")
@@ -41,7 +41,6 @@ set(Eigen3_DIR CACHE PATH "Eigen3 cmake directory")
 set(Qt6_ROOT  CACHE PATH "Qt root directory")
 set(REALSENSE_DIR CACHE PATH "RealSense root directory")
 set(OpenVINO_DIR  CACHE PATH "OpenVINO Runtime directory")
-set(Eigen3_DIR CACHE PATH "Eigen root directory")
 set(MKL_DIR  CACHE PATH "MKL root directory")
 
 include("cmake/env.cmake" OPTIONAL)
@@ -50,13 +49,12 @@ set(MKL_LINK dynamic)
 set(INSTALL_DEP_PATHS "")
 
 ####### FIND OPENCV
-set(OpenCV_ROOT "${OpenCV_BUILD_Path_${Porject_BUILD_TYPE}}")
-if("${OpenCV_ROOT}" STREQUAL "")
-    set(OpenCV_ROOT "${OpenCV_BUILD_Path}")
+set(OpenCV_DIR "${OpenCV_BUILD_Path_${Porject_BUILD_TYPE}}")
+if("${OpenCV_DIR}" STREQUAL "")
+    set(OpenCV_DIR "${OpenCV_BUILD_Path}")
 endif()
-
 find_package(OpenCV REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
-if(TARGET opencv_core) 
+if(TARGET opencv_core)  
     string(TOUPPER ${Porject_BUILD_TYPE} Porject_BUILD_TYPE_UPPER)
     get_target_property(cv_core opencv_core IMPORTED_LOCATION_${Porject_BUILD_TYPE_UPPER})
     get_filename_component(INSTALL_OPENCV_BIN "${cv_core}" DIRECTORY)
@@ -83,16 +81,31 @@ set_target_properties(realsense PROPERTIES
              IMPORTED_IMPLIB ${REALSENSE_DIR}/lib/x64/realsense2.lib)
 target_include_directories(realsense INTERFACE ${REALSENSE_DIR}/include)
 set(INSTALL_REALSENSE_BIN "${REALSENSE_DIR}/bin/x64/")
+
 list(APPEND INSTALL_DEP_PATHS "${INSTALL_REALSENSE_BIN}")
 list(APPEND INSTALL_DEP_PATHS "${OpenVINO_DIR}/bin/intel64/${CMAKE_BUILD_TYPE}")
 list(APPEND INSTALL_DEP_PATHS "${OpenVINO_DIR}/3rdparty/tbb/bin")
 
+
+find_package(MKL REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
+get_target_property(mkl_type MKL::MKL TYPE)
+if (MKL_LINK STREQUAL dynamic)
+    list(APPEND INSTALL_DEP_PATHS ${MKL_ENV_PATH})
+endif()
+message(STATUS "MKL library status:")
+message(STATUS "    config: ${MKL_ROOT}")
+message(STATUS "    version: ${PACKAGE_VERSION}")
+message(STATUS "    include path: ${MKL_INCLUDE}")
+list(APPEND INSTALL_DEP_PATHS "${MKL_DIR}/lib/intel64")
+list(APPEND INSTALL_DEP_PATHS "${MKL_DIR}/redist/intel64")
+
+####### FIND Eigen3
+find_package(Eigen3 REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
+
+add_subdirectory(libyuv)
 include(cmake/install_target.cmake)
 add_subdirectory(src)
 add_subdirectory(data)
-
-
-add_subdirectory(libyuv)
 
 set(INSTALL_BIN_LOC ${CMAKE_INSTALL_PREFIX}/bin)
 configure_file(PhyRecorder.evb.in PhyRecorder.evb @ONLY)

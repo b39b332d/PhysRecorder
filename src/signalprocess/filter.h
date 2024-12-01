@@ -17,7 +17,7 @@ class FilterIIR {
 	bool first_input,is_highpass;
 	double first_val;
 public:
-	FilterIIR(unsigned long long[][6], int, bool is_highpass=true);
+	FilterIIR(const unsigned long long[][6], int, bool is_highpass=true);
 	double filter(double x);
 	void reset();
 };

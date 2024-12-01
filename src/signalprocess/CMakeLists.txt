@@ -1,2 +1,7 @@
-target_sources(PhyRecorder PRIVATE filter.cpp filter.h signalprocess.cpp signalprocess.h)
-target_include_directories(PhyRecorder PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+add_executable(phy_signal_test signal_test.cpp)
+target_link_libraries(phy_signal_test PRIVATE phy_signal)
+
+add_library(phy_signal OBJECT filter.cpp RPPGExtractor.cpp)
+target_include_directories(phy_signal PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(phy_signal PUBLIC Eigen3::Eigen MKL::MKL ${OpenCV_LIBS} )
+target_compile_definitions(phy_signal PUBLIC EIGEN_MKL_DEFAULT)

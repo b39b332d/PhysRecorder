@@ -67,7 +67,7 @@ void ImageViewer::mouseReleaseEvent(QMouseEvent* event)
             click_point_end = endPoint;
             event_lock.unlock();
         }
-        update();  // ×îÖÕ»æÖÆ
+        update();
     }
 
 }

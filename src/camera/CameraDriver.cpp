@@ -1,4 +1,5 @@
 #include <CameraDriver.h>
+#include <algorithm>
 namespace capture {
 
 
@@ -28,7 +29,7 @@ namespace capture {
                 s->selected_profile = s->default_profile;
             }
             device_friendly_name = device_name;
-            std::ranges::replace(device_friendly_name, ':', '-');
+            std::replace(device_friendly_name.begin(), device_friendly_name.end(), 'i', 'p');
             return true;
         }
         else

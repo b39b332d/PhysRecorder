@@ -9,6 +9,9 @@
 #include <QTextStream>
 #include <qstandardpaths.h>
 
+#include <RPPGExtractor.h>
+
+
 void MainWindow::lock_camera_info_play(bool lock) {
     comboBox_profile_type->setDisabled(lock);
     comboBox_profile->setDisabled(lock);
@@ -39,7 +42,6 @@ void MainWindow::run_with_call_back(const std::function<void()>& run_in_thread, 
 
 void MainWindow::refresh_plot() {
     static uchar ref_cnt = 0;
-    static bool r_status = true , g_status=true, b_status = true;
     static bool ppgStatusFinished = true;
     static bool respiStatusFinished = true;
     static bool serialStatusFinished = true;
@@ -79,24 +81,9 @@ void MainWindow::refresh_plot() {
         ui->plot_ppg->graph(2)->data()->removeBefore(ts - show_window_length);
         ui->plot_ppg->graph(1)->data()->removeBefore(ts - show_window_length);
         ui->plot_ppg->graph(0)->data()->removeBefore(ts - show_window_length);
-        ui->plot_interp->graph(0)->data()->removeBefore(ts - show_window_length);
-        ui->plot_interp->graph(1)->data()->removeBefore(ts - show_window_length);
-        ui->plot_interp->graph(2)->data()->removeBefore(ts - show_window_length);
-        ui->plot_interp->graph(3)->data()->removeBefore(ts - show_window_length);
-        if (ui->actionR->isChecked() != r_status) {
-            r_status = !r_status;
-            ui->plot_interp->graph(0)->setVisible(r_status);
-        }
-        if (ui->actionG->isChecked() != g_status) {
-            g_status = !g_status;
-            ui->plot_interp->graph(1)->setVisible(g_status);
-        }
-        if (ui->actionB->isChecked() != b_status) {
-            b_status = !b_status;
-            ui->plot_interp->graph(2)->setVisible(b_status);
-        }
-    }
 
+
+    }
     ui->plot_interp->xAxis->setRange(ts + signalProcess->cam_ofs, show_window_length, Qt::AlignRight);
     ui->plot_interp->xAxis2->setRange(ts, show_window_length, Qt::AlignRight);
     ui->plot_interp->yAxis->rescale();
@@ -137,26 +124,23 @@ void MainWindow::plotRESPI(uchar signal,double ts) {
     //ui->plot_ppg->graph(1)->rescaleValueAxis();
 }
 
-void MainWindow::plotInterpPPG(double ppg, double ts) {
-    ui->plot_interp->graph(3)->addData(ts, ppg);
-}
-void MainWindow::plotInterpRGB(float r, float g, float b, double ts, float* sqi) {
-    //qDebug() << r << g << b << ts << QThread::currentThreadId();
-    ui->plot_interp->graph(0)->addData(ts, r);
-    ui->plot_interp->graph(1)->addData(ts, g);
-    ui->plot_interp->graph(2)->addData(ts, b);
-    if (sqi != NULL) {
-        ui->label_SQIr->setText(QString::number(sqi[0], 'f', 2));
-        ui->label_SQIg->setText(QString::number(sqi[1], 'f', 2));
-        ui->label_SQIb->setText(QString::number(sqi[2], 'f', 2));
-        ui->label_SNRr->setText(QString::number(sqi[3], 'f', 2));
-        ui->label_SNRg->setText(QString::number(sqi[4], 'f', 2));
-        ui->label_SNRb->setText(QString::number(sqi[5], 'f', 2));
-        delete[] sqi;
-    }
-    //if (!refresh_plot_timer->isActive())
-    //    refresh_plot_timer->start(20);
-}
+//void MainWindow::plotInterpPPG(double ppg, double ts) {
+//
+//}
+//void MainWindow::plotInterpRGB(float r, float g, float b, float pos, const QVector<float>& pos_end, double ts) {
+//    //qDebug() << r << g << b << ts << QThread::currentThreadId();
+//    //if (sqi != NULL) {
+//        //ui->label_SQIr->setText(QString::number(sqi[0], 'f', 2));
+//        //ui->label_SQIg->setText(QString::number(sqi[1], 'f', 2));
+//        //ui->label_SQIb->setText(QString::number(sqi[2], 'f', 2));
+//        //ui->label_SNRr->setText(QString::number(sqi[3], 'f', 2));
+//        //ui->label_SNRg->setText(QString::number(sqi[4], 'f', 2));
+//        //ui->label_SNRb->setText(QString::number(sqi[5], 'f', 2));
+//    //    delete[] sqi;
+//    //}
+//    //if (!refresh_plot_timer->isActive())
+//    //    refresh_plot_timer->start(20);
+//}
 void MainWindow::on_device_selected(capture::CameraDevice* device) {
     if (device == nullptr) {
         comboBox_cameras->setCurrentIndex(-1); 
@@ -171,7 +155,7 @@ void MainWindow::on_device_selected(capture::CameraDevice* device) {
     }
 }
 
-void MainWindow::on_device_disabled(capture::CameraDevice* device) {
+void MainWindow::on_capture_device_disabled(capture::CameraDevice* device) {
     int idx = comboBox_cameras->findData(QVariant::fromValue(device));
     if (idx!=-1 && idx == comboBox_cameras->currentIndex()) {
         lock_camera_info_play(false);
@@ -417,20 +401,33 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     ui->plot_ppg->graph(1)->removeFromLegend();
     ui->plot_ppg->graph(2)->removeFromLegend();
 
+    signalProcess = new SignalProcess(ui->fftLabel);
 
     ui->plot_interp->xAxis2->setTicker(timeTicker);
+    ui->plot_interp->addGraph();    
+    signalProcess->graph_r = ui->plot_interp->graph(0);
+    ui->plot_interp->addGraph();    
+    signalProcess->graph_g = ui->plot_interp->graph(1);
+    ui->plot_interp->addGraph(); 
+    signalProcess->graph_b= ui->plot_interp->graph(2);
+    ui->plot_interp->addGraph(); 
+    signalProcess->graph_pos = ui->plot_interp->graph(3);
     ui->plot_interp->addGraph();
-    ui->plot_interp->graph(0)->setPen(QPen(QColorConstants::Red));
-    ui->plot_interp->addGraph();
-    ui->plot_interp->graph(1)->setPen(QPen(QColorConstants::Green));
-    ui->plot_interp->addGraph();
-    ui->plot_interp->graph(2)->setPen(QPen(QColorConstants::Blue));
+    signalProcess->graph_pos_end = ui->plot_interp->graph(4);
     ui->plot_interp->addGraph(ui->plot_interp->xAxis2, ui->plot_interp->yAxis2);
-    ui->plot_interp->graph(3)->setPen(QPen(QColorConstants::Black));
+    signalProcess->graph_ppg = ui->plot_interp->graph(5);
+
+    signalProcess->graph_r->setPen(QPen(QColorConstants::Red));
+    signalProcess->graph_g->setPen(QPen(QColorConstants::Green));
+    signalProcess->graph_b->setPen(QPen(QColorConstants::Blue));
+    signalProcess->graph_pos->setPen(QPen(QColorConstants::Magenta));
+    signalProcess->graph_pos_end->setPen(QPen(QColorConstants::Magenta));
+    signalProcess->graph_ppg->setPen(QPen(QColorConstants::Cyan));
+    // signalProcess thread takes control plot on graph algorithm, main thread used for refresh realtime
+
     ui->plot_interp->xAxis2->setVisible(true);
     ui->plot_interp->xAxis->setVisible(false);
 
-    signalProcess = new SignalProcess(ui->fftLabel);
     auto th2 = new QThread();
     signalProcess->moveToThread(th2);
     th2->start();
@@ -441,9 +438,9 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
 
     capture = new Capture(*converter, signalProcess);
     converter->moveToThread(converterThread);
-    connect(capture, &Capture::device_disabled, this, &MainWindow::on_device_disabled);
+    connect(capture, &Capture::device_disabled, this, &MainWindow::on_capture_device_disabled);
     connect(capture->signalProcess, &SignalProcess::fftReady, this, &MainWindow::setfft);
-    connect(converter, &Converter::frameReady, ui->q_video, &ImageViewer::setImage);
+    auto o = QObject::connect(converter, &Converter::frameReady, ui->q_video, &ImageViewer::setImage);
     connect(converter, &Converter::device_selected, this, &MainWindow::on_device_selected);
 
     converterThread->start();
@@ -476,8 +473,6 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     connect(ui->actionG, &QPushButton::toggled, capture->signalProcess, &SignalProcess::setShowG);
     connect(ui->actionB, &QPushButton::toggled, capture->signalProcess, &SignalProcess::setShowB);
 
-    connect(capture->signalProcess, &SignalProcess::interpPPGReady, this, &MainWindow::plotInterpPPG);
-    connect(capture->signalProcess, &SignalProcess::interpRGBReady, this, &MainWindow::plotInterpRGB);
     connect(capture, &Capture::signalReady, capture->signalProcess, &SignalProcess::processSignal);
     connect(ui->actionTracking, &QPushButton::clicked, this, [this](bool checked) {
         std::unique_lock l(capture->track_lock);
@@ -628,6 +623,7 @@ static inline int encode_codec_map(PIX_TYPE format) {
     case PIX_TYPE_HFYU:return 1;
     case PIX_TYPE_RAW:return 2;
     }
+    return -1;
 }
 void MainWindow::loadCameraOptions(capture::CameraDevice *device) {
 
@@ -949,7 +945,7 @@ void MainWindow::on_actionrefreshSerial_triggered() {
 }
 
 
-void MainWindow::setfft(QImage image) {
+void MainWindow::setfft(const QImage& image) {
     ui->fftLabel->setPixmap(QPixmap::fromImage(image));
 }
 

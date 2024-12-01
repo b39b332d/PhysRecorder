@@ -16,6 +16,7 @@ set(PROJECT_SOURCES
         capture.cpp
 
         ${utils_dir}/cnpy.cpp ${utils_dir}/qcustomplot.cpp ${utils_dir}/MultiSelectComboBox.cpp
+        signalprocess/signalprocess.cpp
         ${CMAKE_SOURCE_DIR}/data/resources/darkstyle.qrc
 )
 set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_SOURCE_DIR}/data/resources/appicon.rc")
@@ -43,7 +44,7 @@ add_subdirectory(serial)
 add_subdirectory(recorder)
 
 target_link_libraries(PhyRecorder PRIVATE Qt6::Widgets ${OpenCV_LIBS} 
-realsense cam_driver phy_recorder serial)
+realsense cam_driver phy_recorder serial phy_signal)
 
 if(EIGEN3_FOUND)
     target_link_libraries(PhyRecorder PRIVATE Eigen3::Eigen)

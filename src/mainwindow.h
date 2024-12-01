@@ -100,7 +100,7 @@ private slots:
     void onFileChanged(const QString& path);
     bool emitFileSignal(bool,QString p="");
     void select_serial(int);
-    void setfft(QImage);
+    void setfft(const QImage& image);
     void refresh_plot();
     void plotPPG(uint16_t,double);
     void plotRESPI(uchar,double);
@@ -110,8 +110,8 @@ private slots:
     void on_actionrefreshSerial_triggered();
     void on_actionrefreshCamera_triggered();
     void on_actionstopSerial_triggered();
-    void plotInterpPPG(double,double);
-    void plotInterpRGB(float, float, float, double, float*);
+    //void plotInterpPPG(double,double);
+    //void plotInterpRGB(float r, float g, float b, float pos, const QVector<float>& pos_end, double ts);
     void comb_comp_changed(int index);
     //void on_startButton_clicked();
 //void on_stopButton_clicked();
@@ -127,8 +127,6 @@ private slots:
     void onProfileTypeSelected(int);
     void onProfileSelected(int);
 
-    void on_device_disabled(capture::CameraDevice*);
-    void on_device_selected(capture::CameraDevice*);
     private:
         void run_with_call_back(const std::function<void()>& run_in_thread, const std::function<void()>& call_back);
         void lock_camera_info_play(bool lock=true);
@@ -140,5 +138,11 @@ private slots:
         QPushButton* camopt_pushButton[(int)capture::CameraDevice::DEVICE_OPTION_CNT];
         QSlider* camopt_slider[(int)capture::CameraDevice::DEVICE_OPTION_CNT];
 
+
+public slots:
+        void on_capture_device_disabled(capture::CameraDevice*);
+        void on_device_selected(capture::CameraDevice*);
 };
+
+
 #endif // MAINWINDOW_H

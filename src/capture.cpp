@@ -7,6 +7,7 @@
 #include <QSharedPointer>
 #include <algorithm>
 #include <windows.h>
+#include <opencv2/imgcodecs.hpp>
 
 #define RawFrame_CVIMG_(frame) (cv::Mat*)(frame->bgr_frame)
 inline cv::Mat* raw2cvmat_bgr(RawFrame* frame) {
@@ -324,15 +325,14 @@ void Capture::run()
         }
         else if (tracking_mode == STATIC_ROI) {
             if (last_tracking_status != STATIC_ROI) {
-                if (rect_face) {
-                    delete rect_face;
-                    rect_face = NULL;
+                if (!rect_face) {
+                    rect_face = new Rect;
                 }
                 emit loseTracking();
                 last_tracking_status = STATIC_ROI;
             }
-            rect_face = new Rect(roi);
-            emit signalReady(Scalar(mean(color_mat(roi))), (double)(mainFrames.front()->frame_ts) / 1e6);
+            *rect_face = Rect(roi);
+            emit signalReady(Scalar(mean(color_mat(*rect_face))), (double)(mainFrames.front()->frame_ts) / 1e6);
         }
         else{
             if (face_landmarks_last.valid()) {
@@ -382,11 +382,6 @@ void Capture::initInferenceEngine() {
     string path_net_landmarks = root_path + "models/intel/facial-landmarks-35-adas-0002/FP32/facial-landmarks-35-adas-0002";
     string resource_path = root_path + "resources/";
 
-    net_face = readNetFromModelOptimizer(path_net_facedetect + ".xml", path_net_facedetect + ".bin");
-    net_face.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
-    net_face.setPreferableTarget(DNN_TARGET_CPU);
-    net_face.setInput(dnn::blobFromImage(imread(resource_path + "faces.jpg"), 1, Size(300, 300)));
-    net_face.forward();
 
     net_landmarks = readNetFromModelOptimizer(path_net_landmarks + ".xml", path_net_landmarks + ".bin");
     net_landmarks.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
@@ -394,6 +389,12 @@ void Capture::initInferenceEngine() {
     Mat test_face = imread(resource_path + "face.jpg");
     net_landmarks.setInput(dnn::blobFromImage(test_face, 1, Size(60, 60)));
     auto w = net_landmarks.forwardAsync();
+
+    net_face = readNetFromModelOptimizer(path_net_facedetect + ".xml", path_net_facedetect + ".bin");
+    net_face.setPreferableBackend(DNN_BACKEND_INFERENCE_ENGINE);
+    net_face.setPreferableTarget(DNN_TARGET_CPU);
+    net_face.setInput(dnn::blobFromImage(imread(resource_path + "faces.jpg"), 1, Size(300, 300)));
+    net_face.forward();
     cv:Mat out;
     w.get(out);
 }
