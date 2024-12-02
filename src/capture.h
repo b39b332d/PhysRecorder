@@ -16,7 +16,7 @@
 extern std::mutex recorder_lock;
 extern std::string record_prefix;
 extern bool is_recording;
-extern std::unordered_map<capture::CameraStream*, std::pair<MediaWriter*, std::vector<double>*>> rec_maps;
+extern std::unordered_map<capture::CameraStream*, MediaWriter*> rec_maps;
 
 class Capture : public QThread
 {

@@ -10,7 +10,7 @@
 #define Y_SCALE  10
 extern QCPGraph* graph_r, * graph_g, * graph_b, * graph_pos, * graph_pos_end, * graph_ppg;
 
-
+extern double win_length;
 SignalProcess::SignalProcess(QLabel* videoLabel)
     :videoLabel(videoLabel)
     , previous_bgr(-1,-1,-1,-1)
@@ -59,6 +59,12 @@ void SignalProcess::processSignal(cv::Scalar bgr_signal, double ts) {
         current_ts = (double)(ts_temp - ts_temp % 10) / 1000;
         previous_bgr = bgr_signal;
         previous_bgr_ts = ts;
+        i_loop = 0;
+
+        RPPGExtractor::reset(r_channel);
+        RPPGExtractor::reset(g_channel);
+        RPPGExtractor::reset(b_channel);
+        RPPGExtractor::reset(pos_channel);
     }
     else {
         while (ts > current_ts + INTERP_CYC) {
@@ -111,77 +117,55 @@ void SignalProcess::processSignal(cv::Scalar bgr_signal, double ts) {
             cv::Mat *canvas_spectrum = new cv::Mat;
             cv::Mat(canvas, cv::Rect2i(0, MAX_SPECTRUM - y_true_max, canvas.cols, y_true_max)).copyTo(*canvas_spectrum);
             int win_len = win_length * INTERP_FS;
+            int max_idx = -1;
+            float snr;
+            unsigned ofs_rgb = 0, ofs_ref=0;
             if (current_ts_ppg == 0) {
-                int max_idx = -1;
-                auto spec =RPPGExtractor::get_spectrum(pos_channel, 0, win_len, max_idx);
+                auto spec = RPPGExtractor::get_spectrum(pos_channel, 0, win_len, max_idx);
                 spec.convertTo(point_list_mat.col(1), CV_32S, -Y_SCALE, y_true_max);
                 polylines(*canvas_spectrum, point_list_mat, false, cv::Scalar_<uint8_t>(255, 0, 255));
 
-                int hormonic_idx = (max_idx + FFT_ROI_MIN) * X_SCALE - FFT_ROI_MIN - 1 ;
+                int hormonic_idx = (max_idx + FFT_ROI_MIN) * X_SCALE - FFT_ROI_MIN - 1;
                 cv::line(*canvas_spectrum, cv::Point2i(max_idx * X_SCALE, 0), cv::Point2i(max_idx * X_SCALE, y_true_max), cv::Scalar_<uint8_t>(0, 0, 0), 2);
                 cv::line(*canvas_spectrum, cv::Point2i(hormonic_idx * X_SCALE, 0), cv::Point2i(hormonic_idx * X_SCALE, y_true_max), cv::Scalar_<uint8_t>(0, 0, 0), 1);
-                
-                float snr;
-                if (show_r) {
-                    auto spec = RPPGExtractor::get_spectrum(r_channel, 0, win_len, max_idx, &snr);
-                    spec.convertTo(point_list_mat.col(1), CV_32S, -Y_SCALE, y_true_max);
-                    polylines(*canvas_spectrum, point_list_mat, false, cv::Scalar_<uint8_t>(0, 0, 255));
-                }
-                if (show_g) {
-                    auto spec = RPPGExtractor::get_spectrum(g_channel, 0, win_len, max_idx, &snr);
-                    spec.convertTo(point_list_mat.col(1), CV_32S, -Y_SCALE, y_true_max);
-                    polylines(*canvas_spectrum, point_list_mat, false, cv::Scalar_<uint8_t>(0, 255, 0));
-                }
-                if (show_b) {
-                    auto spec = RPPGExtractor::get_spectrum(b_channel, 0, win_len, max_idx, &snr);
-                    spec.convertTo(point_list_mat.col(1), CV_32S, -Y_SCALE, y_true_max);
-                    polylines(*canvas_spectrum, point_list_mat, false, cv::Scalar_<uint8_t>(255, 0, 0));
-                }
-
-                RPPGExtractor::get_sqi(b_channel, pos_channel, win_len);
-                RPPGExtractor::get_sqi(g_channel, pos_channel, win_len);
-                RPPGExtractor::get_sqi(r_channel, pos_channel, win_len);
-
             }
             else {
                 int ts_ofs = round(((current_ts_ppg - current_ts) + cam_ofs) * INTERP_FS);
+                ofs_ref = (ts_ofs > 0 ? ts_ofs : 0);
+                ofs_rgb = (ts_ofs < 0 ? -ts_ofs : 0);
 
-                int max_idx = -1;
-                unsigned ofs_ref = (ts_ofs > 0 ? ts_ofs : 0);
-                unsigned ofs_rgb = (ts_ofs < 0 ? -ts_ofs : 0);
                 auto spec = RPPGExtractor::get_spectrum(ref_channel, ofs_ref, win_len, max_idx);
-                spec.convertTo(point_list_mat.col(1), CV_32S, -Y_SCALE, y_true_max);
+                spec.convertTo(point_list_mat.col(1), CV_32S,  - 15.0*Y_SCALE/ (spec.at<float>(max_idx, 0)+1e-7), y_true_max);
                 polylines(*canvas_spectrum, point_list_mat, false, cv::Scalar_<uint8_t>(255, 255, 0));
                 int hormonic_idx = (max_idx + FFT_ROI_MIN) * X_SCALE - FFT_ROI_MIN - 1;
                 cv::line(*canvas_spectrum, cv::Point2i(max_idx * X_SCALE, 0), cv::Point2i(max_idx * X_SCALE, y_true_max), cv::Scalar_<uint8_t>(0, 0, 0), 2);
                 cv::line(*canvas_spectrum, cv::Point2i(hormonic_idx * X_SCALE, 0), cv::Point2i(hormonic_idx * X_SCALE, y_true_max), cv::Scalar_<uint8_t>(0, 0, 0), 1);
 
-
-                float snr;
                 auto spec1 = RPPGExtractor::get_spectrum(pos_channel, ofs_rgb,win_len, max_idx,&snr);
-                spec.convertTo(point_list_mat.col(1), CV_32S, -Y_SCALE, y_true_max);
+                spec1.convertTo(point_list_mat.col(1), CV_32S, -Y_SCALE, y_true_max);
                 polylines(*canvas_spectrum, point_list_mat, false, cv::Scalar_<uint8_t>(255, 0, 255));
-
-                if (show_r) {
-                    auto spec= RPPGExtractor::get_spectrum(r_channel, ofs_rgb, win_len, max_idx, &snr);
-                    spec.convertTo(point_list_mat.col(1), CV_32S, -Y_SCALE, y_true_max);
-                    polylines(*canvas_spectrum, point_list_mat, false, cv::Scalar_<uint8_t>(0, 0, 255));
-                }
-                if (show_g) {
-                    auto spec = RPPGExtractor::get_spectrum(g_channel, ofs_rgb, win_len, max_idx, &snr);
-                    spec.convertTo(point_list_mat.col(1), CV_32S, -Y_SCALE, y_true_max);
-                    polylines(*canvas_spectrum, point_list_mat, false, cv::Scalar_<uint8_t>(0, 255, 0));
-                }
-                if (show_b) {
-                    auto spec = RPPGExtractor::get_spectrum(b_channel, ofs_rgb, win_len, max_idx, &snr);
-                    spec.convertTo(point_list_mat.col(1), CV_32S, -Y_SCALE, y_true_max);
-                    polylines(*canvas_spectrum, point_list_mat, false, cv::Scalar_<uint8_t>(255, 0, 0));
-                }
-                RPPGExtractor::get_sqi(b_channel, ref_channel, win_len, ofs_rgb, ofs_ref);
-                RPPGExtractor::get_sqi(g_channel, ref_channel, win_len, ofs_rgb, ofs_ref);
-                RPPGExtractor::get_sqi(r_channel, ref_channel, win_len, ofs_rgb, ofs_ref);
                 RPPGExtractor::get_sqi(pos_channel, ref_channel, win_len, ofs_rgb, ofs_ref);
+
             }
+            if (show_r) {
+                auto spec = RPPGExtractor::get_spectrum(r_channel, ofs_rgb, win_len, max_idx, &snr);
+                spec.convertTo(point_list_mat.col(1), CV_32S, -Y_SCALE, y_true_max);
+                polylines(*canvas_spectrum, point_list_mat, false, cv::Scalar_<uint8_t>(0, 0, 255));
+            }
+            if (show_g) {
+                auto spec = RPPGExtractor::get_spectrum(g_channel, ofs_rgb, win_len, max_idx, &snr);
+                spec.convertTo(point_list_mat.col(1), CV_32S, -Y_SCALE, y_true_max);
+                polylines(*canvas_spectrum, point_list_mat, false, cv::Scalar_<uint8_t>(0, 255, 0));
+            }
+            if (show_b) {
+                auto spec = RPPGExtractor::get_spectrum(b_channel, ofs_rgb, win_len, max_idx, &snr);
+                spec.convertTo(point_list_mat.col(1), CV_32S, -Y_SCALE, y_true_max);
+                polylines(*canvas_spectrum, point_list_mat, false, cv::Scalar_<uint8_t>(255, 0, 0));
+            }                
+            RPPGExtractor::get_sqi(b_channel, ref_channel, win_len, ofs_rgb, ofs_ref);
+            RPPGExtractor::get_sqi(g_channel, ref_channel, win_len, ofs_rgb, ofs_ref);
+            RPPGExtractor::get_sqi(r_channel, ref_channel, win_len, ofs_rgb, ofs_ref);
+
 
             emit fftReady(QImage(canvas_spectrum->data,
                 canvas_spectrum->cols, y_true_max,
@@ -222,12 +206,15 @@ void SignalProcess::setShowB(bool isChecked) {
     show_b = isChecked;
     show_channel(b_channel, graph_b, isChecked);
 }
-void SignalProcess::processPPG(uint16_t ppg, double ts) {
-    if (current_ts_ppg == 0) {
+
+void SignalProcess::processPPG(double ppg, double ts) {
+    if (current_ts_ppg == 0 ) {
         int64_t ts_temp = ts * 1000;
         current_ts_ppg = (double)(ts_temp - ts_temp % 10) / 1000;
         previous_ppg_ts = ts;
         previous_ppg = ppg;
+        i_loop_ppg = 0;
+        RPPGExtractor::reset(ref_channel);
     }
     else {
         while (ts > current_ts_ppg + INTERP_CYC) {
@@ -236,7 +223,7 @@ void SignalProcess::processPPG(uint16_t ppg, double ts) {
             float  ref = (double)previous_ppg + (double)(previous_ppg - ppg) / (previous_ppg_ts - ts) * (previous_ppg_ts - current_ts_ppg);
             double raw_ref  = RPPGExtractor::process_signal(ref_channel, ref);
             if (i_loop_ppg % UPDATE_RGB_GRAPH_STRIDE == 0) {
-                graph_ppg->addData(current_ts_ppg, ppg);
+                graph_ppg->addData(current_ts_ppg, raw_ref);
                 graph_ppg->data()->removeBefore(ts - win_length);
             }
         }
@@ -244,11 +231,20 @@ void SignalProcess::processPPG(uint16_t ppg, double ts) {
         previous_ppg = ppg;
     }
 }
-void SignalProcess::reset() {
+void SignalProcess::reset_rppg() {
     current_ts = 0;
-    i_loop = 0;
-    i_loop_ppg = 0;
-    current_ts_ppg = 0;
-    RPPGExtractor::reset();
-    previous_bgr = { -1,-1,-1,-1 };
 }
+
+void SignalProcess::reset_ppg() {
+    current_ts_ppg = 0;
+}
+
+
+//void SignalProcess::reset() {
+//    current_ts = 0;
+//    i_loop = 0;
+//    i_loop_ppg = 0;
+//    current_ts_ppg = 0;
+//    RPPGExtractor::reset();
+//    previous_bgr = { -1,-1,-1,-1 };
+//}

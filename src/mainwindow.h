@@ -10,14 +10,13 @@
 #include <vector>
 #include <qcombobox.h>
 #include <QFileSystemWatcher>
-#include "ppg.h"
-#include "respi.h"
-#include "custom_serial.h"
-#include "cnpy.h"
 #include <CameraCapture.h>
 #include <MultiSelectComboBox.h>
-#include<QCheckBox>
-#include<QPushButton>
+#include <QCheckBox>
+#include <QPushButton>
+#include <unordered_set>
+#include <SerialReader.h>
+
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
@@ -56,15 +55,12 @@ private:
     QLatin1Char zeropad;
     QComboBox* comboBox_profile;
     QComboBox* comboBox_profile_type;
+    std::unordered_set<SerialReader*> rec_SerialReaders;
     QComboBox* comboBox_cameras;
     MultiSelectComboBox* comboBox_stream;
-    QComboBox* comboBox_serial;
+    MultiSelectComboBox* comboBox_serial;
     QSpinBox* spinRecordTime;
     QLineEdit* filenameLineEdit;
-    PPGReader* ppg;
-    RESPIReader* respi;
-    CustomSerialReader* custom_serial;
-    std::vector<serial::PortInfo> serial_devices;
     QTimer* record_timer;
     int spin_record_last_time;
     double show_window_length = 6.0;
@@ -75,18 +71,11 @@ private:
     void set_sensor_property();
 
     std::vector<std::string>stream_names;
-    std::vector<uint16_t> ppg_sig_rec;
-    std::vector<uchar> respi_sig_rec;
-    std::vector<double> ppg_ts_rec;
-    std::vector<double> respi_ts_rec;
 
-    std::vector<uint32_t> serial_sig_rec;
-    std::vector<double> serial_ts_rec;
     bool is_opened = false;
 
     QTimer* refresh_plot_timer;
     void refreshCameras();
-    void freshSerialDevices();
     void saveSignals();
     //void setCamInfo(CameraInfo*);
     //Q_SIGNAL void setColorReady(uint8_t, uint8_t, uint8_t);
@@ -99,12 +88,9 @@ private:
 private slots:
     void onFileChanged(const QString& path);
     bool emitFileSignal(bool,QString p="");
-    void select_serial(int);
     void setfft(const QImage& image);
     void refresh_plot();
-    void plotPPG(uint16_t,double);
-    void plotRESPI(uchar,double);
-    void plotCustomSerial(uint32_t, double);
+
     void on_actionStartTrigger_triggered();
     void on_actionRecord_triggered();
     void on_actionrefreshSerial_triggered();
@@ -122,8 +108,6 @@ private slots:
     //void set_profile(int);
 
     void onCameraSelected(int);
-    void onStreamSelected(int, bool is_selected);
-    void onStreamHighted(int, bool);
     void onProfileTypeSelected(int);
     void onProfileSelected(int);
 
@@ -142,6 +126,13 @@ private slots:
 public slots:
         void on_capture_device_disabled(capture::CameraDevice*);
         void on_device_selected(capture::CameraDevice*);
+        void onSerialStopped(SerialReader* reader);
+        void onSerialSelected(int, bool);
+        void onSerialHighted(int idx, bool is_highlight);
+
+        void onStreamSelected(int, bool is_selected);
+        void onStreamHighted(int, bool);
+        void onSerialGraphSelectionChanged();
 };
 
 

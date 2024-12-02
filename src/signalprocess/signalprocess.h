@@ -19,13 +19,13 @@ public:
     Q_SIGNAL void rqiReady(double, double, double);
     Q_SIGNAL void fftReady(const QImage&);
     Q_SLOT void processSignal(cv::Scalar,double);
-    Q_SLOT void  processPPG(uint16_t ppg, double ts);
-    Q_SLOT void reset();
+    Q_SLOT void  processPPG(double ppg, double ts);
+    Q_SLOT void reset_ppg();
+    Q_SLOT void reset_rppg();
     Q_SLOT void setShowR(bool);
     Q_SLOT void setShowG(bool);
     Q_SLOT void setShowB(bool);
     std::atomic<double> cam_ofs = 0;
-    std::atomic<double> win_length = 6;
 private:
     double current_ts = 0;
     double current_ts_ppg = 0;

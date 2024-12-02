@@ -52,9 +52,8 @@ using namespace cnpy;
 using namespace cv::dnn;
 
 std::mutex recorder_lock;
-std::string record_prefix;
 bool is_recording = false;
-std::unordered_map<capture::CameraStream*, std::pair<MediaWriter*, std::vector<double>*>> rec_maps;
+std::unordered_map<capture::CameraStream*, MediaWriter*> rec_maps;
 
 uchar depthr_p[] = { 255,255,255,0,0,64 };
 uchar depthg_p[] = { 0,165,255,255,0,64 };
@@ -73,7 +72,7 @@ Capture::Capture(Converter& converter, SignalProcess* sp) :
     initInferenceEngine();
     QObject::connect(this, &Capture::updateFrame, &converter, &Converter::frame_ready);
 
-    connect(this, &Capture::loseTracking, sp, &SignalProcess::reset);
+    connect(this, &Capture::loseTracking, sp, &SignalProcess::reset_rppg);
 
     //In order to begin getting data from the sensor, we need to register a class to handle frames, 
     // in our case we provide the frame_queue when starting the sensor.
@@ -357,8 +356,7 @@ void Capture::run()
             for (auto& [stream, rec] : rec_maps) {
                 for (auto frame : frame_set[stream]) {
                     frame->acquire();
-                    rec.first->write(frame);
-                    rec.second->push_back((float)(frame->frame_ts)/1e6 - signalProcess->cam_ofs);
+                    rec->write(frame);
                 }
             }
         }

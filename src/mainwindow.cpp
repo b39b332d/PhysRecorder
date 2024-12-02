@@ -12,6 +12,12 @@
 #include <RPPGExtractor.h>
 
 
+#include "custom_serial.h"
+#include "ppg.h"
+#include "respi.h"
+#include "cnpy.h"
+double win_length=8;
+
 void MainWindow::lock_camera_info_play(bool lock) {
     comboBox_profile_type->setDisabled(lock);
     comboBox_profile->setDisabled(lock);
@@ -28,119 +34,33 @@ void MainWindow::lock_camera_info_play(bool lock) {
     }
 }
 
-void MainWindow::run_with_call_back(const std::function<void()>& run_in_thread, const std::function<void()>& call_back) {
-    static QThread* th = NULL;
-    if (th != NULL) {
-        th->wait();
-        th->deleteLater();
-        th = NULL;
+
+static QThread* process_thread = NULL;
+void MainWindow::run_with_call_back(const std::function<void()>& run_in_thread, const std::function<void()>& call_back = []() {}) {
+    if (process_thread != NULL) {
+        process_thread->wait();
+        process_thread->deleteLater();
+        process_thread = NULL;
     }
-    th = QThread::create(run_in_thread);
-    connect(th, &QThread::finished, this, call_back);
-    th->start();
+    process_thread = QThread::create(run_in_thread);
+    connect(process_thread, &QThread::finished, this, call_back);
+    process_thread->start();
 }
 
 void MainWindow::refresh_plot() {
-    static uchar ref_cnt = 0;
-    static bool ppgStatusFinished = true;
-    static bool respiStatusFinished = true;
-    static bool serialStatusFinished = true;
-    if (ppg->isRunning() ){
-        if (ppgStatusFinished) {
-            ppgStatusFinished = false;
-            ui->plot_ppg->graph(0)->addToLegend();
-        }
-    }
-    else if(!ppgStatusFinished) {
-        ppgStatusFinished = true;
-        ui->plot_ppg->graph(0)->removeFromLegend();
-    }
-    if (respi->isRunning()){
-        if (respiStatusFinished) {
-            respiStatusFinished = false;
-                ui->plot_ppg->graph(1)->addToLegend();
-        }
-    }
-    else if (!respiStatusFinished) {
-        respiStatusFinished = true;
-        ui->plot_ppg->graph(1)->removeFromLegend();
-    }
-    if (custom_serial->isRunning()) {
-        if (serialStatusFinished) {
-            serialStatusFinished = false;
-            ui->plot_ppg->graph(2)->addToLegend();
-        }
-    }
-    else if (!serialStatusFinished) {
-        serialStatusFinished = true;
-        ui->plot_ppg->graph(2)->removeFromLegend();
-    }
+
     double ts = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count() + 0.1;
-    ui->plot_ppg->xAxis->setRange(ts, show_window_length, Qt::AlignRight);
-    if (ref_cnt++ % 10 == 0) {
-        ui->plot_ppg->graph(2)->data()->removeBefore(ts - show_window_length);
-        ui->plot_ppg->graph(1)->data()->removeBefore(ts - show_window_length);
-        ui->plot_ppg->graph(0)->data()->removeBefore(ts - show_window_length);
-
-
-    }
     ui->plot_interp->xAxis->setRange(ts + signalProcess->cam_ofs, show_window_length, Qt::AlignRight);
     ui->plot_interp->xAxis2->setRange(ts, show_window_length, Qt::AlignRight);
     ui->plot_interp->yAxis->rescale();
     ui->plot_interp->yAxis2->rescale();
-    ui->plot_ppg->yAxis2->rescale();
     ui->plot_interp->replot();
+
+    ui->plot_ppg->xAxis->setRange(ts, show_window_length, Qt::AlignRight);
+    ui->plot_ppg->yAxis2->rescale();
     ui->plot_ppg->replot();
 }
 
-void MainWindow::plotCustomSerial(uint32_t signal, double ts) {
-    ui->plot_ppg->graph(2)->addData(ts, (double)signal / 0xFFFFFFFF);
-    if (is_recording) {
-        serial_ts_rec.push_back(ts);
-        serial_sig_rec.push_back(signal);
-    }
-    
-}
-void MainWindow::plotPPG(uint16_t signal,double ts) {
-    ui->plot_ppg->graph(0)->addData(ts, (double)signal/1024);
-    //if (!refresh_plot_timer->isActive())
-    //    refresh_plot_timer->start(20);
-    if (is_recording) {
-        ppg_ts_rec.push_back(ts);
-        ppg_sig_rec.push_back(signal);
-    }
-    // rescale value (vertical) axis to fit the current data:
-    //ui->plot_ppg->graph(0)->rescaleValueAxis();
-}
-void MainWindow::plotRESPI(uchar signal,double ts) {
-    ui->plot_ppg->graph(1)->addData(ts, (double)signal/256);
-    //if (!refresh_plot_timer->isActive())
-    //    refresh_plot_timer->start(20);
-    if (is_recording) {
-        respi_ts_rec.push_back(ts);
-        respi_sig_rec.push_back(signal);
-    }
-    // rescale value (vertical) axis to fit the current data:
-    //ui->plot_ppg->graph(1)->rescaleValueAxis();
-}
-
-//void MainWindow::plotInterpPPG(double ppg, double ts) {
-//
-//}
-//void MainWindow::plotInterpRGB(float r, float g, float b, float pos, const QVector<float>& pos_end, double ts) {
-//    //qDebug() << r << g << b << ts << QThread::currentThreadId();
-//    //if (sqi != NULL) {
-//        //ui->label_SQIr->setText(QString::number(sqi[0], 'f', 2));
-//        //ui->label_SQIg->setText(QString::number(sqi[1], 'f', 2));
-//        //ui->label_SQIb->setText(QString::number(sqi[2], 'f', 2));
-//        //ui->label_SNRr->setText(QString::number(sqi[3], 'f', 2));
-//        //ui->label_SNRg->setText(QString::number(sqi[4], 'f', 2));
-//        //ui->label_SNRb->setText(QString::number(sqi[5], 'f', 2));
-//    //    delete[] sqi;
-//    //}
-//    //if (!refresh_plot_timer->isActive())
-//    //    refresh_plot_timer->start(20);
-//}
 void MainWindow::on_device_selected(capture::CameraDevice* device) {
     if (device == nullptr) {
         comboBox_cameras->setCurrentIndex(-1); 
@@ -217,7 +137,7 @@ void MainWindow::onStreamSelected(int idx,bool is_selected) {
     capture::CameraStream* stream = comboBox_stream->itemData(idx).value<capture::CameraStream*>();
 
     if (is_selected) {
-        onStreamHighted(idx, true);
+        //onStreamHighted(idx, true);
         stream->device->register_stream(stream->selected_profile);
         if(comboBox_stream->getSelectedItems().size()!=0)
             ui->actionStartTrigger->setDisabled(false);
@@ -225,7 +145,7 @@ void MainWindow::onStreamSelected(int idx,bool is_selected) {
             ui->actionStartTrigger->setDisabled(true);
     }
     else {
-        onStreamHighted(idx, false);
+        //onStreamHighted(idx, false);
         stream->device->unregister_stream(stream);
     }
 }
@@ -233,8 +153,6 @@ void MainWindow::onStreamHighted(int idx, bool is_highlight) {
 
     if (is_highlight) {
         capture::CameraStream* stream = comboBox_stream->itemData(idx).value<capture::CameraStream*>();
-
-        comboBox_stream->setText(comboBox_stream->getItemText(idx));
         comboBox_profile_type->clear();
         comboBox_profile->clear();
         int item_idx = 0;
@@ -252,13 +170,36 @@ void MainWindow::onStreamHighted(int idx, bool is_highlight) {
         comboBox_profile_type->setCurrentIndex(select_idx);
     }
     else {
-        comboBox_stream->setText(QString("%1 Streams")
-            .arg(comboBox_stream->getSelectedItems().size()));
         comboBox_profile_type->clear();
         comboBox_profile_type->setCurrentIndex(-1);
         comboBox_profile->clear();
         comboBox_profile->setCurrentIndex(-1);
     }
+}
+
+void MainWindow::onSerialHighted(int idx, bool is_highlight) {
+    //if (idx == -1) return; // deselect all
+    SerialReader* stream = comboBox_serial->itemData(idx).value<SerialReader*>();
+    auto graph = stream->graph;
+    if (is_highlight) {
+        if (graph) {
+            graph->setValueAxis(ui->plot_ppg->yAxis2);
+            ui->plot_ppg->legend->itemWithPlottable(graph)->setSelected(true);
+            graph->setSelection(QCPDataSelection(QCPDataRange(0,500)));
+            connect(stream, &SerialReader::serial_ready, signalProcess, &SignalProcess::processPPG);
+
+        }
+    }
+    else {
+        if (graph) {
+            QMetaObject::invokeMethod(signalProcess, &SignalProcess::reset_ppg);
+            graph->setValueAxis(ui->plot_ppg->yAxis);
+            graph->setSelection(QCPDataSelection());
+            ui->plot_ppg->legend->itemWithPlottable(graph)->setSelected(false);
+            disconnect(stream, &SerialReader::serial_ready, signalProcess, &SignalProcess::processPPG);
+        }
+    }
+
 }
 
 void MainWindow::onProfileTypeSelected(int idx) {
@@ -302,11 +243,7 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
 {
     splash.showMessage("Setting up UI");
     ui->setupUi(this);
-    ////*** trial version ***////
-    //Validation *val = new Validation();
-    //val->start();
 
-    //ui->statusIndicatorLabel->setStyleSheet("QLabel { color : cyan; }");
 
     this->setWindowTitle("Remote PhotoPlethysmoGraphy");
 
@@ -315,8 +252,8 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     comboBox_profile_type = new QComboBox(ui->toolBarRS);
     comboBox_profile = new QComboBox(ui->toolBarRS);
     comboBox_cameras->setFixedWidth(225);
-    comboBox_stream->setFixedWidth(100);
-    comboBox_profile_type->setFixedWidth(100);
+    comboBox_stream->setFixedWidth(110);
+    comboBox_profile_type->setFixedWidth(60);
     comboBox_profile->setFixedWidth(130);
     ui->toolBarRS->addWidget(comboBox_cameras);
     ui->toolBarRS->addWidget(comboBox_stream);
@@ -334,30 +271,31 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     ui->actionstopSerial->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
 
 
-    comboBox_serial = new QComboBox(ui->toolBarSD);
+    comboBox_serial = new MultiSelectComboBox(ui->toolBarSD);
     comboBox_serial->setFixedWidth(150);
     ui->toolBarSD->insertWidget(ui->actionstopSerial, comboBox_serial);
-    connect(comboBox_serial, &QComboBox::activated, this, &MainWindow::select_serial);
+    connect(comboBox_serial, &MultiSelectComboBox::selectionChanged, this, &MainWindow::onSerialSelected);
+    connect(comboBox_serial, &MultiSelectComboBox::heightSelect, this, &MainWindow::onSerialHighted);
 
 
-    auto labelname1 = new QLabel(ui->toolBarRC);
-    labelname1->setText("time(s):");
-    //labelname1->setFixedWidth(80);
-    labelname1->setAttribute(Qt::WA_TranslucentBackground);
-    ui->toolBarRC->addWidget(labelname1);
+    //auto labelname1 = new QLabel(ui->toolBarRC);
+    //labelname1->setText("time(s):");
+    ////labelname1->setFixedWidth(80);
+    //labelname1->setAttribute(Qt::WA_TranslucentBackground);
+    //ui->toolBarRC->addWidget(labelname1);
 
-    spinRecordTime = new QSpinBox(ui->toolBarRC);
-    spinRecordTime->setMaximum(99999);
-    spinRecordTime->setMinimum(-1);
-    spinRecordTime->setValue(-1);
-    ui->toolBarRC->addWidget(spinRecordTime);
+    //spinRecordTime = new QSpinBox(ui->toolBarRC);
+    //spinRecordTime->setMaximum(99999);
+    //spinRecordTime->setMinimum(-1);
+    //spinRecordTime->setValue(-1);
+    //ui->toolBarRC->addWidget(spinRecordTime);
 
-    auto labelname2 = new QLabel(ui->toolBarRC);
-    labelname2->setText("filename:");
-    labelname2->setAttribute(Qt::WA_TranslucentBackground);
-    ui->toolBarRC->addWidget(labelname2);
-    filenameLineEdit = new QLineEdit(ui->toolBarRC);
-    ui->toolBarRC->addWidget(filenameLineEdit);
+    //auto labelname2 = new QLabel(ui->toolBarRC);
+    //labelname2->setText("filename:");
+    //labelname2->setAttribute(Qt::WA_TranslucentBackground);
+    //ui->toolBarRC->addWidget(labelname2);
+    //filenameLineEdit = new QLineEdit(ui->toolBarRC);
+    //ui->toolBarRC->addWidget(filenameLineEdit);
 
 
     record_timer = new QTimer(this);
@@ -375,7 +313,7 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     splash.showMessage("Detecting Realsense Device...");
     on_actionrefreshCamera_triggered();
 
-
+    splash.showMessage("Init Plot...");
 
     refresh_plot_timer = new QTimer(this);
     connect(refresh_plot_timer, &QTimer::timeout, this, &MainWindow::refresh_plot);
@@ -385,21 +323,17 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     ui->plot_ppg->legend->setBrush(QBrush(QColor(255, 255, 255, 230)));
 
     ui->plot_ppg->xAxis->setTicker(timeTicker);
-    ui->plot_ppg->yAxis->setRange(0, 1);
-    ui->plot_ppg->addGraph();
-    ui->plot_ppg->graph(0)->setPen(QPen(QColor(40, 110, 255)));
-    ui->plot_ppg->graph(0)->setName("PPG");
-    ui->plot_ppg->addGraph();
-    ui->plot_ppg->graph(1)->setPen(QPen(QColor(255, 110, 40)));
-    ui->plot_ppg->graph(1)->setName("RESPI");
+    ui->plot_ppg->yAxis->setRange(-0.05, 1.05);
 
-    ui->plot_ppg->addGraph(ui->plot_ppg->xAxis, ui->plot_ppg->yAxis2);
-    ui->plot_ppg->graph(2)->setName("SERIAL");
-    ui->plot_ppg->graph(2)->setPen(QPen(QColor(10, 255, 40)));
-    ui->plot_ppg->yAxis2->setVisible(false);
-    ui->plot_ppg->graph(0)->removeFromLegend();
-    ui->plot_ppg->graph(1)->removeFromLegend();
-    ui->plot_ppg->graph(2)->removeFromLegend();
+
+    QFont legendFont = font();
+    legendFont.setPointSize(10);
+    ui->plot_ppg->setInteractions( QCP::iSelectLegend | QCP::iSelectPlottables);
+    ui->plot_ppg->legend->setFont(legendFont);
+    ui->plot_ppg->legend->setSelectedFont(legendFont);
+    ui->plot_ppg->legend->setSelectableParts(QCPLegend::spItems);
+    connect(ui->plot_ppg, &QCustomPlot::selectionChangedByUser, this, &MainWindow::onSerialGraphSelectionChanged);
+
 
     signalProcess = new SignalProcess(ui->fftLabel);
 
@@ -446,26 +380,16 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     converterThread->start();
 
     splash.showMessage("Detecting Serial Device...");
-
-    respi = new RESPIReader();
-    connect(respi, &RESPIReader::respiReady, this, &MainWindow::plotRESPI);
-
-    ppg = new PPGReader();
-    connect(ppg, &PPGReader::ppgReady, this, &MainWindow::plotPPG);
-    connect(ppg, &PPGReader::ppgReady, capture->signalProcess, &SignalProcess::processPPG);
-
-    custom_serial = new CustomSerialReader();
-    connect(custom_serial, &CustomSerialReader::serialReady, this, &MainWindow::plotCustomSerial);
     
 
-    connect(custom_serial, &PPGReader::finished, this, [this] {
-        comboBox_serial->setCurrentIndex(-1);
-        });
-
-    freshSerialDevices();
+    on_actionrefreshSerial_triggered();
+    if (process_thread != NULL) {
+        process_thread->wait();
+        process_thread->deleteLater();
+        process_thread = NULL;
+    }
 
     ui->VideoBox->hide();
-
 
 
     splash.showMessage("Connect signals");
@@ -569,7 +493,7 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     connect(ui->window_slider, &QSlider::valueChanged, this, [this](int val) {
         show_window_length = (double)val / 10;
         ui->label_window_len->setText(QString::number(show_window_length, 'f', 1)+"s");
-        signalProcess->win_length = show_window_length;
+        win_length = show_window_length;
         });
 
     connect(ui->sliderCamOfs, &QSlider::valueChanged, this, [this](int val) {
@@ -604,9 +528,6 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     //connect(capture, &Capture::finished, this, &MainWindow::capFinished);
 
     refresh_plot_timer->start(50);
-    //connect(capture, &Capture::cap_started, this, [this]() {
-    //    setCursor(Qt::ArrowCursor);
-    //    });
     capture->start();
 
     sharedFilePath = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/phyrecorder_ipc.temp";
@@ -616,6 +537,43 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
 
     splash.showMessage("Init capture");
     splash.showMessage("Done");
+}
+
+void MainWindow::onSerialGraphSelectionChanged() {
+    int h_serial = comboBox_serial->getHightLight();
+    QCPGraph* s_graph = nullptr;
+    if(h_serial!=-1)
+        s_graph = comboBox_serial->itemData(h_serial).value<SerialReader*>()->graph;
+
+    for (int i = 0; i < ui->plot_ppg->graphCount(); ++i)
+    {
+        QCPGraph* graph = ui->plot_ppg->graph(i);
+        QCPPlottableLegendItem* item = ui->plot_ppg->legend->itemWithPlottable(graph);
+        bool is_select = (item->selected() || graph->selected());
+        //if (item->selected() || graph->selected())
+        //{
+        //    is_select = true;
+        //    item->setSelected(true);
+        //    graph->setSelection(QCPDataSelection(QCPDataRange(0, 500)));
+        //} 
+        if ((s_graph == graph)&& !is_select) {
+            comboBox_serial->setHighLight(h_serial, false);
+        }
+        else if((s_graph != graph) && is_select) {
+            for (int c = 0; c < comboBox_serial->count();c++) {
+                s_graph = comboBox_serial->itemData(c).value<SerialReader*>()->graph;
+                if (s_graph == graph) {
+                    comboBox_serial->setHighLight(c, true);
+                }
+            }
+            return;
+        }
+        else if ((s_graph == graph) && is_select) {
+            //select an already selected graph
+            comboBox_serial->setHighLight(h_serial, false);
+            return;
+        }
+    }
 }
 static inline int encode_codec_map(PIX_TYPE format) {
     switch (format) {
@@ -836,17 +794,53 @@ void MainWindow::comb_comp_changed(int index) {
         ui->label_quality->setText(QString::number(0));
     }
 }
-void MainWindow::select_serial(int idx) {
-    custom_serial->stop_reading();
-    if (!custom_serial->setPort(serial_devices[idx])) {
-        comboBox_serial->setCurrentIndex(-1);
+void MainWindow::onSerialSelected(int idx,bool selected) {
+    SerialReader* serial_reader = comboBox_serial->itemData(idx).value<SerialReader*>();
+    setCursor(Qt::WaitCursor);
+    static bool is_stop_successed = false;
+    if (selected) {
+        auto graph = ui->plot_ppg->addGraph();
+        graph->setValueAxis(ui->plot_ppg->yAxis);
+        graph->setPen(QPen(QColor(255, 110, 40)));
+        graph->setName(QString::fromStdString(serial_reader->friendly_name));
+        serial_reader->graph = graph;
+        connect(serial_reader, &SerialReader::serial_stopped,
+            this, &MainWindow::onSerialStopped);
+        serial_reader->start_reading();
+        setCursor(Qt::ArrowCursor);
+    }
+    else {
+        run_with_call_back([this, serial_reader]() {
+            serial_reader->disconnect(this);
+            is_stop_successed = serial_reader->stop_reading();
+            }, [this, serial_reader]() {
+                if(is_stop_successed)
+                    onSerialStopped(serial_reader);
+                setCursor(Qt::ArrowCursor);
+                });
+        
+    }
+}
+void MainWindow::onSerialStopped(SerialReader* reader) {
+
+    if (reader->graph) {
+        comboBox_serial->selectItem(QVariant::fromValue(reader), false);
+        reader->graph->removeFromLegend();
+        ui->plot_ppg->removeGraph(reader->graph);
+        reader->graph = nullptr;
+    }
+    if (reader->is_invalid) {
+        reader->disconnect(this);
+        auto it = rec_SerialReaders.find(reader);
+        if (it != rec_SerialReaders.end()) {
+            rec_SerialReaders.erase(it);
+        }
+        comboBox_serial->removeItem(QVariant::fromValue(reader));
     }
 }
 
 MainWindow::~MainWindow()
 {
-    ppg->stop_reading();
-    respi->stop_reading();
     delete ui;
 }
 
@@ -894,54 +888,36 @@ void MainWindow::on_actionstopSerial_triggered() {
         th = NULL;
     }
     th = QThread::create([this]() {
-        ppg->stop_reading();
-        respi->stop_reading();
-        custom_serial->stop_reading();
+        /*serial_ppg->stop_reading();
+        serial_respi->stop_reading();
+        serial_custom->stop_reading();*/
         });
     connect(th, &QThread::finished, this, [this]() {
         ui->actionstopSerial->setDisabled(false);
-        comboBox_serial->setCurrentIndex(-1);
         setCursor(Qt::ArrowCursor);
         });
     th->start();
-}
-void MainWindow::freshSerialDevices() {
-    serial_devices.clear();
-    comboBox_serial->clear();
-    comboBox_serial->setCurrentIndex(-1);
-    std::vector<serial::PortInfo>devices_found = serial::list_ports();
-    for (const auto& dev : devices_found) {
-
-        if (dev.description.find("Silicon Labs CP210x USB to UART Bridge") == std::string::npos) {
-            comboBox_serial->addItem(QString::fromStdString(dev.description));
-            serial_devices.push_back(dev);
-        }else if (!ppg->isRunning() && ppg->setPort(dev) ||
-            !respi->isRunning() && respi->setPort(dev)) {
-            continue;
-        }
-        //else if (ppg->isRunning() && respi->isRunning()) {
-        //    break;
-        //}
-    }
 }
 void MainWindow::on_actionrefreshSerial_triggered() {
     setCursor(Qt::WaitCursor);
     ui->actionrefreshSerial->setDisabled(true);
-    static QThread* th = NULL;
-    if (th != NULL) {
-        th->wait();
-        th->deleteLater();
-        th = NULL;
-    }
-    th = QThread::create([this]() {
-        freshSerialDevices();
-        });
-    connect(th, &QThread::finished, this, [this]() {
+    int c_highidx = comboBox_serial->getHightLight();
+    if(c_highidx !=-1)
+        onSerialHighted(c_highidx, false);
+    comboBox_serial->clear();
+
+    run_with_call_back([this]() {
+        SerialReader::refresh_serials();
+        }, 
+    [this]() {
+        for (auto& [dev_name, dev] : SerialReader::serial_readers) {
+            comboBox_serial->addItem(QString::fromStdString(dev->device_name),
+                QVariant::fromValue(dev),
+                dev->is_running);
+        }
         ui->actionrefreshSerial->setDisabled(false);
-        comboBox_serial->setCurrentIndex(-1);
         setCursor(Qt::ArrowCursor);
         });
-    th->start();
 }
 
 
@@ -951,7 +927,7 @@ void MainWindow::setfft(const QImage& image) {
 
 std::string MainWindow::start_record(std::string save_prefix ="") {
     setCursor(Qt::WaitCursor);
-    ui->toolBarRC->setDisabled(true);
+    ui->toolBarRC->setEnabled(false);
     ui->actionRecord->setIcon(style()->standardIcon(QStyle::SP_DialogNoButton));
     ui->actionRecord->setToolTip("Stop Recording");
     spinRecordTime->setDisabled(true);
@@ -1001,28 +977,31 @@ std::string MainWindow::start_record(std::string save_prefix ="") {
         }
     }
     std::ranges::replace(save_prefix, ':', '-');
-    record_prefix = save_prefix;
     run_with_call_back(
-        [this ]() {
+        [this, save_prefix]() {
             for (int i = 0; i < comboBox_cameras->count(); i++) {
                 capture::CameraDevice* device = comboBox_cameras->itemData(i).value<capture::CameraDevice*>();
                 if (device->is_running()) {
                     for (auto stream : device->enabled_streams) {
-                        auto f_name = record_prefix + device->device_friendly_name + "_" + stream->stream_name + ".avi";
+                        auto f_name = save_prefix + device->device_friendly_name + "_" + stream->stream_name;
                         std::ranges::replace(f_name, ':', '-');
                         auto v_rec = new MediaWriter(f_name,
                             stream->selected_profile->resolution, stream->selected_profile->ratio, stream->selected_profile->format,
                             device->encoder_method,device->encoder_quality);
-                        auto ts_rec = new std::vector<double>;
-                        rec_maps[stream] = { v_rec,ts_rec };
+                        rec_maps[stream] = v_rec;
                     }
                 }
+            }
+            for (auto s : comboBox_serial->getSelectedItems()) {
+                SerialReader* reader = comboBox_serial->itemData(s).value<SerialReader*>();
+                reader->startRecording(save_prefix + reader->friendly_name);
+                rec_SerialReaders.insert(reader);
             }
         },
         [this]() {
             is_recording = true;
             record_timer->start();
-            ui->toolBarRC->setDisabled(false);
+            ui->toolBarRC->setEnabled(true);
             setCursor(Qt::ArrowCursor);
         }
     );
@@ -1032,7 +1011,7 @@ void MainWindow::stop_record() {
     if (record_timer->isActive())
         record_timer->stop();
     setCursor(Qt::WaitCursor);
-    ui->toolBarRC->setDisabled(true);
+    ui->toolBarRC->setEnabled(false);
     spinRecordTime->setValue(spin_record_last_time);
 
 
@@ -1041,33 +1020,16 @@ void MainWindow::stop_record() {
         is_recording = false;
         recorder_lock.unlock();
 
-        cnpy::npy_save<uint16_t>(record_prefix + "ppg_sig.npy", ppg_sig_rec);
-        ppg_sig_rec.clear();
-        cnpy::npy_save<double>(record_prefix + "ppg_ts.npy", ppg_ts_rec);
-        ppg_ts_rec.clear();
-        cnpy::npy_save<uchar>(record_prefix + "respi_sig.npy", respi_sig_rec);
-        respi_sig_rec.clear();
-        cnpy::npy_save<double>(record_prefix + "respi_ts.npy", respi_ts_rec);
-        respi_ts_rec.clear();
-        cnpy::npy_save<uint32_t>(record_prefix + "serial_sig.npy", serial_sig_rec);
-        serial_sig_rec.clear();
-        cnpy::npy_save<double>(record_prefix + "serial_ts.npy", serial_ts_rec);
-        serial_ts_rec.clear();
 
-        for (auto& [stream, rec]: rec_maps) {
-            rec.first->close();
-            auto f_name = record_prefix + stream->device->device_friendly_name + "_" + stream->stream_name + "_ts.npy";
-            std::ranges::replace(f_name, ':', '-');
-            cnpy::npy_save<double>(f_name, *(rec.second));
-            delete rec.first;
-            delete rec.second;
-        }
-        rec_maps.clear();
+        for (auto s : rec_SerialReaders)  s->stopRecording();
+            rec_SerialReaders.clear();
+        for (auto& [stream, rec]: rec_maps) delete rec;
+            rec_maps.clear();
         },
         [this]() {
             ui->actionRecord->setIcon(style()->standardIcon(QStyle::SP_DialogYesButton));
             ui->actionRecord->setToolTip("Start Recording");
-            ui->toolBarRC->setDisabled(false);
+            ui->toolBarRC->setEnabled(true);
             ui->VideoBox->setDisabled(false);
             ui->boxCamOfs->setDisabled(false);
             spinRecordTime->setDisabled(false);

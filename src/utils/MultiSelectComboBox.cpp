@@ -12,15 +12,10 @@ MultiSelectComboBox::MultiSelectComboBox(QWidget* aParent) :
     QComboBox(aParent),
     mListWidget(new QListWidget(this)),
     mLineEdit(new QLineEdit(this)),
-    mSearchBar(new QLineEdit(this)),
     m_list_custom_info(new QList<QVariant>),
     current_selected_items(new QSet<int>)
 {
-    QListWidgetItem* curItem = new QListWidgetItem(mListWidget);
-    mSearchBar->setPlaceholderText("Search..");
-    mSearchBar->setClearButtonEnabled(true);
-    mListWidget->addItem(curItem);
-    mListWidget->setItemWidget(curItem, mSearchBar);
+
 
     mLineEdit->setReadOnly(true);
     mLineEdit->installEventFilter(this);
@@ -29,7 +24,6 @@ MultiSelectComboBox::MultiSelectComboBox(QWidget* aParent) :
     setView(mListWidget);
     setLineEdit(mLineEdit);
 
-    connect(mSearchBar, &QLineEdit::textChanged, this, &MultiSelectComboBox::onSearch);
     connect(this, static_cast<void (QComboBox::*)(int)>(&QComboBox::activated), this, &MultiSelectComboBox::itemClicked);
 }
 
@@ -58,7 +52,7 @@ void MultiSelectComboBox::stateChanged(int aState)
     int sender_idx = -1;
     QCheckBox* sender = static_cast<QCheckBox*>(QObject::sender());
 
-    for (int i = 1; i < count; ++i)
+    for (int i = 0; i < count; ++i)
     {
         QWidget* widget = mListWidget->itemWidget(mListWidget->item(i));
         QCheckBox* checkBox = static_cast<QCheckBox*>(widget);
@@ -76,18 +70,33 @@ void MultiSelectComboBox::stateChanged(int aState)
 
 
             if (hightLight != sender_idx) {
+                // dehighlight previous highlight item  and highlight current
+                if (hightLight != -1) {
+                    emit heightSelect(hightLight, false);
+                }                
                 hightLight = sender_idx;
-                emit heightSelect(sender_idx - 1,true); //sender-1 must is already selected
+                setText(getItemText(sender_idx));
+                emit heightSelect(sender_idx,true); //sender-1 must is already selected
             }
             else if(is_disabled){
-                hightLight = -1;
-                emit heightSelect(sender_idx - 1, false); //sender-1 must is already selected
+                // dehighlight previous highlight item and do nothing
+                setText(QString("%1/%2 Selected")
+                    .arg(getSelectedItems().size()).arg(m_list_custom_info->size()));                if (hightLight != -1) {
+                    emit heightSelect(hightLight, false);
+                    hightLight = -1;
+                }
             }
         }
         else {
-            hightLight = -1;
-            current_selected_items->remove(sender_idx-1);
-            emit selectionChanged(sender_idx-1, false);
+            // deselect current item and unhighlight all
+            if (hightLight != -1) {
+                emit heightSelect(hightLight, false);
+                hightLight = -1;
+            }
+            current_selected_items->remove(sender_idx);
+            setText(QString("%1/%2 Selected")
+                .arg(getSelectedItems().size()).arg(m_list_custom_info->size()));
+            emit selectionChanged(sender_idx, false);
         }
     }
     else {
@@ -95,17 +104,45 @@ void MultiSelectComboBox::stateChanged(int aState)
             disconnect(sender, &QCheckBox::stateChanged, this, &MultiSelectComboBox::stateChanged);
             sender->setCheckState(Qt::Unchecked);
             connect(sender, &QCheckBox::stateChanged, this, &MultiSelectComboBox::stateChanged);
-            hightLight = -1;
-            emit heightSelect(-1, false); //sender-1 must is already selected
+
+            setText(QString("%1/%2 Selected")
+                .arg(getSelectedItems().size()).arg(m_list_custom_info->size()));
+            // unhighlight previous highlight item and do nothing
+            if (hightLight != -1) {
+                emit heightSelect(hightLight, false);
+                hightLight = -1;
+            }
         }
         else {
-            current_selected_items->insert(sender_idx-1);
-            emit selectionChanged(sender_idx - 1, true);
+            // select and high light item
+            if (hightLight != -1) {
+                emit heightSelect(hightLight, false);
+            }
+            current_selected_items->insert(sender_idx);
+            setText(getItemText(sender_idx));
+            emit selectionChanged(sender_idx, true);
+            emit heightSelect(sender_idx, true);
             hightLight = sender_idx;
         }
     }
 }
 
+void MultiSelectComboBox::setHighLight(int idx, bool is_hightlight) {
+    if (hightLight == idx && !is_hightlight) {
+        hightLight = -1;
+        emit heightSelect(idx, false);
+        setText(QString("%1/%2 Selected")
+            .arg(getSelectedItems().size()).arg(m_list_custom_info->size()));
+    }
+    else if(hightLight != idx && is_hightlight){
+        if (hightLight != -1) {
+            emit heightSelect(hightLight, false);
+        }
+        hightLight = idx;
+        emit heightSelect(idx, true);
+        setText(getItemText(idx));
+    }
+}
 void MultiSelectComboBox::addItem(const QString& aText, const QVariant& aUserData, bool default_checked )
 {
     m_list_custom_info->append(aUserData);
@@ -119,6 +156,32 @@ void MultiSelectComboBox::addItem(const QString& aText, const QVariant& aUserDat
     mListWidget->addItem(listWidgetItem);
     mListWidget->setItemWidget(listWidgetItem, checkBox);
     connect(checkBox, &QCheckBox::stateChanged, this, &MultiSelectComboBox::stateChanged);
+    setText(QString("%1/%2 Selected")
+        .arg(getSelectedItems().size()).arg(m_list_custom_info->size()));
+}
+
+void MultiSelectComboBox::removeItem(const QVariant& aUserData)
+{
+    auto i = m_list_custom_info->indexOf(aUserData);
+    if (i < 0)return;
+    m_list_custom_info->remove(i);
+    if(current_selected_items->contains(i))
+        current_selected_items->remove(i );
+    //QWidget* widget = mListWidget->itemWidget(mListWidget->item(i ));
+    //QCheckBox* checkBox = static_cast<QCheckBox*>(widget);
+    //checkBox->disconnect(this);
+    auto item = mListWidget->takeItem(i);
+    delete item;
+    QComboBox::hidePopup();
+    //mListWidget->removeItemWidget(mListWidget->item(i ));
+    //this->update();
+    setText(QString("%1/%2 Selected")
+        .arg(getSelectedItems().size()).arg(m_list_custom_info->size()));
+}
+
+QList<QVariant>* MultiSelectComboBox::getItems()
+{
+    return m_list_custom_info;
 }
 
 QStringList MultiSelectComboBox::currentText()
@@ -140,7 +203,7 @@ void MultiSelectComboBox::setDisabled(bool disable)
 }
 int MultiSelectComboBox::getHightLight()
 {
-    return hightLight-1;
+    return hightLight;
 }
 void MultiSelectComboBox::setText(const QString& aText)
 {
@@ -148,9 +211,32 @@ void MultiSelectComboBox::setText(const QString& aText)
 }
 QString MultiSelectComboBox::getItemText(int idx)
 {
-    QWidget* widget = mListWidget->itemWidget(mListWidget->item(idx+1));
+    QWidget* widget = mListWidget->itemWidget(mListWidget->item(idx));
     QCheckBox* checkBox = static_cast<QCheckBox*>(widget);
     return checkBox->text();
+}
+void MultiSelectComboBox::selectItem(const QVariant& aUserData ,bool selected)
+{
+    auto i = m_list_custom_info->indexOf(aUserData);
+    if(i<0)
+        return;
+    QWidget* widget = mListWidget->itemWidget(mListWidget->item(i));
+    QCheckBox* checkBox = static_cast<QCheckBox*>(widget);
+    if (checkBox->isChecked() != selected) {
+        disconnect(checkBox, &QCheckBox::stateChanged, this, &MultiSelectComboBox::stateChanged);
+        checkBox->setChecked(selected);
+        connect(checkBox, &QCheckBox::stateChanged, this, &MultiSelectComboBox::stateChanged);
+        if (selected)
+            current_selected_items->insert(i);
+        else
+            current_selected_items->remove(i);
+        setText(QString("%1/%2 Selected")
+            .arg(getSelectedItems().size()).arg(m_list_custom_info->size()));
+        if (hightLight != -1) {
+            emit heightSelect(hightLight, false);
+            hightLight = -1;
+        }
+    }
 }
 void MultiSelectComboBox::addItems(const QStringList& aTexts)
 {
@@ -167,7 +253,7 @@ QSet<int> MultiSelectComboBox::getSelectedItems()
 
 int MultiSelectComboBox::count() const
 {
-    int count = mListWidget->count() - 1;// Do not count the search bar
+    int count = mListWidget->count();// Do not count the search bar
     if (count < 0)
     {
         count = 0;
@@ -202,11 +288,6 @@ void MultiSelectComboBox::itemClicked(int aIndex)
     }
 }
 
-void MultiSelectComboBox::SetSearchBarPlaceHolderText(const QString& aPlaceHolderText)
-{
-    mSearchBar->setPlaceholderText(aPlaceHolderText);
-}
-
 void MultiSelectComboBox::SetPlaceHolderText(const QString& aPlaceHolderText)
 {
     mLineEdit->setPlaceholderText(aPlaceHolderText);
@@ -219,14 +300,7 @@ void MultiSelectComboBox::clear()
     mListWidget->clear();
     m_list_custom_info->clear();
     current_selected_items->clear();
-    QListWidgetItem* curItem = new QListWidgetItem(mListWidget);
-    mSearchBar = new QLineEdit(this);
-    mSearchBar->setPlaceholderText("Search..");
-    mSearchBar->setClearButtonEnabled(true);
-    mListWidget->addItem(curItem);
-    mListWidget->setItemWidget(curItem, mSearchBar);
-
-    connect(mSearchBar, &QLineEdit::textChanged, this, &MultiSelectComboBox::onSearch);
+    setText(QString("0/0 Selected"));
 }
 
 void MultiSelectComboBox::wheelEvent(QWheelEvent* aWheelEvent)

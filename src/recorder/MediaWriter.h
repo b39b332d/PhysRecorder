@@ -12,8 +12,13 @@ class MediaWriter {
 	encoder::stream_encoder* stream_p;
 	std::thread write_file_thread;
 
+	std::vector<double> ts_buffer;
+	std::string save_filename;
+
 	void write_file();
 
+	std::thread* save_thread=nullptr;
+	void save_signal_async();
 public:
 	MediaWriter(const std::string& save_path, Resolution size, Ratio fps, PIX_TYPE e_type ,PIX_TYPE d_type, int quality = -1);
 	~MediaWriter();;

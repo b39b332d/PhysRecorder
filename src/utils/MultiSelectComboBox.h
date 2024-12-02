@@ -10,7 +10,10 @@ class MultiSelectComboBox : public QComboBox
 public:
     MultiSelectComboBox(QWidget* aParent = Q_NULLPTR);
     void addItem(const QString& aText, const QVariant& aUserData = QVariant(), bool default_checked = false);
-    void addItems(const QStringList& aTexts);
+    void addItems(const QStringList& aTexts); 
+    void removeItem(const QVariant& aUserData);
+    QList<QVariant>* getItems();
+
     QSet<int> getSelectedItems();
     QStringList currentText();
     int count() const;
@@ -24,6 +27,8 @@ public:
     void setText(const QString& aText);
     QString getItemText(int idx);
     
+    void selectItem(const QVariant& aUserData, bool selected);
+    void setHighLight(int idx, bool hightlight); 
 
 signals:
     void heightSelect(int index,bool is_highlight);
@@ -46,7 +51,6 @@ private:
 
     QListWidget* mListWidget;
     QLineEdit* mLineEdit;
-    QLineEdit* mSearchBar;
     QList<QVariant>* m_list_custom_info;
     QSet<int>* current_selected_items;
     int hightLight = -1;

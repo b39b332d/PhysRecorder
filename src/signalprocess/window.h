@@ -14,16 +14,17 @@ public:
 	inline void append_zero(int);
 	T* getHead() const { return frontp; }
 	T* getTail() const { return backp; }
-	Eigen::Map<Eigen::ArrayXf> getArray(int max_size, int tail_ofs = 0) {
+	Eigen::Map<Eigen::ArrayX<T>> getArray(int max_size, int tail_ofs = 0) {
+		static T ret[1] = { 0 };
 		max_size = std::min(window_size, max_size);
 		if (size < tail_ofs) {
-			return Eigen::Map<Eigen::ArrayXf>({ 0 }, 1);
+			return Eigen::Map<Eigen::ArrayX<T>>(ret,1);
 		}
 		if (size < max_size + tail_ofs) {
-			return Eigen::Map<Eigen::ArrayXf>(backp -
+			return Eigen::Map<Eigen::ArrayX<T>>(backp -
 				size, size - tail_ofs);
 		}
-		return Eigen::Map<Eigen::ArrayXf>(backp -
+		return Eigen::Map<Eigen::ArrayX<T>>(backp -
 			max_size - tail_ofs, max_size);
 	}
 

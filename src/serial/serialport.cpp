@@ -791,6 +791,8 @@ Serial::SerialImpl::write(const uint8_t* data, size_t length)
     return (size_t)(bytes_written);
 }
 
+#pragma warning( push )
+#pragma warning( disable : 4244)
 void
 Serial::SerialImpl::setPort(const string& port)
 {
@@ -803,6 +805,7 @@ Serial::SerialImpl::getPort() const
     return string(port_.begin(), port_.end());
 }
 
+#pragma warning( pop ) 
 void
 Serial::SerialImpl::setTimeout(serial::Timeout& timeout)
 {

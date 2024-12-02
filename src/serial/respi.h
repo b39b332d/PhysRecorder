@@ -3,19 +3,14 @@
 
 #include <qthread.h>
 #include "serialport.h"
-class RESPIReader :public QThread {
+#include "SerialReader.h"
+class RESPIReader :public SerialReader {
 	Q_OBJECT
 public:
 	RESPIReader();
-	bool setPort(const serial::PortInfo&);
 	bool setPortName(const std::string& portNames);
-	bool start_reading();
-	bool stop_reading();
-	Q_SIGNAL void respiReady(uchar,double);
 private:
-	serial::Serial serial_reader;
-	int error_num = 0;
 	void run();
-	std::atomic_bool stop_read_sig = false;;
+	friend SerialReader;
 };
 #endif

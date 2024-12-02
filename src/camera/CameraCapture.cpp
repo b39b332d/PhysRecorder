@@ -9,6 +9,11 @@ namespace capture {
 	std::mutex devices_lock;
 	void refresh_devices()
 	{
+		static bool first_run = true;
+		if (first_run) {
+			CoInitializeEx(NULL, COINIT_MULTITHREADED);
+			first_run = false;
+		}
 		std::unique_lock l(devices_lock);
 		for (auto it = devices_map.cbegin(); it != devices_map.cend() /* not hoisted */; /* no increment */)
 		{

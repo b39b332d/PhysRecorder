@@ -5,11 +5,6 @@
 #include <QWindow>
 int main(int argc, char *argv[])
 {
-
-    if (! SUCCEEDED(CoInitializeEx(NULL, COINIT_MULTITHREADED))) {
-        return -1;
-    }
-    
     putenv("OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS=0");
     QApplication app(argc, argv);
 
@@ -34,6 +29,4 @@ int main(int argc, char *argv[])
 
     splash.finish(&w);
     exit(app.exec());
-
-    CoUninitialize();
 }

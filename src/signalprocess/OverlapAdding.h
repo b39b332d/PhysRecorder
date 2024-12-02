@@ -42,7 +42,6 @@ public:
 			ovadd / ovadd_weight;
 
 	}
-
 	template <typename Derived> // Optimized for calculation only once a loop, evaluate every call!
 	void add_signal(const Eigen::ArrayBase<Derived>& signal) {
 		if (size < shift_len){
@@ -60,12 +59,13 @@ public:
 			ovadd / ovadd_weight;
 
 	}
-	
-	Eigen::Map<Eigen::ArrayXf> getArray(int max_size,int tail_ofs=0) {
+
+	Eigen::Map<Eigen::ArrayX<T>> getArray(int max_size,int tail_ofs=0) {
+		static T ret[1] = { 0 };
 		max_size = std::min(total_len, max_size);
 		int current_len = size + shift_len;
 		if (current_len < tail_ofs) {
-			return Eigen::Map<Eigen::ArrayX<T>>({0}, 1);
+			return Eigen::Map<Eigen::ArrayX<T>>(ret, 1);
 		}
 		if (current_len < max_size+ tail_ofs) {
 			return Eigen::Map<Eigen::ArrayX<T>>(signal_window.getTail() -
