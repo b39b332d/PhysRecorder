@@ -66,6 +66,10 @@ private:
     double show_window_length = 6.0;
     double cam_ofs = 0;
     
+
+    QLineEdit* textedit_serialname;
+    QLineEdit* textedit_streamname;
+
     QTimer cam_option_changed_timer;
     uint32_t cam_option_changed = 0;
     void set_sensor_property();
@@ -92,7 +96,6 @@ private slots:
     void refresh_plot();
 
     void on_actionStartTrigger_triggered();
-    void on_actionRecord_triggered();
     void on_actionrefreshSerial_triggered();
     void on_actionrefreshCamera_triggered();
     void on_actionstopSerial_triggered();
@@ -110,6 +113,7 @@ private slots:
     void onCameraSelected(int);
     void onProfileTypeSelected(int);
     void onProfileSelected(int);
+    void onRecordToggled();
 
     private:
         void run_with_call_back(const std::function<void()>& run_in_thread, const std::function<void()>& call_back);

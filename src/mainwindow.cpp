@@ -35,15 +35,21 @@ void MainWindow::lock_camera_info_play(bool lock) {
 }
 
 
-static QThread* process_thread = NULL;
+static std::atomic<bool> run_with_call_back_busy ;
 void MainWindow::run_with_call_back(const std::function<void()>& run_in_thread, const std::function<void()>& call_back = []() {}) {
-    if (process_thread != NULL) {
-        process_thread->wait();
-        process_thread->deleteLater();
-        process_thread = NULL;
+    bool d = false;
+    while (!run_with_call_back_busy.compare_exchange_strong(d, true)) {
+        run_with_call_back_busy.wait(d);
     }
-    process_thread = QThread::create(run_in_thread);
-    connect(process_thread, &QThread::finished, this, call_back);
+    QThread* process_thread = QThread::create(run_in_thread);
+    connect(process_thread, &QThread::finished, this,
+        [call_back, process_thread]() {
+            call_back();
+    process_thread->wait(); 
+    process_thread->deleteLater(); 
+    run_with_call_back_busy = false;
+        });
+
     process_thread->start();
 }
 
@@ -188,6 +194,15 @@ void MainWindow::onSerialHighted(int idx, bool is_highlight) {
             graph->setSelection(QCPDataSelection(QCPDataRange(0,500)));
             connect(stream, &SerialReader::serial_ready, signalProcess, &SignalProcess::processPPG);
 
+            textedit_serialname->setDisabled(false);
+            textedit_serialname->setText(QString::fromStdString(stream->friendly_name));
+            connect(textedit_serialname, &QLineEdit::editingFinished, this,
+                [stream, graph,this]() {
+                    auto text = textedit_serialname->text().replace(QRegularExpression("[/\\\\:*?\"'<>|]"), "-");
+                    stream->friendly_name = text.toStdString();
+                    textedit_serialname->setText(text);
+                    graph->setName(text);
+                });
         }
     }
     else {
@@ -197,6 +212,9 @@ void MainWindow::onSerialHighted(int idx, bool is_highlight) {
             graph->setSelection(QCPDataSelection());
             ui->plot_ppg->legend->itemWithPlottable(graph)->setSelected(false);
             disconnect(stream, &SerialReader::serial_ready, signalProcess, &SignalProcess::processPPG);
+            textedit_serialname->disconnect(this);
+            textedit_serialname->setText("serial file name");
+            textedit_serialname->setDisabled(true);
         }
     }
 
@@ -232,6 +250,7 @@ void MainWindow::onProfileSelected(int idx) {
     //ui->toolBarRS->setDisabled(false);
     //setCursor(Qt::ArrowCursor);
 }
+#include <QSpacerItem>
 MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
 //use reference instead of pointer
     : QMainWindow(parent)
@@ -265,7 +284,10 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     connect(comboBox_profile_type, &QComboBox::activated, this, &MainWindow::onProfileTypeSelected);
     connect(comboBox_profile, &QComboBox::activated, this, &MainWindow::onProfileSelected);
     ui->actionStartTrigger->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+    ui->actionRecord->setIconSize(QSize(30, 30));
     ui->actionRecord->setIcon(style()->standardIcon(QStyle::SP_DialogYesButton));
+    connect(ui->actionRecord, &QPushButton::clicked, this, &MainWindow::onRecordToggled);
+
     ui->actionrefreshCamera->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
     ui->actionrefreshSerial->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
     ui->actionstopSerial->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
@@ -278,33 +300,23 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     connect(comboBox_serial, &MultiSelectComboBox::heightSelect, this, &MainWindow::onSerialHighted);
 
 
-    //auto labelname1 = new QLabel(ui->toolBarRC);
-    //labelname1->setText("time(s):");
-    ////labelname1->setFixedWidth(80);
-    //labelname1->setAttribute(Qt::WA_TranslucentBackground);
-    //ui->toolBarRC->addWidget(labelname1);
+    textedit_serialname = new QLineEdit(ui->toolBarSD);
+    textedit_serialname->setMinimumWidth(150);
+    textedit_serialname->setMaximumWidth(200);
+    ui->toolBarSD->addWidget(textedit_serialname);
 
-    //spinRecordTime = new QSpinBox(ui->toolBarRC);
-    //spinRecordTime->setMaximum(99999);
-    //spinRecordTime->setMinimum(-1);
-    //spinRecordTime->setValue(-1);
-    //ui->toolBarRC->addWidget(spinRecordTime);
-
-    //auto labelname2 = new QLabel(ui->toolBarRC);
-    //labelname2->setText("filename:");
-    //labelname2->setAttribute(Qt::WA_TranslucentBackground);
-    //ui->toolBarRC->addWidget(labelname2);
-    //filenameLineEdit = new QLineEdit(ui->toolBarRC);
-    //ui->toolBarRC->addWidget(filenameLineEdit);
+    textedit_streamname = new QLineEdit(ui->toolBarRS);
+    textedit_streamname->setMaximumWidth(200);
+    ui->toolBarRS->addWidget(textedit_streamname);
 
 
     record_timer = new QTimer(this);
     record_timer->setSingleShot(false);
     record_timer->setInterval(1000);
     connect(record_timer, &QTimer::timeout, this, [this]() {
-        if (spinRecordTime->value() != -1) {
-            spinRecordTime->setValue(spinRecordTime->value() - 1);
-            if (spinRecordTime->value() == 0) {
+        if (ui->spinRecordTime->value() != -1) {
+            ui->spinRecordTime->setValue(ui->spinRecordTime->value() - 1);
+            if (ui->spinRecordTime->value() == 0) {
                 emitFileSignal(0);
                 stop_record();
             }
@@ -383,11 +395,7 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     
 
     on_actionrefreshSerial_triggered();
-    if (process_thread != NULL) {
-        process_thread->wait();
-        process_thread->deleteLater();
-        process_thread = NULL;
-    }
+    run_with_call_back_busy.wait(false);
 
     ui->VideoBox->hide();
 
@@ -585,12 +593,12 @@ static inline int encode_codec_map(PIX_TYPE format) {
 }
 void MainWindow::loadCameraOptions(capture::CameraDevice *device) {
 
-    ui->lineEdit_cameraName->disconnect(this);
-    ui->lineEdit_cameraName->setText(device->device_friendly_name.c_str());
-    connect(ui->lineEdit_cameraName, &QLineEdit::editingFinished, this, [this, device]() {
-        auto text = ui->lineEdit_cameraName->text().replace(QRegularExpression("[/\\\\:*?\"'<>|]"), "-");
+    textedit_streamname->disconnect(this);
+    textedit_streamname->setText(device->device_friendly_name.c_str());
+    connect(textedit_streamname, &QLineEdit::editingFinished, this, [this, device]() {
+        auto text = textedit_streamname->text().replace(QRegularExpression("[/\\\\:*?\"'<>|]"), "-");
         device->device_friendly_name = text.toStdString();
-        ui->lineEdit_cameraName->setText(text);
+        textedit_streamname->setText(text);
         });
     ui->comboBox_codec->setCurrentIndex(encode_codec_map(device->encoder_method));
     ui->slider_quality->setValue(device->encoder_quality);
@@ -834,6 +842,7 @@ void MainWindow::onSerialStopped(SerialReader* reader) {
         auto it = rec_SerialReaders.find(reader);
         if (it != rec_SerialReaders.end()) {
             rec_SerialReaders.erase(it);
+            reader->stopRecording();
         }
         comboBox_serial->removeItem(QVariant::fromValue(reader));
     }
@@ -881,22 +890,32 @@ void MainWindow::on_actionrefreshCamera_triggered() {
 void MainWindow::on_actionstopSerial_triggered() {
     setCursor(Qt::WaitCursor);
     ui->actionstopSerial->setDisabled(true);
-    static QThread* th = NULL;
-    if (th != NULL) {
-        th->wait();
-        th->deleteLater();
-        th = NULL;
+
+    auto high_idx = comboBox_serial->getHightLight();
+    if (high_idx == -1) {
+        static QSet<SerialReader*> successed_stopped;
+        run_with_call_back([this]() {
+            for (auto s : comboBox_serial->getSelectedItems()) {
+                SerialReader* serial_reader = comboBox_serial->itemData(s).value<SerialReader*>();
+                serial_reader->disconnect(this);
+                if (serial_reader->stop_reading()) {
+                    successed_stopped.insert(serial_reader);
+                }
+
+            }            
+            }, [this]() {
+                for (auto s : successed_stopped) {
+                    onSerialStopped(s);
+                }
+                ui->actionstopSerial->setDisabled(false);
+                setCursor(Qt::ArrowCursor);
+         });
     }
-    th = QThread::create([this]() {
-        /*serial_ppg->stop_reading();
-        serial_respi->stop_reading();
-        serial_custom->stop_reading();*/
-        });
-    connect(th, &QThread::finished, this, [this]() {
+    else {
+        onSerialSelected(high_idx, false);
         ui->actionstopSerial->setDisabled(false);
         setCursor(Qt::ArrowCursor);
-        });
-    th->start();
+    }
 }
 void MainWindow::on_actionrefreshSerial_triggered() {
     setCursor(Qt::WaitCursor);
@@ -930,21 +949,21 @@ std::string MainWindow::start_record(std::string save_prefix ="") {
     ui->toolBarRC->setEnabled(false);
     ui->actionRecord->setIcon(style()->standardIcon(QStyle::SP_DialogNoButton));
     ui->actionRecord->setToolTip("Stop Recording");
-    spinRecordTime->setDisabled(true);
+    ui->spinRecordTime->setDisabled(true);
     ui->boxCamOfs->setDisabled(true);
-    filenameLineEdit->setDisabled(true);
+    ui->filenameLineEdit->setDisabled(true);
     ui->VideoBox->setDisabled(true);
-    int time = spinRecordTime->value();
+    int time = ui->spinRecordTime->value();
     if (time == 0) {
         time = 30;
-        spinRecordTime->setValue(30);
+        ui->spinRecordTime->setValue(30);
     }
     std::string temp_ret;
     if (save_prefix.empty()) {
         auto ts = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         std::stringstream ss;
-        if (filenameLineEdit->text().length() != 0)
-            ss << ts << "_" << filenameLineEdit->text().toStdString() ;
+        if (ui->filenameLineEdit->text().length() != 0)
+            ss << ts << "_" << ui->filenameLineEdit->text().toStdString() ;
         else
             ss << ts;
         save_prefix = std::string("./rec/") + ss.str();
@@ -953,8 +972,8 @@ std::string MainWindow::start_record(std::string save_prefix ="") {
         QDir().mkdir(save_prefix.c_str());
     }
     else {
-        if (filenameLineEdit->text().length() != 0) {
-            auto save_fname = filenameLineEdit->text().toStdString();
+        if (ui->filenameLineEdit->text().length() != 0) {
+            auto save_fname = ui->filenameLineEdit->text().toStdString();
             int first_index = save_prefix.find_first_of('_');
             if (first_index != std::string::npos) {
                 auto orig_path = save_prefix.substr(0,first_index+1);
@@ -1012,7 +1031,7 @@ void MainWindow::stop_record() {
         record_timer->stop();
     setCursor(Qt::WaitCursor);
     ui->toolBarRC->setEnabled(false);
-    spinRecordTime->setValue(spin_record_last_time);
+    ui->spinRecordTime->setValue(spin_record_last_time);
 
 
     run_with_call_back([this]() {
@@ -1032,20 +1051,20 @@ void MainWindow::stop_record() {
             ui->toolBarRC->setEnabled(true);
             ui->VideoBox->setDisabled(false);
             ui->boxCamOfs->setDisabled(false);
-            spinRecordTime->setDisabled(false);
-            filenameLineEdit->setDisabled(false);
+            ui->spinRecordTime->setDisabled(false);
+            ui->filenameLineEdit->setDisabled(false);
             setCursor(Qt::ArrowCursor);
         });
     MessageBeep(MB_OK);
     
 }
-void MainWindow::on_actionRecord_triggered() {
+void MainWindow::onRecordToggled() {
     if (is_recording) {
         emitFileSignal(false);
         stop_record();
     }
     else {
-        spin_record_last_time = spinRecordTime->value();
+        spin_record_last_time = ui->spinRecordTime->value();
         auto save_path = start_record();
         emitFileSignal(true,save_path.c_str());
         
@@ -1097,8 +1116,8 @@ void MainWindow::onFileChanged(const QString& path) {
             if (status == "__stop" && is_recording)
                 stop_record();
             else if (status == "__start" && !is_recording) {
-                spin_record_last_time = spinRecordTime->value();
-                spinRecordTime->setValue(-1);
+                spin_record_last_time = ui->spinRecordTime->value();
+                ui->spinRecordTime->setValue(-1);
                 start_record(messageParts[2].toStdString());
             }
         }

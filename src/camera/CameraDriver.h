@@ -191,7 +191,8 @@ namespace capture {
         std::unordered_map<std::string, std::set<CameraProfile*,
             Cmp>> profiles_map;
 
-        CameraStream(CameraDevice* device) :device(device) {}
+        CameraStream(CameraDevice* device) :device(device) {
+        }
         virtual ~CameraStream() {
             for (auto& [_, ps] : profiles_map)
                 for (auto p : ps)
