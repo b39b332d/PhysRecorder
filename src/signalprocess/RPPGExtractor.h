@@ -32,8 +32,8 @@
 #define FREQ_ROI_MIN_BPM (FFT_RESOLUTION_BPM*FFT_ROI_MIN)
 #define FREQ_ROI_MAX_BPM (FFT_RESOLUTION_BPM*FFT_ROI_MAX)
 
-#define GET_FFT_MAIN_SLOB_WIDTH(signal_length_sec)\
-		int((float)FFT_LENGTH*8/6.28/(signal_length_sec))
+#define GET_FFT_MAIN_SLOB_WIDTH(signal_length)\
+		int((float)FFT_LENGTH*8/6.28/(signal_length))
 
 #define FFT_ROI_LENGTH (FFT_ROI_MAX-FFT_ROI_MIN)
 
@@ -57,8 +57,8 @@ namespace RPPGExtractor {
 	}CHANNEL_TYPE;
 	int create_channel(CHANNEL_TYPE channel_type);
 	float process_signal(int c, ...);
-	cv::Mat get_signal(int c, int win_len, unsigned ofs_len = 0);
-	cv::Mat get_spectrum(int c, unsigned ofs_len, int win_len, int& max_idx, float* snr=nullptr);
+	cv::Mat get_signal(int c, int win_len, unsigned ofs_len = 0, unsigned stride=1);
+	cv::Mat get_spectrum(int c, unsigned ofs_len, int win_len, int* max_idx=nullptr, float* snr=nullptr);
 	float get_sqi(int c1, int c2, int win_len,unsigned  ofs_len_c1 =0, unsigned ofs_len_c2 = 0);
 	void reset(int c);
 	void reset();

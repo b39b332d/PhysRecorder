@@ -19,6 +19,8 @@ add_library(cam_driver OBJECT
 "CameraCapture.cpp"
 )
 
+set_target_properties(cam_driver PROPERTIES AUTOMOC OFF)
+set_target_properties(cam_driver PROPERTIES AUTOUIC OFF)
 target_link_libraries(cam_driver PUBLIC ${OpenCV_LIBS} ${MSMF_LIBS} realsense)
 target_include_directories(cam_driver PUBLIC ./ ${utils_dir}/)
 

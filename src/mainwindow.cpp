@@ -192,6 +192,7 @@ void MainWindow::onSerialHighted(int idx, bool is_highlight) {
             graph->setValueAxis(ui->plot_ppg->yAxis2);
             ui->plot_ppg->legend->itemWithPlottable(graph)->setSelected(true);
             graph->setSelection(QCPDataSelection(QCPDataRange(0,500)));
+            signalProcess->graph_ppg->setSelection(QCPDataSelection(QCPDataRange(0, 500)));
             connect(stream, &SerialReader::serial_ready, signalProcess, &SignalProcess::processPPG);
 
             textedit_serialname->setDisabled(false);
@@ -208,10 +209,11 @@ void MainWindow::onSerialHighted(int idx, bool is_highlight) {
     else {
         if (graph) {
             QMetaObject::invokeMethod(signalProcess, &SignalProcess::reset_ppg);
+            disconnect(stream, &SerialReader::serial_ready, signalProcess, &SignalProcess::processPPG);
             graph->setValueAxis(ui->plot_ppg->yAxis);
             graph->setSelection(QCPDataSelection());
+            signalProcess->graph_ppg->setSelection(QCPDataSelection(QCPDataRange()));
             ui->plot_ppg->legend->itemWithPlottable(graph)->setSelected(false);
-            disconnect(stream, &SerialReader::serial_ready, signalProcess, &SignalProcess::processPPG);
             textedit_serialname->disconnect(this);
             textedit_serialname->setText("serial file name");
             textedit_serialname->setDisabled(true);
@@ -401,9 +403,21 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
 
 
     splash.showMessage("Connect signals");
-    connect(ui->actionR, &QPushButton::toggled,capture->signalProcess, &SignalProcess::setShowR);
-    connect(ui->actionG, &QPushButton::toggled, capture->signalProcess, &SignalProcess::setShowG);
-    connect(ui->actionB, &QPushButton::toggled, capture->signalProcess, &SignalProcess::setShowB);
+
+    ui->actionR->setProperty("channel",  signalProcess->r_channel);
+    ui->actionG->setProperty("channel", signalProcess->g_channel);
+    ui->actionB->setProperty("channel", signalProcess->b_channel);
+    ui->actionPOS->setProperty("channel", signalProcess->pos_channel);
+    connect(ui->actionR, &QPushButton::toggled, capture->signalProcess, &SignalProcess::setShowChannel);
+    connect(ui->actionG, &QPushButton::toggled, capture->signalProcess, &SignalProcess::setShowChannel);
+    connect(ui->actionB, &QPushButton::toggled, capture->signalProcess, &SignalProcess::setShowChannel);
+    connect(ui->actionPOS, &QPushButton::toggled, capture->signalProcess, &SignalProcess::setShowChannel);
+    connect(ui->actionR, &QPushButton::toggled, [this](bool checked) {if(!checked) ui->actionR->setText("R"); });
+    connect(ui->actionG, &QPushButton::toggled, [this](bool checked) {if (!checked)ui->actionG->setText("G"); });
+    connect(ui->actionB, &QPushButton::toggled, [this](bool checked) {if (!checked)ui->actionB->setText("B"); });
+    connect(ui->actionPOS, &QPushButton::toggled, [this](bool checked) {if (!checked)ui->actionPOS->setText("POS"); });
+
+    connect(capture->signalProcess, &SignalProcess::sqiReady, this, &MainWindow::setSqi);
 
     connect(capture, &Capture::signalReady, capture->signalProcess, &SignalProcess::processSignal);
     connect(ui->actionTracking, &QPushButton::clicked, this, [this](bool checked) {
@@ -546,7 +560,41 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     splash.showMessage("Init capture");
     splash.showMessage("Done");
 }
+void MainWindow::setSqi(int c, float snr, float sqi) {
+    QString v = QString::number(snr, 'f', 2) + "\n" + QString::number(sqi, 'f', 2);
+    if (c == signalProcess->r_channel) {
+        if (ui->actionR->isChecked()) {
+            ui->actionR->setText(v);
+        }
+        else {
+            ui->actionR->setText("R");
+        }
+    }else if (c == signalProcess->g_channel) {
+        if (ui->actionG->isChecked()) {
+            ui->actionG->setText(v);
+        }
+        else {
+            ui->actionG->setText("G");
+        }
+    }
+    else if(c == signalProcess->b_channel) {
+        if (ui->actionB->isChecked()) {
+            ui->actionB->setText(v);
+        }
+        else {
+            ui->actionB->setText("B");
+        }
+    }
+    else if(c == signalProcess->pos_channel) {
+        if (ui->actionPOS->isChecked()) {
+            ui->actionPOS->setText(v);
+        }
+        else {
+            ui->actionPOS->setText("POS");
+        }
+    }
 
+}
 void MainWindow::onSerialGraphSelectionChanged() {
     int h_serial = comboBox_serial->getHightLight();
     QCPGraph* s_graph = nullptr;
@@ -558,12 +606,7 @@ void MainWindow::onSerialGraphSelectionChanged() {
         QCPGraph* graph = ui->plot_ppg->graph(i);
         QCPPlottableLegendItem* item = ui->plot_ppg->legend->itemWithPlottable(graph);
         bool is_select = (item->selected() || graph->selected());
-        //if (item->selected() || graph->selected())
-        //{
-        //    is_select = true;
-        //    item->setSelected(true);
-        //    graph->setSelection(QCPDataSelection(QCPDataRange(0, 500)));
-        //} 
+
         if ((s_graph == graph)&& !is_select) {
             comboBox_serial->setHighLight(h_serial, false);
         }
@@ -600,7 +643,6 @@ void MainWindow::loadCameraOptions(capture::CameraDevice *device) {
         device->device_friendly_name = text.toStdString();
         textedit_streamname->setText(text);
         });
-    ui->comboBox_codec->setCurrentIndex(encode_codec_map(device->encoder_method));
     ui->slider_quality->setValue(device->encoder_quality);
 
     for (int opt = 0; opt < capture::CameraDevice::DEVICE_OPTION_CNT; opt++) {
@@ -757,11 +799,44 @@ void MainWindow::set_sensor_property() {
     }
     cam_option_changed = 0;
 }
+template <typename T>
+std::set<T> intersectSets(const std::vector<std::set<T>>& sets) {
+    if (sets.empty()) {
+        return {};  // Return an empty set if no sets are provided
+    }
 
+    // Start with the first set
+    std::set<T> intersection(sets[0].begin(), sets[0].end());
+
+    // Iterate over the remaining sets and compute the intersection
+    for (size_t i = 1; i < sets.size(); ++i) {
+        std::set<T> tempIntersection;
+        std::set_intersection(intersection.begin(), intersection.end(),
+            sets[i].begin(), sets[i].end(),
+            std::inserter(tempIntersection, tempIntersection.end()));
+        intersection = tempIntersection;
+    }
+
+    return intersection;
+}
 void MainWindow::comb_comp_changed(int index) {
+    capture::CameraDevice* device = comboBox_cameras->currentData().value<capture::CameraDevice*>();
+    std::vector<std::set<PIX_TYPE>> support_pixs;
+    for (auto s : device->enabled_streams) {
+        support_pixs.push_back( MediaWriter::get_supported_encoders(s->selected_profile->format));
+    }
+    auto support_pix =  intersectSets(support_pixs);
+
     disconnect(comp_conn);
     qDebug() << ui->comboBox_codec->currentText();
     if (ui->comboBox_codec->currentText() == "MJPG") {
+        if (support_pix.find(PIX_TYPE_MJPG) == support_pix.end()) {
+            auto new_t = *(support_pix.begin());
+            ui->comboBox_codec->setCurrentIndex(
+                ui->comboBox_codec->findText(QString::fromStdString(
+                    GET_PIX_TYPE_NAME(new_t))));
+            return;
+        }
         if(capture->selected_device!=nullptr)capture->selected_device->encoder_method = PIX_TYPE_MJPG;
         ui->slider_quality->setMaximum(100);
         ui->slider_quality->setMinimum(0);
@@ -774,18 +849,14 @@ void MainWindow::comb_comp_changed(int index) {
             });
         ui->slider_quality->setValue(90);
     }
-    else if (ui->comboBox_codec->currentText() == "MPNG") {
-        if (capture->selected_device != nullptr)capture->selected_device->encoder_method = PIX_TYPE_MPNG;
-        ui->slider_quality->setMaximum(9);
-        ui->slider_quality->setMinimum(0);
-        ui->compress_label->setText("Compression");
-        comp_conn = connect(ui->slider_quality, &QSlider::valueChanged, this, [this](int val) {
-            ui->label_quality->setText(QString::number(val));
-            if (capture->selected_device != nullptr)capture->selected_device->encoder_quality = val;
-            });
-        ui->slider_quality->setValue(5);
-    }
     else if (ui->comboBox_codec->currentText() == "HFYU") {
+        if (support_pix.find(PIX_TYPE_HFYU) == support_pix.end()) {
+            auto new_t = *(support_pix.begin());
+            ui->comboBox_codec->setCurrentIndex(
+                ui->comboBox_codec->findText(QString::fromStdString(
+                    GET_PIX_TYPE_NAME(new_t))));
+            return;
+        }
         if (capture->selected_device != nullptr)capture->selected_device->encoder_method = PIX_TYPE_HFYU;
         ui->slider_quality->setMaximum(0);
         ui->slider_quality->setMinimum(0);
@@ -794,6 +865,13 @@ void MainWindow::comb_comp_changed(int index) {
         ui->label_quality->setText("NA");
     }
     else if (ui->comboBox_codec->currentText() == "RAW ") {
+        if (support_pix.find(PIX_TYPE_RAW) == support_pix.end()) {
+            auto new_t = *(support_pix.begin());
+            ui->comboBox_codec->setCurrentIndex(
+                ui->comboBox_codec->findText(QString::fromStdString(
+                    GET_PIX_TYPE_NAME(new_t))));
+            return;
+        }
         if (capture->selected_device != nullptr)capture->selected_device->encoder_method = PIX_TYPE_RAW;
         ui->slider_quality->setMaximum(0);
         ui->slider_quality->setMinimum(0);

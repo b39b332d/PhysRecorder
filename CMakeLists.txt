@@ -107,11 +107,10 @@ include(cmake/install_target.cmake)
 add_subdirectory(src)
 add_subdirectory(data)
 
-set(INSTALL_BIN_LOC ${CMAKE_INSTALL_PREFIX}/bin)
-configure_file(PhyRecorder.evb.in PhyRecorder.evb @ONLY)
 if(EXISTS ${ENIGMA_BOX_CONXOLE_EXE})
 add_custom_target(generate_boxed_exe
-    COMMAND ${ENIGMA_BOX_CONXOLE_EXE} ${CMAKE_CURRENT_BINARY_DIR}/PhyRecorder.evb
+    COMMAND ${CMAKE_COMMAND} -DEVB_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}/bin -P ${CMAKE_HOME_DIRECTORY}/cmake/configure_evb_file.cmake 
+    COMMAND ${ENIGMA_BOX_CONXOLE_EXE} ${CMAKE_INSTALL_PREFIX}/bin/PhyRecorder.evb
     DEPENDS install
 )
 endif()

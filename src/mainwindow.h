@@ -121,6 +121,7 @@ private slots:
         void loadCameraOptions(capture::CameraDevice* device);
         inline void loadCameraOption(capture::CameraDevice* device, capture::CameraDevice::DEVICE_OPTION opt);
 
+
     private:
         QCheckBox* camopt_checkBox[(int)capture::CameraDevice::DEVICE_OPTION_CNT];
         QPushButton* camopt_pushButton[(int)capture::CameraDevice::DEVICE_OPTION_CNT];
@@ -137,6 +138,8 @@ public slots:
         void onStreamSelected(int, bool is_selected);
         void onStreamHighted(int, bool);
         void onSerialGraphSelectionChanged();
+
+        void setSqi(int, float, float);
 };
 
 

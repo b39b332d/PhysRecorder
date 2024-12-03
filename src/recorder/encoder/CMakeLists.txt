@@ -17,6 +17,8 @@ endif()
 endif()
 
 add_library(phy_encoder OBJECT stb_image_write.c Encoder.cpp)
+set_target_properties(phy_encoder PROPERTIES AUTOMOC OFF)
+set_target_properties(phy_encoder PROPERTIES AUTOUIC OFF)
 target_link_libraries(phy_encoder PUBLIC yuv)
 target_compile_definitions(phy_encoder PUBLIC JPEG_ENCODER=${JPEG_ENCODER} PNG_ENCODER=${PNG_ENCODER} JPEG_ENCODER_HEADER="${JPEG_ENCODER}.hpp" PNG_ENCODER_HEADER="${PNG_ENCODER}.hpp")
 target_include_directories(phy_encoder PUBLIC ${PROJECT_SOURCE_DIR}/libyuv/include/)

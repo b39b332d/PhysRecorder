@@ -46,7 +46,7 @@ namespace RPPGExtractor {
 		float ret=0;
 		int channel = channel_types[c].second;
 		if (channel_types[c].first == NORM_CHANNEL) {
-			float raw_s = filters[channel]->filter(va_arg(args, double));
+			float raw_s = filters[channel]->filter(va_arg(args, double)); 
 			raw_windows[channel]->shift(raw_s);
 			ret= raw_s;
 		}
@@ -70,24 +70,30 @@ namespace RPPGExtractor {
 		return ret;
 	}
 
-	cv::Mat get_signal(int c, int win_len, unsigned ofs_len)
+	cv::Mat get_signal(int c, int win_len, unsigned ofs_len, unsigned stride)
 	{
 		int channel = channel_types[c].second;
 		cv::Mat sig;
 		if (channel_types[c].first == POS_CHANNEL) {
 			auto arr = pos_ovadd[channel]->getArray(win_len, ofs_len);
-			return cv::Mat(1, arr.size(),CV_32F, arr.data());
+			if(stride>1)
+				return cv::Mat(arr.size()/ stride, stride,CV_32F, arr.data()).col(stride-1);
+			else
+				return cv::Mat(arr.size(), 1, CV_32F, arr.data());
 		}
 		else if (channel_types[c].first == NORM_CHANNEL) {
 			auto arr = raw_windows[channel]->getArray(win_len, ofs_len);
-			return cv::Mat(1, arr.size(), CV_32F, arr.data());
+			if (stride > 1)
+				return cv::Mat(arr.size() / stride, stride, CV_32F, arr.data()).col(stride - 1);
+			else
+				return cv::Mat(arr.size(), 1, CV_32F, arr.data());
 		}
 		return cv::Mat();
 	}
 
 
 
-	cv::Mat get_spectrum(int c, unsigned ofs_len, int win_len,int &max_idx,float *snr) {
+	cv::Mat get_spectrum(int c, unsigned ofs_len, int win_len,int *max_idx,float *snr) {
 		static Eigen::VectorXf fft_padding(FFT_LENGTH);
 		static Eigen::FFT<float> hr_fft(Eigen::FFT<float>::impl_type(), Eigen::FFT<float>::HalfSpectrum || Eigen::FFT<float>::Unscaled);
 		static Eigen::VectorXcf fft_out(FFT_LENGTH);
@@ -110,21 +116,19 @@ namespace RPPGExtractor {
 				/(sig->size() - 1)).cos()) * (*sig);
 		hr_fft.fwd(fft_out.data(), fft_padding.data(), FFT_LENGTH);
 		delete sig;
-		if(snr!=nullptr){
+		if (max_idx != nullptr) {
+			spec_eigen = fft_out.segment(FFT_ROI_MIN, FFT_ROI_LENGTH).cwiseAbs();
+			spec_eigen.maxCoeff(max_idx);
+		}
+		if(snr != nullptr){
 			const int slob_width = GET_FFT_MAIN_SLOB_WIDTH(win_len);
 			spectrum = fft_out.segment(FFT_ROI_LENGTH_MAX_FRONT, FFT_ROI_LENGTH_MAX_LEN).cwiseAbs();
-			float power = spectrum.segment(max_idx + FFT_ROI_LENGTH_MAX_SLOB_WIDTH - slob_width, slob_width * 2+1).sum();
-			float noise = (spectrum.sum() - power) / (spectrum.size() - slob_width * 2)+1e-7;
-			power /= (slob_width * 2);
+			float power = spectrum.segment(*max_idx + FFT_ROI_LENGTH_MAX_SLOB_WIDTH - slob_width, slob_width * 2+1).sum();
+			float noise = spectrum.sum() - power;
 			*snr = 20 * logf(power / noise); 
 			spec_eigen = spectrum.segment(FFT_ROI_LENGTH_MAX_SLOB_WIDTH, FFT_ROI_LENGTH);
-			return spec;
 		}
-		else {
-			spec_eigen = fft_out.segment(FFT_ROI_MIN, FFT_ROI_LENGTH).cwiseAbs();
-			spec_eigen.maxCoeff(&max_idx);
-			return spec;
-		}
+		return spec;
 	}
 
 	float get_sqi(int c1, int c2, int win_len, unsigned ofs_len_c1, unsigned ofs_len_c2) {

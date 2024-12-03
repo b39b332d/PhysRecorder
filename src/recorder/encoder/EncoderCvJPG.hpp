@@ -14,6 +14,9 @@ namespace encoder {
 		EncoderCvJPG(int width, int height, PIX_TYPE e_type, int quality);
 		EncodedFrame* encode(RawFrame* rgbData);
 		~EncoderCvJPG();
+		static bool is_support(PIX_TYPE e_type) {
+			return true;
+		}
 	}
 	EncoderCvJPG::EncoderCvJPG(int width, int height, PIX_TYPE e_type, int quality): EncoderComp(width, height, e_type, quality){
 

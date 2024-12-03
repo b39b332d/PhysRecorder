@@ -6,6 +6,7 @@
 #include <opencv2/core.hpp>
 #include <gwavi.h>
 #include <Encoder.h>
+#include <set>
 
 class MediaWriter {
 	gwavi_t* container_writer;
@@ -24,6 +25,7 @@ public:
 	~MediaWriter();;
 	void write(RawFrame* frame);
 	void close();
+	static std::set<PIX_TYPE> get_supported_encoders(PIX_TYPE);
 
 };
 

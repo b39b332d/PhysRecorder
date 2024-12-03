@@ -1,4 +1,4 @@
-add_executable(phy_signal_test signal_test.cpp)
+add_executable(phy_signal_test EXCLUDE_FROM_ALL signal_test.cpp)
 target_link_libraries(phy_signal_test PRIVATE phy_signal)
 
 add_library(phy_signal OBJECT filter.cpp RPPGExtractor.cpp)

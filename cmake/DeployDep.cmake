@@ -1,7 +1,7 @@
 
 foreach(_TMP_dep IN LISTS _CMAKE_DEPS)
     if(CMAKE_INSTALL_CONFIG_NAME STREQUAL "Debug")
-        foreach(_deppath @INSTALL_DEP_PATHS@)
+        foreach(_deppath "@INSTALL_DEP_PATHS@")
             cmake_path(IS_PREFIX _deppath ${_TMP_dep} result)
             if(result)
                 break()

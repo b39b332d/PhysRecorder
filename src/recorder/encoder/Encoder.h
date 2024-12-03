@@ -4,6 +4,7 @@
 #include <memory>
 #include <frame_types.h>
 #include <utility>
+#include <set>
 
 namespace encoder {
 
@@ -17,5 +18,8 @@ namespace encoder {
 	EncodedFrame* read(stream_encoder* stream_p);
 	void encoder_stop();
 	void delete_stream(stream_encoder* stream_p);
+
+
+	std::set<PIX_TYPE> get_supported_encoders(PIX_TYPE);
 };
 #endif

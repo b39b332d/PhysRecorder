@@ -14,6 +14,9 @@ namespace encoder {
 		EncoderHUFF(int width, int height, PIX_TYPE e_type, int quality);
 		EncodedFrame* encode(RawFrame* rgbData);
 		~EncoderHUFF();
+		static bool is_support(PIX_TYPE e_type) {
+			return e_type != PIX_TYPE_MJPG;
+		}
 	};
 	static void NV12_to_YUYV(int width, int height, void* src, void* dst)
 	{

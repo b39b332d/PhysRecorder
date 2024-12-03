@@ -19,6 +19,9 @@ namespace encoder {
 		EncoderWIC(int width, int height, PIX_TYPE e_type, int quality);
 		EncodedFrame* encode(RawFrame* rgbData);
 		~EncoderWIC();
+		static bool is_support(PIX_TYPE e_type) {
+			return true;
+		}
 	};
 	EncoderWIC::EncoderWIC(int width, int height, PIX_TYPE e_type, int quality): 
 		EncoderComp(width, height, e_type, quality)

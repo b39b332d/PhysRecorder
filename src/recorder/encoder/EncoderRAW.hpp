@@ -12,6 +12,9 @@ namespace encoder {
 		EncoderRaw(int width, int height, PIX_TYPE e_type, int quality);
 		EncodedFrame* encode(RawFrame* rgbData);
 		~EncoderRaw();
+		static bool is_support(PIX_TYPE e_type) {
+			return e_type!=PIX_TYPE_MJPG;
+		}
 	};
 
 	EncoderRaw::EncoderRaw(int width, int height, PIX_TYPE e_type, int quality) : EncoderComp(width, height, e_type, quality) {

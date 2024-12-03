@@ -1,4 +1,4 @@
-#include <MediaWriter.h>
+#include "MediaWriter.h"
 #include <cnpy.h>
 
 void MediaWriter::write_file() {
@@ -71,4 +71,9 @@ void MediaWriter::close() {
 			delete save_thread;
 		}
 	}
+}
+
+std::set<PIX_TYPE> MediaWriter::get_supported_encoders(PIX_TYPE t)
+{
+	return encoder::get_supported_encoders(t);
 }

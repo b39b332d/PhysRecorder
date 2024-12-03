@@ -14,6 +14,13 @@
 #include <EncoderRAW.hpp>
 namespace encoder {
 
+	std::set<PIX_TYPE> get_supported_encoders(PIX_TYPE t) {
+		std::set<PIX_TYPE> ts;
+		if (JPEG_ENCODER::is_support(t))ts.insert(PIX_TYPE_MJPG);
+		if (EncoderHUFF::is_support(t))ts.insert(PIX_TYPE_HFYU);
+		if (EncoderRaw::is_support(t))ts.insert(PIX_TYPE_RAW);
+		return ts;
+	}
 	class stream_encoder {
 		std::counting_semaphore<CPU_COUNT * 2> out_empty = std::counting_semaphore<CPU_COUNT * 2>(CPU_COUNT * 2);
 		std::counting_semaphore<CPU_COUNT * 2> out_valid = std::counting_semaphore<CPU_COUNT * 2>(0);
@@ -31,11 +38,9 @@ namespace encoder {
 		{
 
 			if (d_type == PIX_TYPE_MJPG)
-				pencoder = new JPEG_ENCODER(width, height, e_type, quality); // defult
+				pencoder = new JPEG_ENCODER(width, height, e_type, quality); 
 			else if (d_type == PIX_TYPE_HFYU)
 				pencoder = new EncoderHUFF(width, height, e_type, quality);
-			else if (d_type == PIX_TYPE_MPNG)
-				pencoder = new PNG_ENCODER(width, height, e_type, quality);
 			else if (d_type == PIX_TYPE_RAW)
 				pencoder = new EncoderRaw(width, height, e_type, quality);
 			else
@@ -179,5 +184,6 @@ namespace encoder {
 		in_lock.unlock();
 		in_valid.release();
 	}
+
 
 };

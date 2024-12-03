@@ -96,7 +96,7 @@ int main() {
 		HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
 		std::cout << "Encoder test\n";
 		encoder::encoder_init();
-		auto en_stream_p = encoder::add_stream(1280 * 2, 720,PIX_TYPE_BGR888);
+		auto en_stream_p = encoder::add_stream(1280 * 2, 720,PIX_TYPE_BGR8);
 		std::thread th([en_stream_p] {while (true) {
 			auto out = encoder::read(en_stream_p);
 			if (out == nullptr) {

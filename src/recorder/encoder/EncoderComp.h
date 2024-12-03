@@ -29,5 +29,9 @@ namespace encoder {
 		}
 		virtual ~EncoderComp() {};
 		virtual EncodedFrame* encode(RawFrame* rgbData) = 0;
+
+		static bool is_support(PIX_TYPE e_type) {
+			return false;
+		}
 	};
 }

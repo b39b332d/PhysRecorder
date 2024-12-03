@@ -25,8 +25,8 @@ int main() {
         process_signal(1, random_float);
         int idx=-1;
         float snr;
-        auto v = get_spectrum(0, 0, 10 * INTERP_FS, idx);
-        auto b = get_spectrum(1, 0, 10 * INTERP_FS, idx, &snr);
+        auto v = get_spectrum(0, 0, 10 * INTERP_FS, &idx);
+        auto b = get_spectrum(1, 0, 10 * INTERP_FS, &idx, &snr);
 
         //reset();
     }
