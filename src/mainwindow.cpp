@@ -26,11 +26,26 @@ void MainWindow::lock_camera_info_play(bool lock) {
         ui->VideoBox->setDisabled(false);
         ui->actionStartTrigger->setToolTip("Stop");
         ui->actionStartTrigger->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
+
+        ui->VideoBox->show();
+        textedit_streamname->disconnect(this);
+        textedit_streamname->setDisabled(false);
+        textedit_streamname->setText(capture->selected_device->device_friendly_name.c_str());
+        connect(textedit_streamname, &QLineEdit::editingFinished, this, [this]() {
+            auto text = textedit_streamname->text().replace(QRegularExpression("[/\\\\:*?\"'<>|]"), "-");
+            capture->selected_device->device_friendly_name = text.toStdString();
+            textedit_streamname->setText(text);
+            });
     }
     else {
         ui->VideoBox->setDisabled(true);
         ui->actionStartTrigger->setToolTip("Play");
         ui->actionStartTrigger->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+
+        ui->VideoBox->hide();
+        textedit_streamname->disconnect(this);
+        textedit_streamname->setDisabled(true);
+        textedit_streamname->setText("");
     }
 }
 
@@ -96,11 +111,9 @@ void MainWindow::onCameraSelected(int idx) {
     if (idx == -1) {
         lock_camera_info_play(false);
         capture->selected_device = nullptr;
-        ui->VideoBox->hide();
         return;
     }
     setCursor(Qt::WaitCursor);
-    ui->VideoBox->show();
     capture::CameraDevice* device = comboBox_cameras->itemData(idx).value<capture::CameraDevice*>();
 
     capture->selected_device = device;
@@ -195,8 +208,9 @@ void MainWindow::onSerialHighted(int idx, bool is_highlight) {
             signalProcess->graph_ppg->setSelection(QCPDataSelection(QCPDataRange(0, 500)));
             connect(stream, &SerialReader::serial_ready, signalProcess, &SignalProcess::processPPG);
 
-            textedit_serialname->setDisabled(false);
+            textedit_serialname->disconnect(this);
             textedit_serialname->setText(QString::fromStdString(stream->friendly_name));
+            textedit_serialname->setDisabled(false);
             connect(textedit_serialname, &QLineEdit::editingFinished, this,
                 [stream, graph,this]() {
                     auto text = textedit_serialname->text().replace(QRegularExpression("[/\\\\:*?\"'<>|]"), "-");
@@ -215,7 +229,7 @@ void MainWindow::onSerialHighted(int idx, bool is_highlight) {
             signalProcess->graph_ppg->setSelection(QCPDataSelection(QCPDataRange()));
             ui->plot_ppg->legend->itemWithPlottable(graph)->setSelected(false);
             textedit_serialname->disconnect(this);
-            textedit_serialname->setText("serial file name");
+            textedit_serialname->setText("");
             textedit_serialname->setDisabled(true);
         }
     }
@@ -305,10 +319,14 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     textedit_serialname = new QLineEdit(ui->toolBarSD);
     textedit_serialname->setMinimumWidth(150);
     textedit_serialname->setMaximumWidth(200);
+    textedit_serialname->setDisabled(true);
+    textedit_serialname->setPlaceholderText("Serial Filename");
     ui->toolBarSD->addWidget(textedit_serialname);
 
     textedit_streamname = new QLineEdit(ui->toolBarRS);
     textedit_streamname->setMaximumWidth(200);
+    textedit_streamname->setDisabled(true);
+    textedit_streamname->setPlaceholderText("Device Filename");
     ui->toolBarRS->addWidget(textedit_streamname);
 
 
@@ -636,13 +654,7 @@ static inline int encode_codec_map(PIX_TYPE format) {
 }
 void MainWindow::loadCameraOptions(capture::CameraDevice *device) {
 
-    textedit_streamname->disconnect(this);
-    textedit_streamname->setText(device->device_friendly_name.c_str());
-    connect(textedit_streamname, &QLineEdit::editingFinished, this, [this, device]() {
-        auto text = textedit_streamname->text().replace(QRegularExpression("[/\\\\:*?\"'<>|]"), "-");
-        device->device_friendly_name = text.toStdString();
-        textedit_streamname->setText(text);
-        });
+
     ui->slider_quality->setValue(device->encoder_quality);
 
     for (int opt = 0; opt < capture::CameraDevice::DEVICE_OPTION_CNT; opt++) {
@@ -1037,21 +1049,24 @@ std::string MainWindow::start_record(std::string save_prefix ="") {
         ui->spinRecordTime->setValue(30);
     }
     std::string temp_ret;
+    filenameLineEdit_name = ui->filenameLineEdit->text();
     if (save_prefix.empty()) {
         auto ts = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         std::stringstream ss;
-        if (ui->filenameLineEdit->text().length() != 0)
-            ss << ts << "_" << ui->filenameLineEdit->text().toStdString() ;
-        else
+        if (filenameLineEdit_name.length() != 0) {
+            ss << ts << "_" << filenameLineEdit_name.toStdString();
+        }
+        else {
             ss << ts;
+        }
         save_prefix = std::string("./rec/") + ss.str();
         temp_ret = save_prefix;
         save_prefix += "/";
         QDir().mkdir(save_prefix.c_str());
     }
     else {
-        if (ui->filenameLineEdit->text().length() != 0) {
-            auto save_fname = ui->filenameLineEdit->text().toStdString();
+        if (filenameLineEdit_name.length() != 0) {
+            auto save_fname = filenameLineEdit_name.toStdString();
             int first_index = save_prefix.find_first_of('_');
             if (first_index != std::string::npos) {
                 auto orig_path = save_prefix.substr(0,first_index+1);
@@ -1073,6 +1088,7 @@ std::string MainWindow::start_record(std::string save_prefix ="") {
             save_prefix += (QString("/") + QString::number(QCoreApplication::applicationPid()) + "_").toStdString();
         }
     }
+    ui->filenameLineEdit->setText("<"+QString::fromStdString(save_prefix)+">");
     std::ranges::replace(save_prefix, ':', '-');
     run_with_call_back(
         [this, save_prefix]() {
@@ -1110,7 +1126,7 @@ void MainWindow::stop_record() {
     setCursor(Qt::WaitCursor);
     ui->toolBarRC->setEnabled(false);
     ui->spinRecordTime->setValue(spin_record_last_time);
-
+    ui->filenameLineEdit->setText(filenameLineEdit_name);
 
     run_with_call_back([this]() {
         recorder_lock.lock();

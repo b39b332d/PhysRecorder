@@ -72,7 +72,8 @@ namespace capture {
     class CameraDevice {
     public:
         std::mutex device_lock;
-        std::string device_name;
+        std::string device_name; // display name
+        std::string device_friendly_name; // save name
         std::unordered_map<std::string, CameraStream*> streams_map;
         std::set<CameraStream*> enabled_streams;
         std::condition_variable device_cond;
@@ -173,7 +174,6 @@ namespace capture {
 
 
 
-        std::string device_friendly_name;
         PIX_TYPE encoder_method=PIX_TYPE_MJPG;
         int encoder_quality = 90;
     };

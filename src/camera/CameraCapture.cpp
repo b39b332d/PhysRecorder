@@ -4,7 +4,7 @@
 #include "RS/CameraDriverRS.h"
 #include <thread>
 namespace capture {
-	std::map<std::string, CameraDevice*> devices_map;
+	std::map<std::string, CameraDevice*> devices_map; // unique name
 	std::set<CameraDevice*> enabled_devices;
 	std::mutex devices_lock;
 	void refresh_devices()

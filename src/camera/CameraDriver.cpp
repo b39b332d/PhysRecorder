@@ -29,7 +29,7 @@ namespace capture {
                 s->selected_profile = s->default_profile;
             }
             device_friendly_name = device_name;
-            std::replace(device_friendly_name.begin(), device_friendly_name.end(), 'i', 'p');
+            std::replace(device_friendly_name.begin(), device_friendly_name.end(), ':', '-');
             return true;
         }
         else

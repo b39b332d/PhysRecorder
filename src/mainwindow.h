@@ -61,6 +61,7 @@ private:
     MultiSelectComboBox* comboBox_serial;
     QSpinBox* spinRecordTime;
     QLineEdit* filenameLineEdit;
+    QString filenameLineEdit_name;
     QTimer* record_timer;
     int spin_record_last_time;
     double show_window_length = 6.0;
