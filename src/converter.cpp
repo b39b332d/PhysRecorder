@@ -9,8 +9,7 @@ static int show_matirx[][2] = { {1,1},{1,1},{1,2},{2,2},{2,2},{2,3},{2,3},{3,3},
 ,{ 3,4 },{3,4},{3,4},{4,4},{4,4},{4,4},{4,4},{4,5},{4,5},{4,5},{4,5},{5,5},{5,5},{5,5},{5,5},{5,5}};
 Converter::Converter(ImageViewer* videoLabel, QObject* parent) :
     QObject(parent),
-    videoLabel(videoLabel),
-    scale(0)
+    videoLabel(videoLabel)
 {
 }
 

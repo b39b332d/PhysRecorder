@@ -37,7 +37,6 @@ public:
     QPoint click_point;
     QPoint click_point_end;
     int click_event_type;
-    QVBoxLayout* save_layout;
     explicit ImageViewer(QWidget* parent = nullptr);
     Q_SLOT void setImage(const QImage&);
 protected:

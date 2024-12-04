@@ -48,24 +48,24 @@ void MainWindow::lock_camera_info_play(bool lock) {
         textedit_streamname->setText("");
     }
 }
+static std::atomic<bool> process_thread_running=false;
+void Worker::run_in_thread(const std::function<void()>& task) {
 
-
-static std::atomic<bool> run_with_call_back_busy ;
+    task();
+    process_thread_running = false;
+    process_thread_running.notify_one();
+    emit process_finished();
+}
 void MainWindow::run_with_call_back(const std::function<void()>& run_in_thread, const std::function<void()>& call_back = []() {}) {
     bool d = false;
-    while (!run_with_call_back_busy.compare_exchange_strong(d, true)) {
-        run_with_call_back_busy.wait(d);
+    while (!process_thread_running.compare_exchange_strong(d, true)) {
+        process_thread_running.wait(true);
     }
-    QThread* process_thread = QThread::create(run_in_thread);
-    connect(process_thread, &QThread::finished, this,
-        [call_back, process_thread]() {
-            call_back();
-    process_thread->wait(); 
-    process_thread->deleteLater(); 
-    run_with_call_back_busy = false;
-        });
+    connect(&process_thread_worker,&Worker::process_finished, 
+        this,call_back,Qt::SingleShotConnection);
+    QMetaObject::invokeMethod(&process_thread_worker,
+        &Worker::run_in_thread,Qt::QueuedConnection,run_in_thread);
 
-    process_thread->start();
 }
 
 void MainWindow::refresh_plot() {
@@ -82,7 +82,7 @@ void MainWindow::refresh_plot() {
     ui->plot_ppg->replot();
 }
 
-void MainWindow::on_device_selected(capture::CameraDevice* device) {
+void MainWindow::onDeviceSelected(capture::CameraDevice* device) {
     if (device == nullptr) {
         comboBox_cameras->setCurrentIndex(-1); 
         onCameraSelected(-1);
@@ -96,7 +96,7 @@ void MainWindow::on_device_selected(capture::CameraDevice* device) {
     }
 }
 
-void MainWindow::on_capture_device_disabled(capture::CameraDevice* device) {
+void MainWindow::onCaptureDeviceDisabled(capture::CameraDevice* device) {
     int idx = comboBox_cameras->findData(QVariant::fromValue(device));
     if (idx!=-1 && idx == comboBox_cameras->currentIndex()) {
         lock_camera_info_play(false);
@@ -266,19 +266,16 @@ void MainWindow::onProfileSelected(int idx) {
     //ui->toolBarRS->setDisabled(false);
     //setCursor(Qt::ArrowCursor);
 }
-#include <QSpacerItem>
 MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
 //use reference instead of pointer
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
-    , ts_idx(-1)
-    , zeropad('0')
-    , totalSourceFileCanBeIndexed(-1)
-    , setSource(false)
 {
     splash.showMessage("Setting up UI");
     ui->setupUi(this);
 
+    process_thread_worker.moveToThread(&process_thread);
+    process_thread.start();
 
     this->setWindowTitle("Remote PhotoPlethysmoGraphy");
 
@@ -404,10 +401,10 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
 
     capture = new Capture(*converter, signalProcess);
     converter->moveToThread(converterThread);
-    connect(capture, &Capture::device_disabled, this, &MainWindow::on_capture_device_disabled);
+    connect(capture, &Capture::device_disabled, this, &MainWindow::onCaptureDeviceDisabled);
     connect(capture->signalProcess, &SignalProcess::fftReady, this, &MainWindow::setfft);
     auto o = QObject::connect(converter, &Converter::frameReady, ui->q_video, &ImageViewer::setImage);
-    connect(converter, &Converter::device_selected, this, &MainWindow::on_device_selected);
+    connect(converter, &Converter::device_selected, this, &MainWindow::onDeviceSelected);
 
     converterThread->start();
 
@@ -415,7 +412,6 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     
 
     on_actionrefreshSerial_triggered();
-    run_with_call_back_busy.wait(false);
 
     ui->VideoBox->hide();
 
@@ -576,6 +572,8 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     QObject::connect(&watcher, &QFileSystemWatcher::fileChanged,this, &MainWindow::onFileChanged);
 
     splash.showMessage("Init capture");
+
+    process_thread_running.wait(true);
     splash.showMessage("Done");
 }
 void MainWindow::setSqi(int c, float snr, float sqi) {
@@ -839,7 +837,7 @@ void MainWindow::comb_comp_changed(int index) {
     }
     auto support_pix =  intersectSets(support_pixs);
 
-    disconnect(comp_conn);
+    ui->slider_quality->disconnect(this);
     qDebug() << ui->comboBox_codec->currentText();
     if (ui->comboBox_codec->currentText() == "MJPG") {
         if (support_pix.find(PIX_TYPE_MJPG) == support_pix.end()) {
@@ -853,7 +851,7 @@ void MainWindow::comb_comp_changed(int index) {
         ui->slider_quality->setMaximum(100);
         ui->slider_quality->setMinimum(0);
         ui->compress_label->setText("Quality");
-        comp_conn = connect(ui->slider_quality, &QSlider::valueChanged, this, [this](int val) {
+        connect(ui->slider_quality, &QSlider::valueChanged, this, [this](int val) {
             if (capture->selected_device != nullptr)capture->selected_device->encoder_quality = val;
             if (val == 100)ui->label_quality->setText("MAX");
             else
