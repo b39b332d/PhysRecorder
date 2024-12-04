@@ -42,6 +42,7 @@ set(Qt6_ROOT  CACHE PATH "Qt root directory")
 set(REALSENSE_DIR CACHE PATH "RealSense root directory")
 set(OpenVINO_DIR  CACHE PATH "OpenVINO Runtime directory")
 set(MKL_DIR  CACHE PATH "MKL root directory")
+set(ENIGMA_BOX_CONXOLE_EXE CACHE PATH "ENIGMA_BOX executable path")
 
 include("cmake/env.cmake" OPTIONAL)
 
@@ -67,7 +68,6 @@ if(TARGET opencv_core)
 else()
     message( FATAL_ERROR "opencv_core does not exist! CMake will exit." )
 endif()
-
 ####### FIND Qt
 find_package(Qt6 COMPONENTS Widgets Gui Core Multimedia REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
 get_target_property(mocExe Qt6::moc IMPORTED_LOCATION)
@@ -81,8 +81,8 @@ set_target_properties(realsense PROPERTIES
              IMPORTED_IMPLIB ${REALSENSE_DIR}/lib/x64/realsense2.lib)
 target_include_directories(realsense INTERFACE ${REALSENSE_DIR}/include)
 set(INSTALL_REALSENSE_BIN "${REALSENSE_DIR}/bin/x64/")
-
 list(APPEND INSTALL_DEP_PATHS "${INSTALL_REALSENSE_BIN}")
+
 list(APPEND INSTALL_DEP_PATHS "${OpenVINO_DIR}/bin/intel64/${CMAKE_BUILD_TYPE}")
 list(APPEND INSTALL_DEP_PATHS "${OpenVINO_DIR}/3rdparty/tbb/bin")
 

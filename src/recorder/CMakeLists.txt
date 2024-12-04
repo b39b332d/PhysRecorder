@@ -1,6 +1,8 @@
 add_subdirectory(encoder)
 
 add_library(phy_recorder OBJECT MediaWriter.cpp "avi-utils.cc" "fileio.cc" "gwavi.cc")
+set_target_properties(phy_recorder PROPERTIES AUTOMOC OFF)
+set_target_properties(phy_recorder PROPERTIES AUTOUIC OFF)
 target_link_libraries(phy_recorder PUBLIC opencv_core phy_encoder "$<TARGET_OBJECTS:phy_encoder>")
 target_include_directories(phy_recorder PUBLIC ./ ${utils_dir})
 

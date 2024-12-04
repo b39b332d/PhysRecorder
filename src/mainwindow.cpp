@@ -8,14 +8,8 @@
 #include <QFile>
 #include <QTextStream>
 #include <qstandardpaths.h>
-
+#include <windows.h>
 #include <RPPGExtractor.h>
-
-
-#include "custom_serial.h"
-#include "ppg.h"
-#include "respi.h"
-#include "cnpy.h"
 double win_length=8;
 
 void MainWindow::lock_camera_info_play(bool lock) {

@@ -87,17 +87,17 @@ function(custom_target_install tgt)
                 endif()
             endif()
 
-             if("opencv_videoio" IN_LIST tgt_dep_lib)
-                    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-                    set(dnn_dep ${INSTALL_OPENCV_BIN}/opencv_videoio_ffmpeg${OpenCV_VERSION_CP}_64.dll
-                        )
-                    else()
-                    set(dnn_dep ${INSTALL_OPENCV_BIN}/opencv_videoio_ffmpeg${OpenCV_VERSION_CP}${debug_postfix}.dll
-                        )
-                    endif()
-                    install(FILES ${dnn_dep} TYPE BIN)
-                    install(CODE "list(APPEND _CMAKE_DEPS ${dnn_dep})")
-             endif()
+#             if("opencv_videoio" IN_LIST tgt_dep_lib)
+#                    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+#                    set(dnn_dep ${INSTALL_OPENCV_BIN}/opencv_videoio_ffmpeg${OpenCV_VERSION_CP}_64.dll
+#                        )
+#                    else()
+#                    set(dnn_dep ${INSTALL_OPENCV_BIN}/opencv_videoio_ffmpeg${OpenCV_VERSION_CP}${debug_postfix}.dll
+#                        )
+#                    endif()
+#                    install(FILES ${dnn_dep} TYPE BIN)
+#                    install(CODE "list(APPEND _CMAKE_DEPS ${dnn_dep})")
+#             endif()
 
             install(DIRECTORY ${CMAKE_SOURCE_DIR}/data TYPE BIN)
             install(SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/DeployDep.cmake)
