@@ -59,7 +59,7 @@ namespace RPPGExtractor {
 	float process_signal(int c, ...);
 	cv::Mat get_signal(int c, int win_len, unsigned ofs_len = 0, unsigned stride=1);
 	cv::Mat get_spectrum(int c, unsigned ofs_len, int win_len, int* max_idx=nullptr, float* snr=nullptr);
-	float get_sqi(int c1, int c2, int win_len,unsigned  ofs_len_c1 =0, unsigned ofs_len_c2 = 0);
+	float get_pcc(int c1, int c2, int win_len,unsigned  ofs_len_c1 =0, unsigned ofs_len_c2 = 0);
 	void reset(int c);
 	void reset();
 };

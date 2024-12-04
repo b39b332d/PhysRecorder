@@ -41,7 +41,7 @@ private:
     cv::Mat canvas;
     cv::Mat point_list_mat;
 
-    int ref_channel;
+    int ppg_channel;
 
     bool show_r = false;
     bool show_g = false;

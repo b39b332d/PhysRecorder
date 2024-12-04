@@ -87,11 +87,13 @@ int main() {
 	Mat img = imread("data/resources/face.jpg");
 	cv::resize(img, img, Size(1280 * 2, 720));
 
-	int size  = stb_encode_jpg(img.data, 1280 * 2, 720, 3, jpegBuffer);
+	int size = stb_encode_jpg(img.data, 1280 * 2, 720, 3, jpegBuffer);
 
 	int i;
 	std::cin >> i;
 
+}
+/*
 	{
 		HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
 		std::cout << "Encoder test\n";
@@ -240,3 +242,4 @@ int main() {
 	}
 	return 0;
 }
+*/

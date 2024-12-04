@@ -1,5 +1,4 @@
 #include "RPPGExtractor.h"
-#include <RPPGExtractor.h>
 #include <unsupported/Eigen/FFT>
 #include <Eigen/Dense>
 #include "OverlapAdding.h"
@@ -131,25 +130,38 @@ namespace RPPGExtractor {
 		return spec;
 	}
 
-	float get_sqi(int c1, int c2, int win_len, unsigned ofs_len_c1, unsigned ofs_len_c2) {
+	float get_pcc(int c1, int c2, int win_len, unsigned ofs_len_c1, unsigned ofs_len_c2) {
 		Eigen::Map<Eigen::ArrayXf>* sig1;
 		if (channel_types[c1].first == POS_CHANNEL)
 			sig1 = new Eigen::Map<Eigen::ArrayXf>(pos_ovadd[channel_types[c1].second]->getArray(win_len, ofs_len_c1));
 		else
-			sig1 = new Eigen::Map<Eigen::ArrayXf>(raw_windows[channel_types[c1].second]->getArray(win_len, ofs_len_c2));
+			sig1 = new Eigen::Map<Eigen::ArrayXf>(raw_windows[channel_types[c1].second]->getArray(win_len, ofs_len_c1));
 		Eigen::Map<Eigen::ArrayXf>* sig2;
 		if (channel_types[c2].first == POS_CHANNEL)
-			sig2 = new Eigen::Map<Eigen::ArrayXf>(pos_ovadd[channel_types[c2].second]->getArray(win_len, ofs_len_c1));
+			sig2 = new Eigen::Map<Eigen::ArrayXf>(pos_ovadd[channel_types[c2].second]->getArray(win_len, ofs_len_c2));
 		else
 			sig2 = new Eigen::Map<Eigen::ArrayXf>(raw_windows[channel_types[c2].second]->getArray(win_len, ofs_len_c2));
 		float sqi;
-		if (sig1->size() > sig2->size()) {
-			sqi = (sig1->tail(sig2->size()) * *sig2).sum();
+		if (sig1->size() <= 1 || sig2->size() <= 1)
+			sqi = 0;
+		else if (sig1->size() > sig2->size()) {
+			auto s1_temp = sig1->tail(sig2->size()) - sig1->tail(sig2->size()).mean();
+			auto s2_temp = *sig2 - sig2->mean();
+			float covariance = (s1_temp.matrix().transpose() *
+				s2_temp.matrix())(0, 0) / sig2->size();
+			float std_X = std::sqrt(s1_temp.square().sum() / sig2->size());
+			float std_Y = std::sqrt(s2_temp.square().sum() / sig2->size());
+			sqi= covariance / (std_X * std_Y+1e-7);
 		}
-		else if (sig1->size() < sig2->size()) {
-			sqi = (sig2->tail(sig1->size()) * *sig1).sum();
-		}else
-			sqi = (*sig2 * *sig1).sum();
+		else {
+			auto s2_temp = sig2->tail(sig1->size()) - sig2->tail(sig1->size()).mean();
+			auto s1_temp = *sig1 - sig1->mean();
+			float covariance = (s2_temp.matrix().transpose() *
+				s1_temp.matrix())(0, 0) / sig1->size();
+			float std_X = std::sqrt(s1_temp.square().sum() / sig1->size());
+			float std_Y = std::sqrt(s2_temp.square().sum() / sig1->size());
+			sqi = covariance / (std_X * std_Y + 1e-7);
+		}
 		delete sig1, sig2;
 		return sqi;
 	}

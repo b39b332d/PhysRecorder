@@ -8,7 +8,7 @@ file(WRITE ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "
   <Files>
     <Enabled>True</Enabled>
     <DeleteExtractedOnExit>False</DeleteExtractedOnExit>
-    <CompressFiles>False</CompressFiles>
+    <CompressFiles>True</CompressFiles>
     <Files>
       <File>
         <Type>3</Type>

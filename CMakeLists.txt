@@ -112,5 +112,6 @@ add_custom_target(generate_boxed_exe
     COMMAND ${CMAKE_COMMAND} -DEVB_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}/bin -P ${CMAKE_HOME_DIRECTORY}/cmake/configure_evb_file.cmake 
     COMMAND ${ENIGMA_BOX_CONXOLE_EXE} ${CMAKE_INSTALL_PREFIX}/bin/PhyRecorder.evb
     DEPENDS install
+    USES_TERMINAL
 )
 endif()
