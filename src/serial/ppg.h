@@ -8,7 +8,7 @@ class PPGReader :public SerialReader {
 public:
 	PPGReader();
 	bool setPortName(const std::string& portNames);
-
+	char device_c;
 private:
 	void run();
 	friend SerialReader;

@@ -2,24 +2,27 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-
-#include "capture.h"
 #include <QSpinBox>
 #include <QDir>
 #include <QSplashScreen>
-#include <vector>
-#include <qcombobox.h>
 #include <QFileSystemWatcher>
-#include <CameraCapture.h>
-#include <MultiSelectComboBox.h>
 #include <QCheckBox>
+#include <qcombobox.h>
 #include <QPushButton>
 #include <unordered_set>
-#include <SerialReader.h>
+#include <vector>
+#include <CameraCapture.h>
+#include <QTimer>
+#include <QThread>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
+class Capture;
+class MultiSelectComboBox;
+class Converter;
+class SignalProcess;
+class SerialReader;
 class Worker : public QObject {
     Q_OBJECT
 
@@ -69,7 +72,6 @@ private:
 
 
     QTimer* refresh_plot_timer;
-    void refreshCameras();
 
     QFileSystemWatcher watcher;
     QString sharedFilePath;
@@ -97,7 +99,7 @@ private slots:
         QThread process_thread;
         Worker process_thread_worker;
         void run_with_call_back(const std::function<void()>& run_in_thread, const std::function<void()>& call_back);
-        
+
         void lock_camera_info_play(bool lock=true);
         void loadCameraOptions(capture::CameraDevice* device);
 

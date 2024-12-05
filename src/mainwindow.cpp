@@ -10,6 +10,11 @@
 #include <qstandardpaths.h>
 #include <windows.h>
 #include <RPPGExtractor.h>
+#include <capture.h>
+#include <SerialReader.h>
+#include <MultiSelectComboBox.h>
+#include "converter.h"
+#include "signalprocess.h"
 double win_length=8;
 
 void MainWindow::lock_camera_info_play(bool lock) {
@@ -393,10 +398,12 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     converter = new Converter(ui->q_video);
     QThread* converterThread = new QThread();
 
-    capture = new Capture(*converter, signalProcess);
+    capture = new Capture();
     converter->moveToThread(converterThread);
     connect(capture, &Capture::device_disabled, this, &MainWindow::onCaptureDeviceDisabled);
-    connect(capture->signalProcess, &SignalProcess::fftReady, this, &MainWindow::setfft);
+    connect(signalProcess, &SignalProcess::fftReady, this, &MainWindow::setfft);
+    connect(capture, &Capture::updateFrame, converter, &Converter::frame_ready);
+
     auto o = QObject::connect(converter, &Converter::frameReady, ui->q_video, &ImageViewer::setImage);
     connect(converter, &Converter::device_selected, this, &MainWindow::onDeviceSelected);
 
@@ -416,18 +423,19 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     ui->actionG->setProperty("channel", signalProcess->g_channel);
     ui->actionB->setProperty("channel", signalProcess->b_channel);
     ui->actionPOS->setProperty("channel", signalProcess->pos_channel);
-    connect(ui->actionR, &QPushButton::toggled, capture->signalProcess, &SignalProcess::setShowChannel);
-    connect(ui->actionG, &QPushButton::toggled, capture->signalProcess, &SignalProcess::setShowChannel);
-    connect(ui->actionB, &QPushButton::toggled, capture->signalProcess, &SignalProcess::setShowChannel);
-    connect(ui->actionPOS, &QPushButton::toggled, capture->signalProcess, &SignalProcess::setShowChannel);
+    connect(ui->actionR, &QPushButton::toggled, signalProcess, &SignalProcess::setShowChannel);
+    connect(ui->actionG, &QPushButton::toggled, signalProcess, &SignalProcess::setShowChannel);
+    connect(ui->actionB, &QPushButton::toggled, signalProcess, &SignalProcess::setShowChannel);
+    connect(ui->actionPOS, &QPushButton::toggled, signalProcess, &SignalProcess::setShowChannel);
     connect(ui->actionR, &QPushButton::toggled, [this](bool checked) {if(!checked) ui->actionR->setText("R"); });
     connect(ui->actionG, &QPushButton::toggled, [this](bool checked) {if (!checked)ui->actionG->setText("G"); });
     connect(ui->actionB, &QPushButton::toggled, [this](bool checked) {if (!checked)ui->actionB->setText("B"); });
     connect(ui->actionPOS, &QPushButton::toggled, [this](bool checked) {if (!checked)ui->actionPOS->setText("POS"); });
 
-    connect(capture->signalProcess, &SignalProcess::sqiReady, this, &MainWindow::setSqi);
+    connect(signalProcess, &SignalProcess::sqiReady, this, &MainWindow::setSqi);
 
-    connect(capture, &Capture::signalReady, capture->signalProcess, &SignalProcess::processSignal);
+    connect(capture, &Capture::signalReady, signalProcess, &SignalProcess::processSignal);
+    connect(capture, &Capture::loseTracking, signalProcess, &SignalProcess::reset_rppg);
     connect(ui->actionTracking, &QPushButton::clicked, this, [this](bool checked) {
         std::unique_lock l(capture->track_lock);
         if (checked) {
@@ -550,8 +558,6 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
         });
     
     ui->VideoBox->setDisabled(true);
-    if(!QDir("./rec").exists())
-        QDir().mkdir("./rec");
     //connect(capture->signalProcess, &SignalProcess::signalReady, this, &MainWindow::addSignal);
 
     //connect(capture, &Capture::finished, this, &MainWindow::on_stopButton_clicked);
@@ -935,13 +941,6 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::refreshCameras() {
-    capture::refresh_devices();
-    for (auto& [device_name,device] : capture::devices_map) {
-        comboBox_cameras->addItem(QString::fromStdString(device_name), QVariant::fromValue(device));
-    }
-    comboBox_cameras->setCurrentIndex(-1);
-}
 
 void MainWindow::on_actionrefreshCamera_triggered() {
     setCursor(Qt::WaitCursor);
@@ -955,18 +954,19 @@ void MainWindow::on_actionrefreshCamera_triggered() {
     comboBox_profile_type->clear();
     comboBox_profile_type->setCurrentIndex(-1);
     comboBox_cameras->setDisabled(true);
-    run_with_call_back(
+    ui->actionStartTrigger->setDisabled(true);
+    lock_camera_info_play(false);
+    run_with_call_back(capture::refresh_devices,
         [this]() {
-            refreshCameras();
-        },
-        [this]() {
+            for (auto& [device_name, device] : capture::devices_map) {
+                comboBox_cameras->addItem(QString::fromStdString(device_name), QVariant::fromValue(device));
+            }
             comboBox_cameras->setCurrentIndex(-1);
             comboBox_cameras->setDisabled(false);
             ui->actionrefreshCamera->setDisabled(false);
             setCursor(Qt::ArrowCursor);
         }
     );
-
 }
 
 void MainWindow::on_actionstopSerial_triggered() {

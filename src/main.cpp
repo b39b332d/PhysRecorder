@@ -3,12 +3,22 @@
 #include <QApplication>
 #include <QSplashScreen>
 #include <QWindow>
+#include <QMessageBox>
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
     QPixmap pixmap(PROJECT_ROOT_PATH"resources/ECG.jpg");
     QSplashScreen splash(pixmap);
     splash.show();
+
+    if (!QDir("./rec").exists()) {
+        bool s = QDir().mkdir("./rec");
+        if (!s) {
+            QMessageBox::critical(nullptr, "Error", "Can not create rec folder!");
+            app.exit();
+            return 0;
+        }
+    }
 
 
     QFile f(":qdarkstyle/dark/darkstyle.qss");

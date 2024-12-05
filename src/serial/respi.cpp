@@ -60,7 +60,7 @@ void RESPIReader::run() {
         Sleep(10);
         serial_reader->write("\x20\x32");
         serial_reader->flush();
-        serial_reader->setTimeout(20, 20, 0, 20, 0);
+        serial_reader->setTimeout(5, 100, 0, 20, 0);
 
         while (true) {
             read_data = serial_reader->read(1);
@@ -72,7 +72,7 @@ void RESPIReader::run() {
             else {
                 error_num++;
             }
-            if (error_num == 20)
+            if (error_num == 10)
                 throw std::exception();
             if (stop_read_sig == true)
                 break;
@@ -81,8 +81,12 @@ void RESPIReader::run() {
         serial_reader->write("\x20\x33");
         serial_reader->flush();
         serial_reader->readline(100, "\x20\x33");
+        serial_reader->close();
+
     }
     catch (std::exception e) {
+        try { serial_reader->close(); }
+        catch (...) { ; }
         invalidDevice();
     }
     onSerialStop();

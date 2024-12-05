@@ -1,13 +1,11 @@
 #ifndef CAPTURE_H
 #define CAPTURE_H
-#include "signalprocess.h"
 #include <QThread >
 #include <string>
 #include <vector>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/dnn.hpp>
 #include <atomic>
-#include "converter.h"
 #include <MediaWriter.h>
 #include <CameraCapture.h>
 
@@ -21,27 +19,9 @@ extern std::unordered_map<capture::CameraStream*, MediaWriter*> rec_maps;
 class Capture : public QThread
 {
     Q_OBJECT
-        cv::Mat m_frame;
-    std::vector<double> timestamp;
-    int timestamp_method;
-    int capture_ready;
-    int timestamp_line_count;
 
     cv::dnn::Net net_face;
     cv::dnn::Net net_landmarks;
-    Converter& converter;
-    std::atomic<bool> suicide = false;
-    const double interp_cyc;
-    double fps = 0;
-    int total_frames = 0;
-    cv::Size2i vid_size;
-    MediaWriter* rec=NULL;
-    std::vector<double> rec_ts;
-    float rec_fps ;
-    cv::Mat sync_stage1, sync_stage2, depthLUT;
-    cv::Mat LUT_16_reinterpret_cast(cv::Mat mat, cv::Mat dst);
-    int cam_idx;
-    std::mutex cv_cap_lock;
 
 public:
 
@@ -55,20 +35,16 @@ public:
     TRACKING_MODE tracking_mode;
     cv::Rect2i roi;
 
-    SignalProcess* signalProcess;
-    std::atomic<int> rot = 0;
-    std::atomic<bool> is_fliplr = false;
-    std::atomic<bool> is_flipud = false;
+    int rot = 0;
+    bool is_fliplr = false;
+    bool is_flipud = false;
     capture::CameraDevice* selected_device = nullptr;
-    Capture(Converter& converter, SignalProcess*);
+    Capture();
 
     Q_SIGNAL void signalReady(cv::Scalar, double);
     Q_SIGNAL void loseTracking();
     Q_SIGNAL void updateFrame(QList<RawFrame*> main_frames, QList<RawFrame*> other_frames, cv::Rect2i);
     Q_SIGNAL void device_disabled(capture::CameraDevice*);
-    int total_time = 0;
-    void wait_for_rec_save();
-    bool use_camera;
 
 private:
     void run();

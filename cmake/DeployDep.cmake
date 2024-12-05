@@ -19,9 +19,9 @@ foreach(_TMP_dep IN LISTS _CMAKE_DEPS)
     else()
         if(_TMP_dep MATCHES ".*[/\\\\]msvcp[0-9]*\\.dll$")
             cmake_path(REMOVE_EXTENSION _TMP_dep OUTPUT_VARIABLE MSVCP_DLL_NAME)
-            set(MSVCP_DLLS_NAME "${MSVCP_DLL_NAME}_1.dll;${MSVCP_DLL_NAME}_2.dll")
+            set(MSVCP_DLLS_NAME "${MSVCP_DLL_NAME}_1.dll" "${MSVCP_DLL_NAME}_2.dll")
             foreach(_TMP_dep IN LISTS MSVCP_DLLS_NAME)
-                if(NOT (_TMP_dep IN_LIST _CMAKE_DEPS) AND (EXISTS ${_TMP_dep}))
+                if(NOT (_TMP_dep IN LISTS _CMAKE_DEPS) AND (EXISTS ${_TMP_dep}))
                     file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin" 
                                 TYPE SHARED_LIBRARY 
                                 FILES ${_TMP_dep}

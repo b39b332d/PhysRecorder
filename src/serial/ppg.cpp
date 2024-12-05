@@ -39,14 +39,23 @@ bool PPGReader::setPortName(const std::string& portName) {
     if (!serial_reader->isOpen()) {
         return false;
     }
-    serial_reader->write("\xff\xcb\x03\xa4\xa1");
+    serial_reader->write("\xff\xc7\x03\xa4\xa1"
+                            "\xff\xca\x03\xa4\xa1"
+                            "\xff\xcb\x03\xa4\xa1"
+                            "\xff\xcc\x03\xa4\xa1"
+                             "\xff\xce\x03\xa4\xa1");
     serial_reader->flushInput();
-    read_data = serial_reader->readline(100, "\xff\xcb\x03\xa4\xa1");
-    if (read_data.find_last_of("\xff\xcb\x03\xa4\xa1") != read_data.size() - 1) {
-        goto FALSE_RETURN;
-    } 
+    read_data = serial_reader->readline(100, "\x03\xa4\xa1");
+    if(read_data[read_data.size() -5] != '\xff') goto FALSE_RETURN;
+    device_c = read_data[read_data.size() - 4];
+    if (device_c == '\xc7') signal_name="HK-SPO2";
+    else if (device_c == '\xca') signal_name = "HK-Pluse";
+    else if (device_c == '\xcb') signal_name = "HK-PPG";
+    else if (device_c == '\xcc') signal_name = "HK-Respi";
+    else if (device_c == '\xce') signal_name = "HK-ECG";
+    else goto FALSE_RETURN;
     Sleep(2);
-    serial_reader->write("\xff\xcb\x03\xa5\xa2");
+    serial_reader->write(std::string("\xff")+ device_c+ "\x03\xa5\xa2");
     serial_reader->flushInput();
     read_data = serial_reader->read(9);
     if (read_data.size() != 9) {
@@ -76,14 +85,14 @@ void PPGReader::run() {
     try {
         serial_reader->open();
         Sleep(2);
-        serial_reader->write("\xff\xcb\x03\xa3\xa0");
+        serial_reader->write(std::string("\xff") + device_c + "\x03\xa3\xa0");
         serial_reader->flush();
-        serial_reader->setTimeout(5, 5, 0, 5, 0);
+        serial_reader->setTimeout(5, 100, 0, 100, 0);
 
         while (true) {
-            read_data = serial_reader->readline(7, "\xff\xcb");
+            read_data = serial_reader->readline(7, std::string("\xff") + device_c );
             double time_ofs = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count() - 1.0 / ppg_fs * ((-5 + serial_reader->available()) / 7 + 1);
-            if (read_data.size() != 7 || (uchar)read_data[5] != 0xff || (uchar)read_data[6] != 0xcb) {
+            if (read_data.size() != 7 || (uchar)read_data[5] != 0xff || read_data[6] != device_c) {
                 //if (read_data.size() == 7)
                 //    qDebug() << (uchar)read_data[0] << (uchar)read_data[1] << (uchar)read_data[2] << (uchar)read_data[3] << (uchar)read_data[4] << (uchar)read_data[5] << (uchar)read_data[6];
                 error_num++;
@@ -98,17 +107,20 @@ void PPGReader::run() {
                     error_num++;
                 }
             }
-            if (error_num == 50)
+            if (error_num == 10)
                 throw std::exception();
             if (stop_read_sig == true)
                 break;
         }
-        serial_reader->write("\xff\xcb\x03\xa4\xa1");
+        serial_reader->write(std::string("\xff") + device_c + "\x03\xa4\xa1");
         serial_reader->flush();
         serial_reader->setTimeout(100, 100, 0, 100, 0);
-        serial_reader->readline(100, "\xff\xcb\x03\xa4\xa1");
+        serial_reader->readline(100, std::string("\xff") + device_c + "\x03\xa4\xa1");
+        serial_reader->close();
     }
     catch (std::exception e) {
+        try { serial_reader->close(); }
+        catch (...) { ; }
         invalidDevice();
     }
     onSerialStop();

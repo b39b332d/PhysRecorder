@@ -29,10 +29,13 @@ add_executable( PhyRecorder
     ${APP_ICON_RESOURCE_WINDOWS}
 )
 
+
+ find_library(delayimp_LIB NAMES  delayimp REQUIRED)
 set_target_properties(PhyRecorder PROPERTIES 
     WIN32_EXECUTABLE 1 
     RESOURCE "${CMAKE_SOURCE_DIR}/data/resources/icon.ico"
 )
+
 target_include_directories(PhyRecorder PRIVATE ./ ${utils_dir})
 
 target_compile_definitions( PhyRecorder
@@ -43,9 +46,10 @@ add_subdirectory(camera)
 add_subdirectory(signalprocess)
 add_subdirectory(serial)
 add_subdirectory(recorder)
+add_subdirectory(utils)
 
 target_link_libraries(PhyRecorder PRIVATE Qt6::Widgets ${OpenCV_LIBS} 
-realsense cam_driver phy_recorder serial phy_signal)
+realsense cam_driver phy_recorder serial phy_signal ${delayimp_LIB})
 
 set_target_properties(PhyRecorder PROPERTIES WIN32_EXECUTABLE TRUE)
 

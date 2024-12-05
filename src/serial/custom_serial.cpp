@@ -15,7 +15,7 @@ bool CustomSerialReader::setPortName(const std::string& portName) {
         serial_reader->close();
     try {
         serial_reader->setPort(portName.c_str());
-        serial_reader->setTimeout(100, 100, 0, 100, 0);
+        serial_reader->setTimeout(50, 50, 0, 100, 0);
         serial_reader->open();
     }
     catch (...) {
@@ -26,8 +26,8 @@ bool CustomSerialReader::setPortName(const std::string& portName) {
     }
 
     serial_reader->flush();
-    read_data = serial_reader->readline(100, "\r\n");
-    read_data = serial_reader->readline(100, "\r\n");
+    read_data = serial_reader->readline(15, "\r\n");
+    read_data = serial_reader->readline(15, "\r\n");
     if (read_data.size() <= 2) goto FALSE_RETURN;
     read_data.pop_back();
     read_data.pop_back();
@@ -58,7 +58,7 @@ void CustomSerialReader::run() {
         serial_reader->setTimeout(50, 50, 0, 5, 0);
 
         while (true) {
-            read_data = serial_reader->readline(30, "\r\n");
+            read_data = serial_reader->readline(15, "\r\n");
             double time_ofs = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
             if (read_data.size() <=2) {
                 //if (read_data.size() == 7)

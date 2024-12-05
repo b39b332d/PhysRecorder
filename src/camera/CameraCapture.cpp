@@ -15,16 +15,18 @@ namespace capture {
 			first_run = false;
 		}
 		std::unique_lock l(devices_lock);
+		std::map<std::string, CameraDevice*> devices_new_map;
 		for (auto it = devices_map.cbegin(); it != devices_map.cend() /* not hoisted */; /* no increment */)
 		{
 			if (it->second->status == CameraDevice::CS_STANDBY || it->second->status == CameraDevice::CS_UNINIT) {
 				delete it->second;
 				devices_map.erase(it++);
 			}
-			else
+			else {
+				devices_new_map[it->first] = it->second;
 				++it;
+			}
 		}
-		std::map<std::string, CameraDevice*> devices_new_map;
 		std::vector<std::vector<CameraDevice*>> dss;
 		dss.push_back(EnumerateCamera_MSMF());
 		dss.push_back(EnumerateCamera_RS());

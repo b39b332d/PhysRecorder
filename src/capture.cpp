@@ -59,35 +59,26 @@ uchar depthr_p[] = { 255,255,255,0,0,64 };
 uchar depthg_p[] = { 0,165,255,255,0,64 };
 uchar depthb_p[] = { 0,0,0,255,255,128 };
 
-Capture::Capture(Converter& converter, SignalProcess* sp) :
-    converter(converter),
-    tracking_mode(NOT_TRACKING),
-    interp_cyc(10),
-    timestamp_line_count(0),
-    capture_ready(0),
-    timestamp_method(0),
-    signalProcess(sp)
+Capture::Capture() :
+    tracking_mode(NOT_TRACKING)
 {
-
     initInferenceEngine();
-    QObject::connect(this, &Capture::updateFrame, &converter, &Converter::frame_ready);
 
-    connect(this, &Capture::loseTracking, sp, &SignalProcess::reset_rppg);
 
     //In order to begin getting data from the sensor, we need to register a class to handle frames, 
     // in our case we provide the frame_queue when starting the sensor.
-    depthLUT = Mat(Size(1, 256*256), CV_8UC4);
-    int j = 0,i=0;
-    for (; j < 5; j++) {
-        for (; i < 13107; i++) {
-            depthLUT.data[(j * 13107 + i) * 4 + 0] = (depthb_p[j + 1] - depthb_p[j]) * ((double)i / 13107) + depthb_p[j];
-            depthLUT.data[(j * 13107 + i) * 4 + 1] = (depthg_p[j + 1] - depthg_p[j]) * ((double)i / 13107) + depthg_p[j];
-            depthLUT.data[(j * 13107 + i) * 4 + 2] = (depthr_p[j + 1] - depthr_p[j]) * ((double)i / 13107) + depthr_p[j];
-        }
-    }
-    depthLUT.data[(j * 13107 + i) * 4 + 0] = depthb_p[5];
-    depthLUT.data[(j * 13107 + i) * 4 + 1] = depthg_p[5];
-    depthLUT.data[(j * 13107 + i) * 4 + 2] = depthr_p[5];
+    //depthLUT = Mat(Size(1, 256*256), CV_8UC4);
+    //int j = 0,i=0;
+    //for (; j < 5; j++) {
+    //    for (; i < 13107; i++) {
+    //        depthLUT.data[(j * 13107 + i) * 4 + 0] = (depthb_p[j + 1] - depthb_p[j]) * ((double)i / 13107) + depthb_p[j];
+    //        depthLUT.data[(j * 13107 + i) * 4 + 1] = (depthg_p[j + 1] - depthg_p[j]) * ((double)i / 13107) + depthg_p[j];
+    //        depthLUT.data[(j * 13107 + i) * 4 + 2] = (depthr_p[j + 1] - depthr_p[j]) * ((double)i / 13107) + depthr_p[j];
+    //    }
+    //}
+    //depthLUT.data[(j * 13107 + i) * 4 + 0] = depthb_p[5];
+    //depthLUT.data[(j * 13107 + i) * 4 + 1] = depthg_p[5];
+    //depthLUT.data[(j * 13107 + i) * 4 + 2] = depthr_p[5];
 }
 
 
@@ -109,33 +100,28 @@ static cv::Rect2i getSquareBox(cv::Rect2i& face, cv::Size frame_size, double sca
         center_y - max_size / 2, max_size, max_size);
 }
 
-cv::Mat Capture::LUT_16_reinterpret_cast(cv::Mat mat, cv::Mat dst)
-{
-    int limit = mat.rows * mat.cols;
-    ushort* ptr = reinterpret_cast<ushort*>(mat.data);
-    uchar* ptr_d = reinterpret_cast<uchar*>(dst.data);
-    uint32_t* ptr_t = (uint32_t*)(depthLUT.data);
-    for (int i = 0; i < limit-1; i++, ptr++, ptr_d+=3)
-    {
-        *(uint32_t*)ptr_d = ptr_t[*ptr];
-    }
-    *(ushort*)ptr_d = (ushort)ptr_t[*ptr];
-    *(ptr_d+2) = *( (uchar*)(ptr_t+*ptr) + 2);
-    return mat;
-}
+//cv::Mat Capture::LUT_16_reinterpret_cast(cv::Mat mat, cv::Mat dst)
+//{
+//    int limit = mat.rows * mat.cols;
+//    ushort* ptr = reinterpret_cast<ushort*>(mat.data);
+//    uchar* ptr_d = reinterpret_cast<uchar*>(dst.data);
+//    uint32_t* ptr_t = (uint32_t*)(depthLUT.data);
+//    for (int i = 0; i < limit-1; i++, ptr++, ptr_d+=3)
+//    {
+//        *(uint32_t*)ptr_d = ptr_t[*ptr];
+//    }
+//    *(ushort*)ptr_d = (ushort)ptr_t[*ptr];
+//    *(ptr_d+2) = *( (uchar*)(ptr_t+*ptr) + 2);
+//    return mat;
+//}
 void Capture::run()
 {
-    int i_loop = 0;
-    double last_ts = 0;
-    double last_ts2 = 0;
-    double fps = 0;
     Rect2i* rect_face=NULL;
 
     uint32_t error_cnt = 0;
     TRACKING_MODE last_tracking_status = TRACKING_LOSE;
     emit loseTracking();
 
-    int f_cnt = 0;
     bool first_image = false;
     cv::AsyncArray face_landmarks_last;
     face_landmarks_last.release();
@@ -376,8 +362,8 @@ void Capture::initInferenceEngine() {
     // command of downloading from open_model_zoo: 
     // omz_downloader  --name face-detection-retail-0005 --output_dir C:\Users\b39b3\Documents\src\opencv\modules --precisions FP16,FP16-INT8,FP32
     string root_path = PROJECT_ROOT_PATH;
-    string path_net_facedetect = root_path + "models/intel/face-detection-retail-0005/FP32/face-detection-retail-0005";
-    string path_net_landmarks = root_path + "models/intel/facial-landmarks-35-adas-0002/FP32/facial-landmarks-35-adas-0002";
+    string path_net_facedetect = root_path + "models/intel/face-detection-retail-0005/FP16/face-detection-retail-0005";
+    string path_net_landmarks = root_path + "models/intel/facial-landmarks-35-adas-0002/FP16/facial-landmarks-35-adas-0002";
     string resource_path = root_path + "resources/";
 
 

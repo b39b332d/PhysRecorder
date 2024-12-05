@@ -2,11 +2,8 @@
 #define IMAGEVIEWER_H
 
 #include <QWidget>
-#include <QPainter>
-#include <QTimer>
-#include <opencv2/core/types.hpp>
 #include <mutex>
-#include <QVBoxLayout>
+#include <QPainter>
 #include <QElapsedTimer>
 
 class ImageViewer : public QWidget
@@ -29,8 +26,8 @@ class ImageViewer : public QWidget
     QRect select_rect;
     QPoint endPoint;
     QElapsedTimer pressTime;
-    const int timeThreshold = 300;
-    const int moveThreshold = 5;
+    const int timeThreshold = 500;
+    const int moveThreshold = 20;
 
 public:
     std::mutex event_lock;

@@ -1,5 +1,3 @@
-
-
 file(WRITE ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "
 <?xml version=\"1.0\" encoding=\"Windows-1252\"?>
 <>
@@ -8,7 +6,7 @@ file(WRITE ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "
   <Files>
     <Enabled>True</Enabled>
     <DeleteExtractedOnExit>False</DeleteExtractedOnExit>
-    <CompressFiles>True</CompressFiles>
+    <CompressFiles>False</CompressFiles>
     <Files>
       <File>
         <Type>3</Type>
@@ -30,6 +28,7 @@ function(scan_directory dir)
          get_filename_component(filename ${file} NAME)
          get_filename_component(extension ${file} LAST_EXT)
         if(IS_DIRECTORY ${file})
+    if(NOT ${filename} STREQUAL "rc")
             file(APPEND  ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "  <File>\n")
             file(APPEND  ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "    <Type>3</Type>\n")
             file(APPEND  ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "    <Name>${filename}</Name>\n")
@@ -41,9 +40,10 @@ function(scan_directory dir)
             scan_directory(${file})  # Recursively scan this subdirectory
             file(APPEND  ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "    </Files>\n")
             file(APPEND  ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "  </File>\n")
+            endif()
         else()
             # It's a file, print its specific structure
-            if(NOT extension STREQUAL ".txt")
+            if(NOT extension STREQUAL ".txt" AND NOT extension STREQUAL ".gitignore")
                 file(APPEND  ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "  <File>\n")
                 file(APPEND  ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "    <Type>2</Type>\n")
                 file(APPEND  ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "    <Name>${filename}</Name>\n")
@@ -68,7 +68,8 @@ foreach(file ${files_and_dirs})
     # Check if it is a directory or a file
     get_filename_component(filename ${file} NAME)
     get_filename_component(extension ${file} LAST_EXT)
-    if(IS_DIRECTORY ${file} AND NOT ${filename} STREQUAL "rec")
+    if(IS_DIRECTORY ${file})
+    if(NOT ${filename} STREQUAL "rec")
         file(APPEND  ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "  <File>\n")
         file(APPEND  ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "    <Type>3</Type>\n")
         file(APPEND  ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "    <Name>${filename}</Name>\n")
@@ -80,9 +81,14 @@ foreach(file ${files_and_dirs})
         scan_directory(${file})  # Recursively scan this subdirectory
         file(APPEND  ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "    </Files>\n")
         file(APPEND  ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "  </File>\n")
+        endif()
     else()
         # It's a file, print its specific structure
         if(extension STREQUAL ".dll" OR extension STREQUAL ".ico")
+            file(SIZE ${file} filesize)
+            if(extension STREQUAL ".dll" AND filesize GREATER 1024  AND NOT filename MATCHES "^(msvc|vcruntime|Qt[2-9]).*")
+                list(APPEND UFX_CMD_LIST COMMAND ${UPX_EXE} -qq --force --best "${file}")
+            endif()
             file(APPEND  ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "  <File>\n")
             file(APPEND  ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "    <Type>2</Type>\n")
             file(APPEND  ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "    <Name>${filename}</Name>\n")
@@ -99,6 +105,7 @@ foreach(file ${files_and_dirs})
     endif()
 endforeach()
 
+execute_process(${UFX_CMD_LIST})
 
 file(APPEND  ${EVB_INSTALL_PREFIX}/PhyRecorder.evb "
         </Files>

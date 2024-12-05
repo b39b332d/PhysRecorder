@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  ${CMAKE_INSTALL_PREFIX}/bin)
 SET(CMAKE_CXX_FLAGS_RELEASE "/O2")
+
 set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD on)
 
 get_property(GENERATOR_IS_MULTI_CONFIG_VAR GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
@@ -43,6 +44,7 @@ set(REALSENSE_DIR CACHE PATH "RealSense root directory")
 set(OpenVINO_DIR  CACHE PATH "OpenVINO Runtime directory")
 set(MKL_DIR  CACHE PATH "MKL root directory")
 set(ENIGMA_BOX_CONXOLE_EXE CACHE PATH "ENIGMA_BOX executable path")
+set(UPX_PACK_EXE CACHE PATH "upx package executable path")
 
 include("cmake/env.cmake" OPTIONAL)
 
@@ -83,7 +85,7 @@ target_include_directories(realsense INTERFACE ${REALSENSE_DIR}/include)
 set(INSTALL_REALSENSE_BIN "${REALSENSE_DIR}/bin/x64/")
 list(APPEND INSTALL_DEP_PATHS "${INSTALL_REALSENSE_BIN}")
 
-list(APPEND INSTALL_DEP_PATHS "${OpenVINO_DIR}/bin/intel64/${CMAKE_BUILD_TYPE}")
+list(APPEND INSTALL_DEP_PATHS "${OpenVINO_DIR}/bin/intel64/${Porject_BUILD_TYPE}")
 list(APPEND INSTALL_DEP_PATHS "${OpenVINO_DIR}/3rdparty/tbb/bin")
 
 
@@ -109,7 +111,7 @@ add_subdirectory(data)
 
 if(EXISTS ${ENIGMA_BOX_CONXOLE_EXE})
 add_custom_target(generate_boxed_exe
-    COMMAND ${CMAKE_COMMAND} -DEVB_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}/bin -P ${CMAKE_HOME_DIRECTORY}/cmake/configure_evb_file.cmake 
+    COMMAND ${CMAKE_COMMAND} -DUPX_EXE=${UPX_PACK_EXE} -DEVB_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}/bin -P ${CMAKE_HOME_DIRECTORY}/cmake/configure_evb_file.cmake 
     COMMAND ${ENIGMA_BOX_CONXOLE_EXE} ${CMAKE_INSTALL_PREFIX}/bin/PhyRecorder.evb
     DEPENDS install
     USES_TERMINAL

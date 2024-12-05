@@ -22,21 +22,28 @@ endfunction()
 function(custom_target_install tgt)
     if(TARGET ${tgt})
         install(TARGETS ${tgt} RUNTIME_DEPENDENCY_SET TGT_INSTALL_SET RESOURCE DESTINATION bin)
+        
+
         get_all_dep_recursive(${tgt})
         set(tgt_dep_lib "${__${tgt}_deps}")
         #get_target_property(tgt_dep_lib ${tgt} LINK_LIBRARIES)
-        if(Qt6::Widgets IN_LIST tgt_dep_lib)
-            set(DEPLOY_OPTIONS "$<TARGET_NAME:${tgt}> -verbose 0 --no-translations")
+        if(Qt6::Core IN_LIST tgt_dep_lib)
             file (GENERATE
                   OUTPUT "DeployQt.cmake" 
-                  CONTENT "execute_process(COMMAND \"${DEPLOYQT_EXECUTABLE}\" $<TARGET_NAME:${tgt}>.exe -verbose 0 --no-translations \
-                             WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/bin \
+                  CONTENT "execute_process(COMMAND \"${DEPLOYQT_EXECUTABLE}\" \
+                              --verbose 1 --no-compiler-runtime --no-translations --exclude-plugins qsvg,qwebp,qtiff,qtga,qicns,qsvgicon,qgif,qico,qwbmp,qnetworklistmanager,qtuiotouchplugin\
+                              $<TARGET_NAME:${tgt}>.exe \
+                                WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/bin \
                              RESULT_VARIABLE result)
                          if(result)
                              message(FATAL_ERROR \"Executing ${DEPLOYQT_EXECUTABLE} failed: \${result}\")
                          endif()"
             )           
             install(SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/DeployQt.cmake)
+
+        endif()
+        if(realsense IN_LIST tgt_dep_lib)
+        target_link_options(${tgt} PRIVATE "/DELAYLOAD:realsense2.dll")
         endif()
 
         if(MKL::MKL IN_LIST tgt_dep_lib)
@@ -48,21 +55,27 @@ function(custom_target_install tgt)
                         list(APPEND mkl_dep_dst ${mkl_dep_dst_item})
                     endforeach()
                     install(FILES ${mkl_dep_dst} TYPE BIN)
+                    target_link_options(${tgt} PRIVATE "/DELAYLOAD:mkl_intel_thread.2.dll")
         endif()
         
         if(opencv_core IN_LIST tgt_dep_lib)
             configure_file(${CMAKE_SOURCE_DIR}/cmake/DeployDep.cmake DeployDep.cmake @ONLY)
             install(RUNTIME_DEPENDENCY_SET TGT_INSTALL_SET 
                 DIRECTORIES ${INSTALL_DEP_PATHS} $ENV{Path}
-                PRE_EXCLUDE_REGEXES "[/\/]vc[^/\/]*$"  "[/\/]msvc[^/\/]*$"  "^qt6.*\.dll" "^api-ms-win-crt-.*\.dll" ".*\.exe"
-                POST_INCLUDE_REGEXES  ""
-                POST_EXCLUDE_REGEXES [[.*[/\/]system32[/\/].*\.dll]] [[.*[/\/]qt[/\/].*\.dll]]
+                PRE_EXCLUDE_REGEXES "^qt6.*\.dll" "^api-ms-win-crt-.*\.dll" ".*\.exe" # "[/\/]vc[^/\/]*$"  "[/\/]msvc[^/\/]*$" 
+                POST_INCLUDE_REGEXES  "[/\/]msvc[^/\/]*$" "[/\/]vcruntime[^/\/]*$"
+                POST_EXCLUDE_REGEXES  [[.*[/\/]qt[/\/].*\.dll]] [[.*[/\/]system32[/\/].*\.dll]]
             )
+            install(CODE [[message(status ${_CMAKE_DEPS})]])
+            # install(CODE [[exit()]])
             string(REPLACE "." "" OpenCV_VERSION_CP ${OpenCV_VERSION})
             unset(debug_postfix)
             if(Porject_BUILD_TYPE STREQUAL debug)
                 set(debug_postfix "d")
             endif()
+            
+            target_link_options(${tgt} PRIVATE "/DELAYLOAD:opencv_core${OpenCV_VERSION_CP}${debug_postfix}.dll")
+            target_link_options(${tgt} PRIVATE "/DELAYLOAD:opencv_imgproc${OpenCV_VERSION_CP}${debug_postfix}.dll")
             if("opencv_dnn" IN_LIST tgt_dep_lib)
                 if(${OpenCV_VERSION_CP} LESS 480)
                     set(dnn_dep ${INSTALL_OPENCV_BIN}/inference_engine_ir_reader${debug_postfix}.dll
