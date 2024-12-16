@@ -116,7 +116,7 @@ namespace capture {
             }
             if (*since == LLONG_MAX) *since = current_ts- frame.get_timestamp() * 1e3;
             pts->write(pts->selected_profile->createFrame(
-                 frame.get_timestamp() * 1e3+ current_ts, (unsigned char*)(frame.get_data()), frame.get_data_size(), [frame]() {
+                 frame.get_timestamp() * 1e3+ *since, (unsigned char*)(frame.get_data()), frame.get_data_size(), [frame]() {
 
                 }
             ));

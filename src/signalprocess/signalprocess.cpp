@@ -192,7 +192,7 @@ void SignalProcess::show_channel(int channel, QCPGraph* graph, bool is_show) {
         if (channel == pos_channel) {
             // get signal before pos
             cv::Mat s = RPPGExtractor::get_signal(channel, win_length * INTERP_FS- POS_WINSIZE, POS_WINSIZE+i_loop % UPDATE_RGB_GRAPH_STRIDE, UPDATE_RGB_GRAPH_STRIDE);
-            if (s.rows == 1)return;
+            if (s.rows <= 1)return;
             QVector<QCPGraphData> graph_data(s.rows);
             cv::Mat graph_data_mat(s.rows, 2, CV_64F, graph_data.data());
             // create y value
@@ -214,7 +214,7 @@ void SignalProcess::show_channel(int channel, QCPGraph* graph, bool is_show) {
         }
         else {
             cv::Mat s = RPPGExtractor::get_signal(channel, win_length * INTERP_FS, i_loop % UPDATE_RGB_GRAPH_STRIDE, UPDATE_RGB_GRAPH_STRIDE);
-            if (s.rows == 1)return;
+            if (s.rows <= 1)return;
             QVector<QCPGraphData> graph_data(s.rows);
             cv::Mat graph_data_mat(s.rows, 2, CV_64F, graph_data.data());
             s.convertTo(graph_data_mat.col(1), CV_64F);

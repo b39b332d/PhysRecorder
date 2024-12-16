@@ -33,8 +33,16 @@ inline cv::Mat* raw2cvmat_bgr(RawFrame* frame) {
     case PIX_TYPE_UYVY:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC2, frame->raw_frame), *out_image, cv::COLOR_YUV2BGR_UYVY); break;
     case PIX_TYPE_Y12I:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC2, frame->raw_frame), *out_image, cv::COLOR_YUV2BGR_I420); break;
     case PIX_TYPE_L8:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC1, frame->raw_frame), *out_image, cv::COLOR_GRAY2BGR); break;
-    case PIX_TYPE_D16:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_16UC1, frame->raw_frame), *out_image, cv::COLOR_GRAY2BGR); break;
-    case PIX_TYPE_L16:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_16UC1, frame->raw_frame), *out_image, cv::COLOR_GRAY2BGR); break;
+    case PIX_TYPE_L16: cv::extractChannel(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC2, frame->raw_frame), *out_image, 0);break;
+    case PIX_TYPE_D16:
+    case PIX_TYPE_Z16:
+    {
+        cv::Mat temp_img(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_16UC1, frame->raw_frame);
+        cv::Mat log_img;
+        temp_img.convertTo(log_img, CV_8UC1, 0.05);
+        cv::applyColorMap(log_img, *out_image, cv::COLORMAP_RAINBOW);
+
+    }break;
     case PIX_TYPE_MJPG:  cv::imdecode(cv::Mat(frame->raw_frame_len, 1, CV_8UC1, frame->raw_frame), cv::IMREAD_COLOR, out_image); break;
     default: return nullptr;
     };

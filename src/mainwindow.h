@@ -88,7 +88,7 @@ private slots:
     void on_actionrefreshSerial_triggered();
     void on_actionrefreshCamera_triggered();
     void on_actionstopSerial_triggered();
-    void comb_comp_changed(int index);
+    void comb_comp_changed();
 
     void onCameraSelected(int);
     void onProfileTypeSelected(int);

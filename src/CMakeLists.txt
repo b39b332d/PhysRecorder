@@ -47,6 +47,7 @@ add_subdirectory(signalprocess)
 add_subdirectory(serial)
 add_subdirectory(recorder)
 add_subdirectory(utils)
+add_subdirectory(audio)
 
 target_link_libraries(PhyRecorder PRIVATE Qt6::Widgets ${OpenCV_LIBS} 
 realsense cam_driver phy_recorder serial phy_signal ${delayimp_LIB})

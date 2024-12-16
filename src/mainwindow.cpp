@@ -654,7 +654,6 @@ void MainWindow::loadCameraOptions(capture::CameraDevice *device) {
 
 
     ui->slider_quality->setValue(device->encoder_quality);
-
     for (int opt = 0; opt < capture::CameraDevice::DEVICE_OPTION_CNT; opt++) {
         auto opt_range = device->get_option_range((capture::CameraDevice::DEVICE_OPTION)opt);
 
@@ -785,7 +784,9 @@ void MainWindow::loadCameraOptions(capture::CameraDevice *device) {
             camopt_pushButton[opt]->setText("NA");
         }
     }
-
+    ui->comboBox_codec->setCurrentIndex(
+        ui->comboBox_codec->findText(QString::fromStdString(
+            GET_PIX_TYPE_NAME(device->encoder_method))));
 }
 
 void MainWindow::set_sensor_property() {
@@ -829,24 +830,25 @@ std::set<T> intersectSets(const std::vector<std::set<T>>& sets) {
 
     return intersection;
 }
-void MainWindow::comb_comp_changed(int index) {
+void MainWindow::comb_comp_changed() {
     capture::CameraDevice* device = comboBox_cameras->currentData().value<capture::CameraDevice*>();
-    std::vector<std::set<PIX_TYPE>> support_pixs;
-    for (auto s : device->enabled_streams) {
-        support_pixs.push_back( MediaWriter::get_supported_encoders(s->selected_profile->format));
-    }
-    auto support_pix =  intersectSets(support_pixs);
-
-    ui->slider_quality->disconnect(this);
-    qDebug() << ui->comboBox_codec->currentText();
-    if (ui->comboBox_codec->currentText() == "MJPG") {
-        if (support_pix.find(PIX_TYPE_MJPG) == support_pix.end()) {
-            auto new_t = *(support_pix.begin());
+    if (GET_PIX_TYPE_NAME(device->encoder_method) != ui->comboBox_codec->currentText()) {
+        std::vector<std::set<PIX_TYPE>> support_pixs;
+        for (auto s : device->enabled_streams) {
+            support_pixs.push_back(MediaWriter::get_supported_encoders(s->selected_profile->format));
+        }
+        auto support_pix = intersectSets(support_pixs);
+        std::string pix_val = ui->comboBox_codec->currentText().toStdString();
+        if (support_pix.find(
+            (PIX_TYPE)PIX_FOURCC_TO_UINT32(pix_val))
+            == support_pix.end()) {
             ui->comboBox_codec->setCurrentIndex(
-                ui->comboBox_codec->findText(QString::fromStdString(
-                    GET_PIX_TYPE_NAME(new_t))));
+                ui->comboBox_codec->findText(QString::fromStdString("MJPG"))); //default
             return;
         }
+    }
+    ui->slider_quality->disconnect(this);
+    if (ui->comboBox_codec->currentText() == "MJPG") {
         if(capture->selected_device!=nullptr)capture->selected_device->encoder_method = PIX_TYPE_MJPG;
         ui->slider_quality->setMaximum(100);
         ui->slider_quality->setMinimum(0);
@@ -857,16 +859,9 @@ void MainWindow::comb_comp_changed(int index) {
             else
                 ui->label_quality->setText(QString::number(val)+"%");
             });
-        ui->slider_quality->setValue(90);
+        ui->slider_quality->setValue(capture->selected_device->encoder_quality);
     }
     else if (ui->comboBox_codec->currentText() == "HFYU") {
-        if (support_pix.find(PIX_TYPE_HFYU) == support_pix.end()) {
-            auto new_t = *(support_pix.begin());
-            ui->comboBox_codec->setCurrentIndex(
-                ui->comboBox_codec->findText(QString::fromStdString(
-                    GET_PIX_TYPE_NAME(new_t))));
-            return;
-        }
         if (capture->selected_device != nullptr)capture->selected_device->encoder_method = PIX_TYPE_HFYU;
         ui->slider_quality->setMaximum(0);
         ui->slider_quality->setMinimum(0);
@@ -875,13 +870,6 @@ void MainWindow::comb_comp_changed(int index) {
         ui->label_quality->setText("NA");
     }
     else if (ui->comboBox_codec->currentText() == "RAW ") {
-        if (support_pix.find(PIX_TYPE_RAW) == support_pix.end()) {
-            auto new_t = *(support_pix.begin());
-            ui->comboBox_codec->setCurrentIndex(
-                ui->comboBox_codec->findText(QString::fromStdString(
-                    GET_PIX_TYPE_NAME(new_t))));
-            return;
-        }
         if (capture->selected_device != nullptr)capture->selected_device->encoder_method = PIX_TYPE_RAW;
         ui->slider_quality->setMaximum(0);
         ui->slider_quality->setMinimum(0);

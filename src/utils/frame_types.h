@@ -26,6 +26,7 @@ typedef enum {
 	PIX_TYPE_DEFINE_MACRO(L16),
 	PIX_TYPE_DEFINE_MACRO(L8),
 	PIX_TYPE_DEFINE_MACRO(D16),
+	PIX_TYPE_DEFINE_MACRO(Z16),
 
 	// see avi support raw pix types: https://ffmpeg.org/pipermail/ffmpeg-devel/2007-May/035617.html
 	PIX_TYPE_DEFINE_MACRO(I420), //yuv420p

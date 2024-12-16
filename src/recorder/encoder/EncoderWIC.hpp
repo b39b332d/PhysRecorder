@@ -230,19 +230,24 @@ namespace encoder {
 			WICPixelFormatGUID pixelFormat;
 			switch (e_type)
 			{
-			PIX_TYPE_RGB888:
+			case PIX_TYPE_RGB8:
 				pixelFormat = { GUID_WICPixelFormat24bppRGB };
 				break;
-			PIX_TYPE_GRAY08:
+			case PIX_TYPE_BGR8:
+				pixelFormat = { GUID_WICPixelFormat24bppBGR };
+				break;
+			case PIX_TYPE_L8:
 				pixelFormat = { GUID_WICPixelFormat8bppGray };
 				break;
-			PIX_TYPE_GRAY16:
+			case PIX_TYPE_L16:
+			case PIX_TYPE_D16:
+			case PIX_TYPE_Z16:
 				pixelFormat = { GUID_WICPixelFormat16bppGray };
 				break;
-			PIX_TYPE_RGBA32:
+			case PIX_TYPE_RGBA:
 				pixelFormat = { GUID_WICPixelFormat32bppRGBA };
 				break;
-			PIX_TYPE_BGRA32:
+			case PIX_TYPE_BGRA:
 				pixelFormat = { GUID_WICPixelFormat32bppBGRA };
 				break;
 			default:
