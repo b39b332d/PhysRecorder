@@ -1241,3 +1241,10 @@ bool MainWindow::emitFileSignal(bool is_start,QString msg) {
     }
     return false;
 }
+
+
+__declspec(dllexport) void start_mainwin(QSplashScreen& screen) {
+    MainWindow *w = new MainWindow(screen);
+    w->show();
+    screen.finish(w);
+}

@@ -324,6 +324,7 @@ void Capture::run()
                 emit loseTracking();
                 last_tracking_status = STATIC_ROI;
             }
+            error_cnt = 0;
             *rect_face = Rect(roi);
             emit signalReady(Scalar(mean(color_mat(*rect_face))), (double)(mainFrames.front()->frame_ts) / 1e6);
         }

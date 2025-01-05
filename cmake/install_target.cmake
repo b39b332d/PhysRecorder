@@ -51,7 +51,6 @@ function(custom_target_install tgt)
                         list(APPEND mkl_dep_dst ${mkl_dep_dst_item})
                     endforeach()
                     install(FILES ${mkl_dep_dst} TYPE BIN)
-                    target_link_options(${tgt} PRIVATE "/DELAYLOAD:mkl_intel_thread.2.dll")
         endif()
         
         if(opencv_core IN_LIST tgt_dep_lib)
@@ -62,8 +61,7 @@ function(custom_target_install tgt)
                 POST_INCLUDE_REGEXES  "[/\/]msvc[^/\/]*$" "[/\/]vcruntime[^/\/]*$"
                 POST_EXCLUDE_REGEXES  [[.*[/\/]qt[/\/].*\.dll]] [[.*[/\/]system32[/\/].*\.dll]]
             )
-            install(CODE [[message(status ${_CMAKE_DEPS})]])
-            # install(CODE [[exit()]])
+
             string(REPLACE "." "" OpenCV_VERSION_CP ${OpenCV_VERSION})
             unset(debug_postfix)
             if(Porject_BUILD_TYPE STREQUAL debug)

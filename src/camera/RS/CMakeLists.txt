@@ -1,5 +1,3 @@
-
-find_package(Realsense)
 if(Realsense_FOUND)
 	target_sources(cam_driver PRIVATE
 	"./CameraDriverRS.cpp"

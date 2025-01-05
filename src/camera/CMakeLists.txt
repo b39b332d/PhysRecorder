@@ -4,14 +4,12 @@ set(RECORDER_SOURCES
         detect_cam.cpp
         qt_match_cam_msmf.cpp
 )
-add_library(cam_driver SHARED
+add_library(cam_driver STATIC
 "CameraDriver.cpp"
 "CameraCapture.cpp"
 )
 
 target_include_directories(cam_driver PUBLIC ./ ${utils_dir}/)
-target_compile_definitions(cam_driver PRIVATE  USE_DRIVER_LIBRARY_EXPORTS)
-target_compile_definitions(cam_driver PUBLIC  USE_DRIVER_LIBRARY)
 set( CAM_DRIVER_FUNC ) 
 add_subdirectory(MSMF)
 add_subdirectory(MVis)

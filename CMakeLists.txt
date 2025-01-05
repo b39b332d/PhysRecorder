@@ -18,6 +18,8 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 project(rPPG LANGUAGES CXX C)
+add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
+add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 
 if ("${CMAKE_CONFIGURATION_TYPES}" STREQUAL Debug OR "${CMAKE_BUILD_TYPE}" STREQUAL Debug)
     set(Porject_BUILD_TYPE debug)
@@ -25,6 +27,8 @@ else()
     set(Porject_BUILD_TYPE release)
 endif()
 
+include(FetchContent )
+set (FETCHCONTENT_QUIET FALSE)
 
 
 cmake_host_system_information(RESULT ProcessorCount_N QUERY NUMBER_OF_PHYSICAL_CORES)
@@ -36,77 +40,122 @@ endif()
 #### DOWNLOAD OPENCV REALSENSE QT DEVELOPMENT RUNTIME LIBRARY
 
 # CHECK THESE VARIABLES BEFORE CONFIGURE
-set(OpenCV_BUILD_Path_release CACHE PATH "OpenCV cmake release directory")
-set(OpenCV_BUILD_Path_debug CACHE PATH "OpenCV cmake debug directory")
-set(OpenCV_BUILD_Path CACHE PATH "OpenCV cmake directory")
-set(Eigen3_DIR CACHE PATH "Eigen3 cmake directory")
+set(OpenCV_ROOT CACHE PATH "OpenCV directory which contain release and debug build")
 set(Qt6_ROOT  CACHE PATH "Qt root directory")
-set(REALSENSE_DIR CACHE PATH "RealSense root directory")
-set(OpenVINO_DIR  CACHE PATH "OpenVINO Runtime directory")
-set(MKL_DIR  CACHE PATH "MKL root directory")
-set(ENIGMA_BOX_CONXOLE_EXE CACHE PATH "ENIGMA_BOX executable path")
-set(UPX_PACK_EXE CACHE PATH "upx package executable path")
+set(Realsense_ROOT CACHE PATH "RealSense root directory")
+set(MVis_ROOT  CACHE PATH "MindVision SDK Root directory")
+set(MKL_DIR  CACHE PATH "MKL cmake directory")
+
+set(ENIGMAVBCONXOLE_EXE CACHE PATH "ENIGMA_BOX executable path")
+set(UPX_EXE CACHE PATH "Ultimate Packer for eXecutables executable path")
 
 include("cmake/env.cmake" OPTIONAL)
 
-set(MKL_LINK dynamic)
 set(INSTALL_DEP_PATHS "")
 
 ####### FIND OPENCV
-set(OpenCV_DIR "${OpenCV_BUILD_Path_${Porject_BUILD_TYPE}}")
-if("${OpenCV_DIR}" STREQUAL "")
-    set(OpenCV_DIR "${OpenCV_BUILD_Path}")
+if(OpenCV_ROOT)
+    set(OpenCV_DIR "${OpenCV_ROOT}/${Porject_BUILD_TYPE}")
 endif()
-find_package(OpenCV REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
-if(TARGET opencv_core) 
-    string(TOUPPER ${Porject_BUILD_TYPE} Porject_BUILD_TYPE_UPPER)
-    get_target_property(cv_core opencv_core IMPORTED_LOCATION_${Porject_BUILD_TYPE_UPPER})
-    get_filename_component(INSTALL_OPENCV_BIN "${cv_core}" DIRECTORY)
-    list(APPEND INSTALL_DEP_PATHS ${INSTALL_OPENCV_BIN})
-    message(STATUS "OpenCV library status:")
-    message(STATUS "    config: ${OpenCV_DIR}")
-    message(STATUS "    version: ${OpenCV_VERSION}")
-    message(STATUS "    libraries: ${OpenCV_LIBS}")
-    message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
-else()
-    message( FATAL_ERROR "opencv_core does not exist! CMake will exit." )
+find_package(OpenCV QUIET)
+if(NOT OpenCV_FOUND AND DOWNLOAD_URL)
+    FetchContent_Declare(
+        OpenCV_Build
+        URL "${DOWNLOAD_URL}/opencv/${Porject_BUILD_TYPE}"
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+        OVERRIDE_FIND_PACKAGE
+    )
+    FetchContent_MakeAvailable(OpenCV_Build)
+    find_package(OpenCV REQUIRED NO_SYSTEM_ENVIRONMENT_PATH HINTS ${opencv_build_SOURCE_DIR})
 endif()
+if(NOT OpenCV_FOUND)
+    message( FATAL_ERROR "OpenCV does not exist! CMake will exit." )
+endif()
+
+string(TOUPPER ${Porject_BUILD_TYPE} Porject_BUILD_TYPE_UPPER)
+get_target_property(cv_core opencv_core IMPORTED_LOCATION_${Porject_BUILD_TYPE_UPPER})
+get_filename_component(INSTALL_OPENCV_BIN "${cv_core}" DIRECTORY)
+list(APPEND INSTALL_DEP_PATHS ${INSTALL_OPENCV_BIN})
+message(STATUS "OpenCV library status:")
+message(STATUS "    config: ${OpenCV_DIR}")
+message(STATUS "    version: ${OpenCV_VERSION}")
+message(STATUS "    libraries: ${OpenCV_LIBS}")
+message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
+
 ####### FIND Qt
-find_package(Qt6 COMPONENTS Widgets Gui Core REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
+find_package(Qt6 COMPONENTS Widgets Gui Core)
+if(NOT Qt6_FOUND AND DOWNLOAD_URL)
+    FetchContent_Declare(
+        Qt6_BUILD
+        URL "${DOWNLOAD_URL}/${CMAKE_C_COMPILER_ID}2022_64.tar.gz"
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+        OVERRIDE_FIND_PACKAGE
+        EXCLUDE_FROM_ALL
+    )
+    FetchContent_MakeAvailable(Qt6_BUILD)
+    set(Qt6_ROOT ${qt6_build_SOURCE_DIR})
+    find_package(Qt6 COMPONENTS Widgets Gui Core REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
+endif()
+if(NOT Qt6_FOUND)
+    message( FATAL_ERROR "Qt does not exist! CMake will exit." )
+endif()
+
 get_target_property(mocExe Qt6::moc IMPORTED_LOCATION)
 get_filename_component(qtBinDir "${mocExe}" DIRECTORY)
 find_program(DEPLOYQT_EXECUTABLE windeployqt PATHS "${qtBinDir}" NO_DEFAULT_PATH)
 
-
-list(APPEND INSTALL_DEP_PATHS "${OpenVINO_DIR}/bin/intel64/${Porject_BUILD_TYPE}")
-list(APPEND INSTALL_DEP_PATHS "${OpenVINO_DIR}/3rdparty/tbb/bin")
-
-
-find_package(MKL REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
-get_target_property(mkl_type MKL::MKL TYPE)
-if (MKL_LINK STREQUAL dynamic)
-    list(APPEND INSTALL_DEP_PATHS ${MKL_ENV_PATH})
+####### FIND MKL
+set(MKL_LINK static)
+find_package(MKL NO_SYSTEM_ENVIRONMENT_PATH)
+if(MKL_FOUND)
+    get_target_property(mkl_type MKL::MKL TYPE)
+    message(STATUS "MKL library status:")
+    message(STATUS "    config: ${MKL_ROOT}")
+    message(STATUS "    version: ${PACKAGE_VERSION}")
+    message(STATUS "    include path: ${MKL_INCLUDE}")
 endif()
-message(STATUS "MKL library status:")
-message(STATUS "    config: ${MKL_ROOT}")
-message(STATUS "    version: ${PACKAGE_VERSION}")
-message(STATUS "    include path: ${MKL_INCLUDE}")
-list(APPEND INSTALL_DEP_PATHS "${MKL_DIR}/lib/intel64")
-list(APPEND INSTALL_DEP_PATHS "${MKL_DIR}/redist/intel64")
 
 ####### FIND Eigen3
-find_package(Eigen3 REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
+FetchContent_Declare(
+    Eigen3
+    GIT_REPOSITORY  https://gitlab.com/libeigen/eigen.git
+    GIT_TAG master
+    EXCLUDE_FROM_ALL
+)
+FetchContent_MakeAvailable(Eigen3)
+
+######### FIND PACKEXE
+if(Porject_BUILD_TYPE STREQUAL "release")
+    if(NOT ENIGMAVBCONXOLE_EXE OR NOT UPX_EXE)
+        FetchContent_Declare(
+            BOX_TOOLS
+            URL  "${DOWNLOAD_URL}/box_tools.zip"
+            DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+            OVERRIDE_FIND_PACKAGE
+            EXCLUDE_FROM_ALL
+        )
+        FetchContent_MakeAvailable(BOX_TOOLS)
+    
+        set(ENIGMAVBCONXOLE_EXE "${box_tools_SOURCE_DIR}/enigmavbconsole.exe")
+        set(UPX_EXE "${box_tools_SOURCE_DIR}/upx.exe")
+    endif()
+    add_custom_target(generate_boxed_exe
+        COMMAND ${CMAKE_COMMAND} -DEXEC_NAME=PhyRecorder -DUPX_EXE=${UPX_PACK_EXE} -DEVB_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}/bin -P ${CMAKE_HOME_DIRECTORY}/cmake/configure_evb_file.cmake 
+        COMMAND ${ENIGMAVBCONXOLE_EXE} ${CMAKE_INSTALL_PREFIX}/bin/PhyRecorder.evb
+        DEPENDS install
+        USES_TERMINAL
+    )
+endif()
+
+####### FIND MSMF
+find_package(MSMF)
+####### FIND MVis
+find_package(MVis)
+####### FIND Realsense
+find_package(Realsense)
+
 
 add_subdirectory(libyuv)
 include(cmake/install_target.cmake)
 add_subdirectory(src)
 add_subdirectory(data)
-
-if(EXISTS ${ENIGMA_BOX_CONXOLE_EXE})
-add_custom_target(generate_boxed_exe
-    COMMAND ${CMAKE_COMMAND} -DUPX_EXE=${UPX_PACK_EXE} -DEVB_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}/bin -P ${CMAKE_HOME_DIRECTORY}/cmake/configure_evb_file.cmake 
-    COMMAND ${ENIGMA_BOX_CONXOLE_EXE} ${CMAKE_INSTALL_PREFIX}/bin/PhyRecorder.evb
-    DEPENDS install
-    USES_TERMINAL
-)
-endif()

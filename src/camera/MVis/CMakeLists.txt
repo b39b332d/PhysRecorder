@@ -1,5 +1,3 @@
-set(MVis_ROOT "D:/Program Files (x86)/MindVision")
-find_package(MVis)
 if(MVis_FOUND)
 	target_sources(cam_driver PRIVATE
 	"./CameraDriverMVis.cpp"

@@ -14,21 +14,11 @@
 #define cam_frame_buf_len 16
 
 
-#ifdef USE_DRIVER_LIBRARY
-#ifdef  USE_DRIVER_LIBRARY_EXPORTS 
-#define DRIVER_API __declspec(dllexport)
-#else
-#define DRIVER_API __declspec(dllimport)
-#endif
-#else
-#define DRIVER_API
-#endif
-
 
 namespace capture {
     class CameraStream;
     class CameraDevice;
-    class DRIVER_API CameraProfile {
+    class CameraProfile {
     public:
         CameraStream* stream;
         CameraProfile(CameraStream* stream) :stream(stream) {}
@@ -82,7 +72,7 @@ namespace capture {
         option_status def;
         option_status current;
     };
-    class DRIVER_API CameraDevice {
+    class CameraDevice {
     public:
         std::mutex device_lock;
         std::string device_name; // display name
@@ -190,7 +180,7 @@ namespace capture {
         PIX_TYPE encoder_method=PIX_TYPE_MJPG;
         int encoder_quality = 90;
     };
-    class DRIVER_API CameraStream {
+    class CameraStream {
     public:
         using Cmp = std::integral_constant<decltype(&CameraProfile::cmp_profile), &CameraProfile::cmp_profile>;
 

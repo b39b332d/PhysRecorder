@@ -1,5 +1,3 @@
-
-find_package(MSMF)
 if(MSMF_FOUND)
 	target_sources(cam_driver PRIVATE
 	"./CameraDriverMSMF.cpp"

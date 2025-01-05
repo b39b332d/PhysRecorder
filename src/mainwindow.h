@@ -125,5 +125,4 @@ public slots:
         void setSqi(int, float, float);
 };
 
-
 #endif // MAINWINDOW_H
