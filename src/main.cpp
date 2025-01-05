@@ -1,16 +1,16 @@
 #include <cstdlib>
-#include "mainwindow.h"
 #include <QApplication>
 #include <QSplashScreen>
-#include <QWindow>
 #include <QMessageBox>
+#include <QFile>
+#include <QDir>
+__declspec(dllimport) void start_mainwin(QSplashScreen& screen);
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
     QPixmap pixmap(PROJECT_ROOT_PATH"resources/ECG.jpg");
     QSplashScreen splash(pixmap);
     splash.show();
-
     if (!QDir("./rec").exists()) {
         bool s = QDir().mkdir("./rec");
         if (!s) {
@@ -19,6 +19,7 @@ int main(int argc, char *argv[])
             return 0;
         }
     }
+    splash.showMessage("Loading DLLs");
 
 
     QFile f(":qdarkstyle/dark/darkstyle.qss");
@@ -34,8 +35,6 @@ int main(int argc, char *argv[])
 
     app.setWindowIcon(QIcon(QPixmap(PROJECT_ROOT_PATH"resources/icon.png")));
 
-    MainWindow w = MainWindow(splash);
-    w.show();
-    splash.finish(&w);
+    start_mainwin(splash);
     exit(app.exec());
 }

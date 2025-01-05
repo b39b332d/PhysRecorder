@@ -1272,7 +1272,7 @@ private:
 
 public:
     unsigned char* generate_stream_header(unsigned int& packed_table_size
-        
+
     ) {
         packed_table_size = this->get_packed_table_size();
         // Validate header size, it must be one of:
@@ -1697,12 +1697,13 @@ private:
                         compressed[1] = decompressed[0];
                         compressed[2] = decompressed[3];
                         compressed[3] = decompressed[2];
-                        compressed+=4;
+                        compressed += 4;
                         decompressed += 4;
-                    }else
-                    for (int channel = 0; channel < channels; ++channel) {
-                        *compressed++ = *decompressed++;
                     }
+                    else
+                        for (int channel = 0; channel < channels; ++channel) {
+                            *compressed++ = *decompressed++;
+                        }
                     stream_index += 32;
                     continue;
                 }
@@ -1713,10 +1714,11 @@ private:
                     //}
                     unsigned char decoded;
                     if (is_uyvy) {
-                        decoded = *(decompressed+ uyvymap[channel]);
+                        decoded = *(decompressed + uyvymap[channel]);
                         decompressed++;
-                    }else
-                     decoded = *decompressed++;
+                    }
+                    else
+                        decoded = *decompressed++;
                     const unsigned char shift = channel_tables[channel]->shift[decoded];
                     const unsigned int add = channel_tables[channel]->add_shifted[decoded] >> (32 - shift);
 

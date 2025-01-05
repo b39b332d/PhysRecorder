@@ -139,8 +139,8 @@ void Capture::run()
     while (true)
     {
         capture::frame_set_t frame_set;
-        std::set<capture::CameraDevice*> new_disabled_devices;
-        std::set<capture::CameraDevice*> enabled_devices;
+        capture::devices_set_t new_disabled_devices;
+        capture::devices_set_t enabled_devices;
         capture::readFrames(frame_set,
             next_refresh_time,
             new_disabled_devices, enabled_devices);
@@ -324,6 +324,7 @@ void Capture::run()
                 emit loseTracking();
                 last_tracking_status = STATIC_ROI;
             }
+            error_cnt = 0;
             *rect_face = Rect(roi);
             emit signalReady(Scalar(mean(color_mat(*rect_face))), (double)(mainFrames.front()->frame_ts) / 1e6);
         }

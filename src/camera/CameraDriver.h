@@ -12,6 +12,9 @@
 #include <set>
 #include <type_traits>
 #define cam_frame_buf_len 16
+
+
+
 namespace capture {
     class CameraStream;
     class CameraDevice;
@@ -64,7 +67,7 @@ namespace capture {
         int min;
         int max;
         int step;
-        int scaled_factor;
+        double scaled_factor;
         OPTION_TYPE support_type;
         option_status def;
         option_status current;
@@ -232,22 +235,9 @@ namespace capture {
         std::chrono::steady_clock::time_point previous_fps_time = std::chrono::steady_clock::now();
 
     private:
-        const size_t capacity_=10;
+        const size_t capacity_=50; // max 1000 fps
     };
 
-    class CameraDeviceEnumerator { // for devices enum
-    public:
-        std::vector<CameraDevice*> devices;
-        virtual ~CameraDeviceEnumerator() {
-            for (auto d : devices)delete d;
-        };
-        /* Other members */
-    };
 };
 
-class CameraControl {
-public:
-
-
-};
 #endif

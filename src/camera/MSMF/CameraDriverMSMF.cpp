@@ -480,7 +480,9 @@ namespace capture {
         IMFActivate** m_ppDevices; // contains properties about each device
         std::vector<CameraDevice*> devices;
         if (!is_MFStartup_init) {
-            MFStartup(MF_VERSION); is_MFStartup_init = true;
+            CoInitializeEx(NULL, COINIT_MULTITHREADED);
+            MFStartup(MF_VERSION); 
+            is_MFStartup_init = true;
         }
         else {
             MFShutdown();

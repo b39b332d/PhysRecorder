@@ -80,6 +80,32 @@ void MainWindow::refresh_plot() {
     ui->plot_ppg->yAxis2->rescale();
     ui->plot_ppg->replot();
 }
+void MainWindow::closeEvent(QCloseEvent* event)
+{
+    if (is_recording) {
+        QMessageBox::StandardButton reply = QMessageBox::question(
+            this,
+            tr("Close Application"),
+            tr("Recording, Are you want to close the application?"),
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No
+        );
+
+        if (reply == QMessageBox::Yes) {
+            // Perform any cleanup or saving operations
+            // Accept the event - window will close
+            event->accept();
+        }
+        else {
+            // Ignore the event - window will stay open
+            event->ignore();
+        }
+        return;
+    }
+    event->accept();
+    return;
+}
+
 
 void MainWindow::onDeviceSelected(capture::CameraDevice* device) {
     if (device == nullptr) {
@@ -944,10 +970,12 @@ void MainWindow::on_actionrefreshCamera_triggered() {
     comboBox_cameras->setDisabled(true);
     ui->actionStartTrigger->setDisabled(true);
     lock_camera_info_play(false);
-    run_with_call_back(capture::refresh_devices,
+    static capture::devices_set_t current_devices;
+    run_with_call_back(
+        []() {capture::refresh_devices(current_devices); },
         [this]() {
-            for (auto& [device_name, device] : capture::devices_map) {
-                comboBox_cameras->addItem(QString::fromStdString(device_name), QVariant::fromValue(device));
+            for (auto& device : current_devices) {
+                comboBox_cameras->addItem(QString::fromStdString(device->device_name), QVariant::fromValue(device));
             }
             comboBox_cameras->setCurrentIndex(-1);
             comboBox_cameras->setDisabled(false);
@@ -1212,4 +1240,11 @@ bool MainWindow::emitFileSignal(bool is_start,QString msg) {
         return true;
     }
     return false;
+}
+
+
+__declspec(dllexport) void start_mainwin(QSplashScreen& screen) {
+    MainWindow *w = new MainWindow(screen);
+    w->show();
+    screen.finish(w);
 }

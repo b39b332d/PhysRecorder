@@ -1,5 +1,4 @@
 #pragma once
-#define UNICODE
 #include <vector>
 #include <iostream>
 #include <EncoderComp.h>

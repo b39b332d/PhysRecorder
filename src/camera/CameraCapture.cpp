@@ -1,47 +1,51 @@
 #include "CameraCapture.h"
-
-#include "MSMF/CameraDriverMSMF.h"
-#include "RS/CameraDriverRS.h"
+#include "DriverEnum.h"
 #include <thread>
 namespace capture {
-	std::map<std::string, CameraDevice*> devices_map; // unique name
-	std::set<CameraDevice*> enabled_devices;
+
+	devices_set_t enabled_devices;
 	std::mutex devices_lock;
-	void refresh_devices()
+
+	/*
+		bidirectional map
+		current_devices->first <--> current_devices->second->device_name
+	*/
+	static devices_bimap_t current_devices;
+	void refresh_devices(devices_set_t& devices_map)
 	{
+		devices_map.clear();
 		static bool first_run = true;
 		if (first_run) {
-			CoInitializeEx(NULL, COINIT_MULTITHREADED);
 			first_run = false;
 		}
 		std::unique_lock l(devices_lock);
-		std::map<std::string, CameraDevice*> devices_new_map;
-		for (auto it = devices_map.cbegin(); it != devices_map.cend() /* not hoisted */; /* no increment */)
+		for (auto it = current_devices.cbegin(); it != current_devices.cend() /* not hoisted */; /* no increment */)
 		{
 			if (it->second->status == CameraDevice::CS_STANDBY || it->second->status == CameraDevice::CS_UNINIT) {
 				delete it->second;
-				devices_map.erase(it++);
+				current_devices.erase(it++);
 			}
 			else {
-				devices_new_map[it->first] = it->second;
+				devices_map.insert(it->second);
 				++it;
 			}
 		}
 		std::vector<std::vector<CameraDevice*>> dss;
-		dss.push_back(EnumerateCamera_MSMF());
-		dss.push_back(EnumerateCamera_RS());
+		for (int i = 0; i < sizeof(enum_drivers)/sizeof(enum_drivers[0]); i++) {
+			dss.push_back(enum_drivers[i]());
+		}
 		for (auto& ds : dss) {
 			for (auto d : ds) {
-				auto pd = devices_map.find(d->device_name);
-				if (pd != devices_map.end()) {
+				auto pd = current_devices.find(d->device_name);
+				if (pd != current_devices.end()) {
 					delete d;
 				}
 				else {
-					devices_new_map[d->device_name] = d;
+					current_devices[d->device_name] = d;
+					devices_map.insert(d);
 				}
 			}
 		}
-		devices_map = devices_new_map;
 	}
 	bool enable_device(CameraDevice* device) {
 		if (device->start()) {
@@ -67,8 +71,8 @@ namespace capture {
 	void readFrames(
 		frame_set_t& frames, 
 		std::chrono::steady_clock::time_point until, 
-		std::set<CameraDevice*>& new_disabled_devices,
-		std::set<CameraDevice*>& enabled_devices_temp,
+		devices_set_t& new_disabled_devices,
+		devices_set_t& enabled_devices_temp,
 		CameraStream* wait_stream
 		)
 	{

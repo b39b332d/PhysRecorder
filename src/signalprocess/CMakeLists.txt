@@ -7,7 +7,7 @@ set_target_properties(phy_signal PROPERTIES AUTOUIC OFF)
 target_include_directories(phy_signal PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(phy_signal PUBLIC Eigen3::Eigen ${OpenCV_LIBS} )
 
-if(TARGET MKL::MKL)
+if(MKL_FOUND)
     target_link_libraries(phy_signal PUBLIC MKL::MKL)
     target_compile_definitions(phy_signal PUBLIC EIGEN_MKL_DEFAULT EIGEN_VECTORIZE_SSE4_2)
 endif()
