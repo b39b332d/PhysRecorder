@@ -15,6 +15,7 @@ if(NOT GENERATOR_IS_MULTI_CONFIG_VAR AND NOT DEFINED CMAKE_BUILD_TYPE)
     # //Setting CMAKE_BUILD_TYPE as CACHE must go before project(). Otherwise project() sets its value and set() doesn't take an effect
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel ...")
 endif()
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 project(rPPG LANGUAGES CXX C)
 
@@ -57,7 +58,7 @@ if("${OpenCV_DIR}" STREQUAL "")
     set(OpenCV_DIR "${OpenCV_BUILD_Path}")
 endif()
 find_package(OpenCV REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
-if(TARGET opencv_core)  
+if(TARGET opencv_core) 
     string(TOUPPER ${Porject_BUILD_TYPE} Porject_BUILD_TYPE_UPPER)
     get_target_property(cv_core opencv_core IMPORTED_LOCATION_${Porject_BUILD_TYPE_UPPER})
     get_filename_component(INSTALL_OPENCV_BIN "${cv_core}" DIRECTORY)
@@ -71,19 +72,11 @@ else()
     message( FATAL_ERROR "opencv_core does not exist! CMake will exit." )
 endif()
 ####### FIND Qt
-find_package(Qt6 COMPONENTS Widgets Gui Core Multimedia REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
+find_package(Qt6 COMPONENTS Widgets Gui Core REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
 get_target_property(mocExe Qt6::moc IMPORTED_LOCATION)
 get_filename_component(qtBinDir "${mocExe}" DIRECTORY)
 find_program(DEPLOYQT_EXECUTABLE windeployqt PATHS "${qtBinDir}" NO_DEFAULT_PATH)
 
-####### FIND REALSENSE
-add_library(realsense SHARED IMPORTED )
-set_target_properties(realsense PROPERTIES
-             IMPORTED_LOCATION ${REALSENSE_DIR}/bin/x64/realsense2.dll
-             IMPORTED_IMPLIB ${REALSENSE_DIR}/lib/x64/realsense2.lib)
-target_include_directories(realsense INTERFACE ${REALSENSE_DIR}/include)
-set(INSTALL_REALSENSE_BIN "${REALSENSE_DIR}/bin/x64/")
-list(APPEND INSTALL_DEP_PATHS "${INSTALL_REALSENSE_BIN}")
 
 list(APPEND INSTALL_DEP_PATHS "${OpenVINO_DIR}/bin/intel64/${Porject_BUILD_TYPE}")
 list(APPEND INSTALL_DEP_PATHS "${OpenVINO_DIR}/3rdparty/tbb/bin")

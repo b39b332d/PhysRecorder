@@ -42,13 +42,9 @@ function(custom_target_install tgt)
             install(SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/DeployQt.cmake)
 
         endif()
-        if(realsense IN_LIST tgt_dep_lib)
-        target_link_options(${tgt} PRIVATE "/DELAYLOAD:realsense2.dll")
-        endif()
 
         if(MKL::MKL IN_LIST tgt_dep_lib)
-                    set(mkl_dep mkl_avx2.2.dll
-                        mkl_def.2.dll)
+                    set(mkl_dep mkl_avx2.2.dll mkl_def.2.dll)
                     foreach(dep_item IN ITEMS  ${mkl_dep} )
                         unset(mkl_dep_dst_item CACHE)
                         find_file (mkl_dep_dst_item ${dep_item} PATHS  ${INSTALL_DEP_PATHS})
@@ -74,8 +70,6 @@ function(custom_target_install tgt)
                 set(debug_postfix "d")
             endif()
             
-            target_link_options(${tgt} PRIVATE "/DELAYLOAD:opencv_core${OpenCV_VERSION_CP}${debug_postfix}.dll")
-            target_link_options(${tgt} PRIVATE "/DELAYLOAD:opencv_imgproc${OpenCV_VERSION_CP}${debug_postfix}.dll")
             if("opencv_dnn" IN_LIST tgt_dep_lib)
                 if(${OpenCV_VERSION_CP} LESS 480)
                     set(dnn_dep ${INSTALL_OPENCV_BIN}/inference_engine_ir_reader${debug_postfix}.dll
@@ -99,18 +93,6 @@ function(custom_target_install tgt)
                     install(FILES ${dnn_dep_dst} TYPE BIN)
                 endif()
             endif()
-
-#             if("opencv_videoio" IN_LIST tgt_dep_lib)
-#                    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-#                    set(dnn_dep ${INSTALL_OPENCV_BIN}/opencv_videoio_ffmpeg${OpenCV_VERSION_CP}_64.dll
-#                        )
-#                    else()
-#                    set(dnn_dep ${INSTALL_OPENCV_BIN}/opencv_videoio_ffmpeg${OpenCV_VERSION_CP}${debug_postfix}.dll
-#                        )
-#                    endif()
-#                    install(FILES ${dnn_dep} TYPE BIN)
-#                    install(CODE "list(APPEND _CMAKE_DEPS ${dnn_dep})")
-#             endif()
 
             install(DIRECTORY ${CMAKE_SOURCE_DIR}/data TYPE BIN)
             install(SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/DeployDep.cmake)

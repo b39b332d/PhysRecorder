@@ -136,12 +136,12 @@ namespace capture {
     void CameraDeviceRS::native_release() {
 
     }
-    int get_scale_factor(float val) {
+    double get_scale_factor(float val) {
         val = fabs(val);
-        int i = 0;
-        while (val-int(val) > 1e6) {
-            val *= 2;
-            i += 1;
+        double i = 1;
+        while (val-int(val) > 1e-6) {
+            val *= 10;
+            i *= 10;
         }
         return i;
     }
@@ -150,14 +150,14 @@ namespace capture {
         if (rs_sensor.supports(option)) {
             rs2::option_range range = rs_sensor.get_option_range(option);
             opt_range.scaled_factor = get_scale_factor(range.step);
-            opt_range.min = roundf(range.min * (1 << opt_range.scaled_factor));
-            opt_range.max = roundf(range.max * (1 << opt_range.scaled_factor));;
+            opt_range.min = roundf(range.min * opt_range.scaled_factor);
+            opt_range.max = roundf(range.max *  opt_range.scaled_factor);
             opt_range.is_supported = true;
-            opt_range.step = roundf(range.step * (1 << opt_range.scaled_factor));;
-            opt_range.def.value = roundf(range.def * (1 << opt_range.scaled_factor));;
+            opt_range.step = roundf(range.step * opt_range.scaled_factor);
+            opt_range.def.value = roundf(range.def *opt_range.scaled_factor);
             opt_range.def.status_type = OPTION_MANUAL;
             opt_range.support_type = OPTION_MANUAL;
-            opt_range.current.value = roundf(rs_sensor.get_option(option) * (1 << opt_range.scaled_factor));
+            opt_range.current.value = roundf(rs_sensor.get_option(option) * opt_range.scaled_factor);
             opt_range.current.status_type = OPTION_MANUAL;
         }
         return opt_range;
@@ -171,11 +171,11 @@ namespace capture {
                     option_range opt_range = { 0, };
                     rs2::option_range range = rs_sensor.get_option_range(RS2_OPTION_EXPOSURE);
                     opt_range.scaled_factor = get_scale_factor(range.step);
-                    opt_range.min = roundf(range.min * (1 << opt_range.scaled_factor));
-                    opt_range.max = roundf(range.max * (1 << opt_range.scaled_factor));;
+                    opt_range.min = roundf(range.min * opt_range.scaled_factor);
+                    opt_range.max = roundf(range.max * opt_range.scaled_factor);;
                     opt_range.is_supported = true;
-                    opt_range.step = roundf(range.step * (1 << opt_range.scaled_factor));;
-                    opt_range.def.value = roundf(range.def * (1 << opt_range.scaled_factor));;
+                    opt_range.step = roundf(range.step * opt_range.scaled_factor);;
+                    opt_range.def.value = roundf(range.def * opt_range.scaled_factor);;
                     opt_range.def.status_type = OPTION_MANUAL;
                     if (rs_sensor.supports(RS2_OPTION_ENABLE_AUTO_EXPOSURE)) {
                         rs2::option_range range = rs_sensor.get_option_range(RS2_OPTION_ENABLE_AUTO_EXPOSURE);
@@ -191,7 +191,7 @@ namespace capture {
                         opt_range.current.status_type = OPTION_MANUAL;
                         opt_range.support_type = OPTION_MANUAL;
                     }
-                    opt_range.current.value = roundf(rs_sensor.get_option(RS2_OPTION_EXPOSURE) * (1 << opt_range.scaled_factor));
+                    opt_range.current.value = roundf(rs_sensor.get_option(RS2_OPTION_EXPOSURE) * opt_range.scaled_factor);
                     configurations[i] = opt_range;
                 }
                 break;;
@@ -200,11 +200,11 @@ namespace capture {
                     option_range opt_range = { 0, };
                     rs2::option_range range = rs_sensor.get_option_range(RS2_OPTION_WHITE_BALANCE);
                     opt_range.scaled_factor = get_scale_factor(range.step);
-                    opt_range.min = roundf(range.min * (1 << opt_range.scaled_factor));
+                    opt_range.min = roundf(range.min * opt_range.scaled_factor);
                     opt_range.is_supported = true;
-                    opt_range.max = roundf(range.max * (1 << opt_range.scaled_factor));;
-                    opt_range.step = roundf(range.step * (1 << opt_range.scaled_factor));;
-                    opt_range.def.value = roundf(range.def * (1 << opt_range.scaled_factor));;
+                    opt_range.max = roundf(range.max * opt_range.scaled_factor);;
+                    opt_range.step = roundf(range.step * opt_range.scaled_factor);;
+                    opt_range.def.value = roundf(range.def * opt_range.scaled_factor);;
                     opt_range.def.status_type = OPTION_MANUAL;
                     if (rs_sensor.supports(RS2_OPTION_ENABLE_AUTO_WHITE_BALANCE)) {
                         rs2::option_range range = rs_sensor.get_option_range(RS2_OPTION_ENABLE_AUTO_WHITE_BALANCE);
@@ -220,7 +220,7 @@ namespace capture {
                         opt_range.current.status_type = OPTION_MANUAL;
                         opt_range.support_type = OPTION_MANUAL;
                     }
-                    opt_range.current.value = roundf(rs_sensor.get_option(RS2_OPTION_WHITE_BALANCE) * (1 << opt_range.scaled_factor));
+                    opt_range.current.value = roundf(rs_sensor.get_option(RS2_OPTION_WHITE_BALANCE) * opt_range.scaled_factor);
                     configurations[i] = opt_range;
 
                 }
@@ -270,13 +270,13 @@ namespace capture {
                     option_range opt_range = { 0, };
                     rs2::option_range range = rs_sensor.get_option_range(RS2_OPTION_LASER_POWER);
                     opt_range.scaled_factor = get_scale_factor(range.step);
-                    opt_range.min = roundf(range.min * (1 << opt_range.scaled_factor));
+                    opt_range.min = roundf(range.min * opt_range.scaled_factor);
                     opt_range.is_supported = true;
-                    opt_range.max = roundf(range.max * (1 << opt_range.scaled_factor));;
-                    opt_range.step = roundf(range.step * (1 << opt_range.scaled_factor));;
-                    opt_range.def.value = roundf(range.def * (1 << opt_range.scaled_factor));;
+                    opt_range.max = roundf(range.max * opt_range.scaled_factor);;
+                    opt_range.step = roundf(range.step * opt_range.scaled_factor);;
+                    opt_range.def.value = roundf(range.def * opt_range.scaled_factor);;
                     opt_range.def.status_type = OPTION_MANUAL;
-                    opt_range.current.value = roundf(rs_sensor.get_option(RS2_OPTION_LASER_POWER) * (1 << opt_range.scaled_factor));
+                    opt_range.current.value = roundf(rs_sensor.get_option(RS2_OPTION_LASER_POWER) * opt_range.scaled_factor);
                     opt_range.current.status_type = OPTION_MANUAL;
                     opt_range.support_type = OPTION_MANUAL;
                     if (rs_sensor.supports(RS2_OPTION_EMITTER_ENABLED)) {
@@ -299,13 +299,13 @@ namespace capture {
                     option_range opt_range = { 0, };
                     rs2::option_range range = rs_sensor.get_option_range(RS2_OPTION_LED_POWER);
                     opt_range.scaled_factor = get_scale_factor(range.step);
-                    opt_range.min = roundf(range.min * (1 << opt_range.scaled_factor));
+                    opt_range.min = roundf(range.min * opt_range.scaled_factor);
                     opt_range.is_supported = true;
-                    opt_range.max = roundf(range.max * (1 << opt_range.scaled_factor));;
-                    opt_range.step = roundf(range.step * (1 << opt_range.scaled_factor));;
-                    opt_range.def.value = roundf(range.def * (1 << opt_range.scaled_factor));;
+                    opt_range.max = roundf(range.max * opt_range.scaled_factor);;
+                    opt_range.step = roundf(range.step * opt_range.scaled_factor);;
+                    opt_range.def.value = roundf(range.def * opt_range.scaled_factor);;
                     opt_range.def.status_type = OPTION_MANUAL;
-                    opt_range.current.value = roundf(rs_sensor.get_option(RS2_OPTION_LED_POWER) * (1 << opt_range.scaled_factor));
+                    opt_range.current.value = roundf(rs_sensor.get_option(RS2_OPTION_LED_POWER) * opt_range.scaled_factor);
                     opt_range.current.status_type = OPTION_MANUAL;
                     opt_range.support_type = OPTION_MANUAL;
                     configurations[i] = opt_range;
@@ -337,11 +337,11 @@ namespace capture {
         }
     }
     inline void CameraDeviceRS::set_signle_option_native(DEVICE_OPTION option,rs2_option opt, const option_status& value) {
-        float value_o = value.value / (1 << configurations[option].scaled_factor);
+        float value_o = value.value / configurations[option].scaled_factor;
         if (configurations[option].step > 1) {
             if (value.value % configurations[option].step != 0) {
                 float s = (float)(value.value - configurations[option].min) / configurations[option].step;
-                value_o = (roundf(s) * configurations[option].step + configurations[option].min) / (1 << configurations[option].scaled_factor);
+                value_o = (roundf(s) * configurations[option].step + configurations[option].min) / configurations[option].scaled_factor;
             }
         }
         rs_sensor.set_option(opt, value_o);
@@ -357,11 +357,11 @@ namespace capture {
                 configurations[option].current.status_type = OPTION_AUTO;
             }
             else {
-                float value_o = value.value / (1 << configurations[option].scaled_factor);
+                float value_o = value.value / configurations[option].scaled_factor;
                 if (configurations[option].step > 1) {
                     if (value.value % configurations[option].step != 0) {
                         float s = (float)(value.value - configurations[option].min) / configurations[option].step;
-                        value_o = (roundf(s) * configurations[option].step + configurations[option].min) / (1 << configurations[option].scaled_factor);
+                        value_o = (roundf(s) * configurations[option].step + configurations[option].min) /  configurations[option].scaled_factor;
                     }
                 }
                 rs_sensor.set_option(RS2_OPTION_EXPOSURE, value_o);
@@ -374,11 +374,11 @@ namespace capture {
                 configurations[option].current.status_type = OPTION_AUTO;
             }
             else {
-                float value_o = value.value / (1 << configurations[option].scaled_factor);
+                float value_o = value.value / configurations[option].scaled_factor;
                 if (configurations[option].step > 1) {
                     if (value.value % configurations[option].step != 0) {
                         float s = (float)(value.value - configurations[option].min) / configurations[option].step;
-                        value_o = (roundf(s) * configurations[option].step + configurations[option].min) / (1 << configurations[option].scaled_factor);
+                        value_o = (roundf(s) * configurations[option].step + configurations[option].min) / configurations[option].scaled_factor;
                     }
                 }
                 rs_sensor.set_option(RS2_OPTION_WHITE_BALANCE, value_o);
@@ -411,11 +411,11 @@ namespace capture {
                     configurations[option].current.value = value.value;
                 }
                 else {
-                    float value_o = value.value / (1 << configurations[option].scaled_factor);
+                    float value_o = value.value / configurations[option].scaled_factor;
                     if (configurations[option].step > 1) {
                         if (value.value % configurations[option].step != 0) {
                             float s = (float)(value.value - configurations[option].min) / configurations[option].step;
-                            value_o = (roundf(s) * configurations[option].step + configurations[option].min) / (1 << configurations[option].scaled_factor);
+                            value_o = (roundf(s) * configurations[option].step + configurations[option].min) / configurations[option].scaled_factor;
                         }
                     }
                     rs_sensor.set_option(RS2_OPTION_LASER_POWER, value_o);
@@ -428,11 +428,11 @@ namespace capture {
                     configurations[option].current.value = value.value;
                 }
                 else {
-                    float value_o = value.value / (1 << configurations[option].scaled_factor);
+                    float value_o = value.value / configurations[option].scaled_factor;
                     if (configurations[option].step > 1) {
                         if (value.value % configurations[option].step != 0) {
                             float s = (float)(value.value - configurations[option].min) / configurations[option].step;
-                            value_o = (roundf(s) * configurations[option].step + configurations[option].min) / (1 << configurations[option].scaled_factor);
+                            value_o = (roundf(s) * configurations[option].step + configurations[option].min) / configurations[option].scaled_factor;
                         }
                     }
                     rs_sensor.set_option(RS2_OPTION_LED_POWER, value_o);

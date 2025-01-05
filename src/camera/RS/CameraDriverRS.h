@@ -44,15 +44,6 @@ namespace capture {
         void set_signle_option_native(DEVICE_OPTION option, rs2_option opt, const option_status& value);
     };
 
-    class CameraDeviceEnumeratorRS :public CameraDeviceEnumerator { // for devices enum
-        rs2::stream_profile profile;
-        rs2::sensor sensor;
-    public:
-        CameraDeviceEnumeratorRS();
-        ~CameraDeviceEnumeratorRS();
-    };
-
-
     std::vector<CameraDevice*> EnumerateCamera_RS();
 }
 #endif

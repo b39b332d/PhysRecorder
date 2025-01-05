@@ -1,15 +1,18 @@
 #include <cstdlib>
-#include "mainwindow.h"
+//#include "mainwindow.h"
 #include <QApplication>
 #include <QSplashScreen>
 #include <QWindow>
 #include <QMessageBox>
+#include <QFile>
+#include <QDir>
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
     QPixmap pixmap(PROJECT_ROOT_PATH"resources/ECG.jpg");
     QSplashScreen splash(pixmap);
     splash.show();
+    return 0;
 
     if (!QDir("./rec").exists()) {
         bool s = QDir().mkdir("./rec");
@@ -34,8 +37,8 @@ int main(int argc, char *argv[])
 
     app.setWindowIcon(QIcon(QPixmap(PROJECT_ROOT_PATH"resources/icon.png")));
 
-    MainWindow w = MainWindow(splash);
-    w.show();
-    splash.finish(&w);
-    exit(app.exec());
+    //MainWindow w = MainWindow(splash);
+    //w.show();
+    //splash.finish(&w);
+    //exit(app.exec());
 }

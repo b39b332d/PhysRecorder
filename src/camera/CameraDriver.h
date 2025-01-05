@@ -12,10 +12,23 @@
 #include <set>
 #include <type_traits>
 #define cam_frame_buf_len 16
+
+
+#ifdef USE_DRIVER_LIBRARY
+#ifdef  USE_DRIVER_LIBRARY_EXPORTS 
+#define DRIVER_API __declspec(dllexport)
+#else
+#define DRIVER_API __declspec(dllimport)
+#endif
+#else
+#define DRIVER_API
+#endif
+
+
 namespace capture {
     class CameraStream;
     class CameraDevice;
-    class CameraProfile {
+    class DRIVER_API CameraProfile {
     public:
         CameraStream* stream;
         CameraProfile(CameraStream* stream) :stream(stream) {}
@@ -64,12 +77,12 @@ namespace capture {
         int min;
         int max;
         int step;
-        int scaled_factor;
+        double scaled_factor;
         OPTION_TYPE support_type;
         option_status def;
         option_status current;
     };
-    class CameraDevice {
+    class DRIVER_API CameraDevice {
     public:
         std::mutex device_lock;
         std::string device_name; // display name
@@ -177,7 +190,7 @@ namespace capture {
         PIX_TYPE encoder_method=PIX_TYPE_MJPG;
         int encoder_quality = 90;
     };
-    class CameraStream {
+    class DRIVER_API CameraStream {
     public:
         using Cmp = std::integral_constant<decltype(&CameraProfile::cmp_profile), &CameraProfile::cmp_profile>;
 
@@ -232,22 +245,9 @@ namespace capture {
         std::chrono::steady_clock::time_point previous_fps_time = std::chrono::steady_clock::now();
 
     private:
-        const size_t capacity_=10;
+        const size_t capacity_=50; // max 1000 fps
     };
 
-    class CameraDeviceEnumerator { // for devices enum
-    public:
-        std::vector<CameraDevice*> devices;
-        virtual ~CameraDeviceEnumerator() {
-            for (auto d : devices)delete d;
-        };
-        /* Other members */
-    };
 };
 
-class CameraControl {
-public:
-
-
-};
 #endif

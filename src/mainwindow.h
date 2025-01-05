@@ -108,6 +108,8 @@ private slots:
         QPushButton* camopt_pushButton[(int)capture::CameraDevice::DEVICE_OPTION_CNT];
         QSlider* camopt_slider[(int)capture::CameraDevice::DEVICE_OPTION_CNT];
 
+protected:
+    void closeEvent(QCloseEvent* event) override;
 
 public slots:
         void onCaptureDeviceDisabled(capture::CameraDevice*);
