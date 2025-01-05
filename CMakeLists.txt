@@ -71,7 +71,7 @@ else()
     message( FATAL_ERROR "opencv_core does not exist! CMake will exit." )
 endif()
 ####### FIND Qt
-find_package(Qt6 COMPONENTS Widgets Gui Core Multimedia REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
+find_package(Qt6 COMPONENTS Widgets Gui Core REQUIRED NO_SYSTEM_ENVIRONMENT_PATH)
 get_target_property(mocExe Qt6::moc IMPORTED_LOCATION)
 get_filename_component(qtBinDir "${mocExe}" DIRECTORY)
 find_program(DEPLOYQT_EXECUTABLE windeployqt PATHS "${qtBinDir}" NO_DEFAULT_PATH)
@@ -79,10 +79,10 @@ find_program(DEPLOYQT_EXECUTABLE windeployqt PATHS "${qtBinDir}" NO_DEFAULT_PATH
 ####### FIND REALSENSE
 add_library(realsense SHARED IMPORTED )
 set_target_properties(realsense PROPERTIES
-             IMPORTED_LOCATION ${REALSENSE_DIR}/bin/x64/realsense2.dll
-             IMPORTED_IMPLIB ${REALSENSE_DIR}/lib/x64/realsense2.lib)
-target_include_directories(realsense INTERFACE ${REALSENSE_DIR}/include)
-set(INSTALL_REALSENSE_BIN "${REALSENSE_DIR}/bin/x64/")
+             IMPORTED_LOCATION ${Realsense_ROOT}/bin/x64/realsense2.dll
+             IMPORTED_IMPLIB ${Realsense_ROOT}/lib/x64/realsense2.lib)
+target_include_directories(realsense INTERFACE ${Realsense_ROOT}/include)
+set(INSTALL_REALSENSE_BIN "${Realsense_ROOT}/bin/x64/")
 list(APPEND INSTALL_DEP_PATHS "${INSTALL_REALSENSE_BIN}")
 
 list(APPEND INSTALL_DEP_PATHS "${OpenVINO_DIR}/bin/intel64/${Porject_BUILD_TYPE}")
