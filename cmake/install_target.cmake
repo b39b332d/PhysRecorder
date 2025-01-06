@@ -1,3 +1,4 @@
+# get all dependent targets
 MACRO(get_all_dep tgt var)
     list( APPEND ${var} ${tgt})
     if(TARGET ${tgt})
@@ -34,7 +35,7 @@ function(custom_target_install tgt)
             file (GENERATE
                   OUTPUT "DeployQt.cmake" 
                   CONTENT "execute_process(COMMAND \"${DEPLOYQT_EXECUTABLE}\" \
-                              --verbose 1 --no-compiler-runtime --no-translations --exclude-plugins qsvg,qwebp,qtiff,qtga,qicns,qsvgicon,qgif,qico,qwbmp,qnetworklistmanager,qtuiotouchplugin\
+                              --verbose 1 --no-compiler-runtime --no-translations --exclude-plugins qjpeg,qsvg,qwebp,qtiff,qtga,qicns,qsvgicon,qgif,qico,qwbmp,qnetworklistmanager,qtuiotouchplugin\
                               $<TARGET_NAME:${tgt}>.exe \
                                 WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/bin \
                              RESULT_VARIABLE result)
@@ -56,7 +57,6 @@ function(custom_target_install tgt)
                 POST_EXCLUDE_REGEXES  [[.*[/\/]qt[/\/].*\.dll]] [[.*[/\/]system32[/\/].*\.dll]]
             )
             
-            install(CODE [[message(STATUS "HJHJ"${_CMAKE_DEPS})]])
             string(REPLACE "." "" OpenCV_VERSION_CP ${OpenCV_VERSION})
             unset(debug_postfix)
             if(Porject_BUILD_TYPE STREQUAL debug)
@@ -87,7 +87,7 @@ function(custom_target_install tgt)
                 endif()
             endif()
 
-            install(DIRECTORY ${CMAKE_SOURCE_DIR}/data TYPE BIN)
+            install(DIRECTORY ${CMAKE_SOURCE_DIR}/data TYPE BIN PATTERN "styles" EXCLUDE)
             install(SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/DeployDep.cmake)
         endif()
     endif()

@@ -67,6 +67,7 @@ namespace capture {
             cam->status = CameraDevice::CS_ON_STOP;
             cam->camera_read_thread->join();
             CameraStop(cam->cam_device);
+            CameraUnInit(cam->cam_device);
         }
     }
     bool CameraDeviceMVis::native_start()
@@ -216,7 +217,7 @@ namespace capture {
     std::vector<CameraDevice*> EnumerateCamera_MVis() {
         std::vector<CameraDevice*> devices;
         if (!mvis_init) {
-            CameraSdkInit(0);
+            auto status = CameraSdkInit(0);
             std::atexit(MVIS_stop);
             mvis_init = true;
         }

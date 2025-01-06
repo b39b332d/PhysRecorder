@@ -8,7 +8,7 @@ __declspec(dllimport) void start_mainwin(QSplashScreen& screen);
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    QPixmap pixmap(PROJECT_ROOT_PATH"resources/ECG.jpg");
+    QPixmap pixmap(PROJECT_ROOT_PATH"resources/ECG.bmp");
     QSplashScreen splash(pixmap);
     splash.show();
     if (!QDir("./rec").exists()) {
@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
         app.setStyleSheet(ts.readAll());
     }
 
-    app.setWindowIcon(QIcon(QPixmap(PROJECT_ROOT_PATH"resources/icon.png")));
+    app.setWindowIcon(QIcon(QPixmap(PROJECT_ROOT_PATH"resources/icon.ico")));
 
     start_mainwin(splash);
     exit(app.exec());

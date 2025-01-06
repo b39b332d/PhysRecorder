@@ -49,7 +49,7 @@ set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_SOURCE_DIR}/data/resources/appicon.rc")
 add_executable( PhyRecorder
     WIN32
     main.cpp
-    ${CMAKE_SOURCE_DIR}/data/resources/darkstyle.qrc
+    ${CMAKE_SOURCE_DIR}/data/styles/darkstyle.qrc
     ${APP_ICON_RESOURCE_WINDOWS}
 )
 set_target_properties(PhyRecorder PROPERTIES 
