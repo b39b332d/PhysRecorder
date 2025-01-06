@@ -187,7 +187,7 @@ find_package(Realsense)
 list(APPEND INSTALL_DEP_PATHS "${Realsense_ROOT}/bin/x64/")
 
 ####### FIND libyuv
-add_subdirectory(libyuv)
+add_subdirectory(libyuv EXCLUDE_FROM_ALL)
 
 ####### build
 include(cmake/install_target.cmake)
