@@ -35,6 +35,7 @@ target_compile_definitions(PhyRecorder_main
 
 add_subdirectory(camera)
 add_subdirectory(signalprocess)
+add_subdirectory(imageprocess)
 add_subdirectory(serial)
 add_subdirectory(recorder)
 add_subdirectory(utils)
