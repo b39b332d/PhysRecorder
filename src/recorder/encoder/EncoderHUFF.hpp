@@ -1,10 +1,11 @@
-#pragma once
+﻿#pragma once
 #include <vector>
 #include <iostream>
 #include <EncoderComp.h>
-#include<huffyuv.hpp>
-#include<libyuv.h>
-#include<opencv2/imgproc.hpp>
+#include <huffyuv.hpp>
+#include <libyuv.h>
+#include <opencv2/imgproc.hpp>
+
 namespace encoder {
 	class EncoderHUFF :public EncoderComp {
 		::huffyuv* encoder;
@@ -57,7 +58,7 @@ namespace encoder {
 			}
 		}
 	}
-	EncoderHUFF::EncoderHUFF(int width, int height, PIX_TYPE e_type, int quality): EncoderComp(width, height, e_type, quality){//huffyuv �汾
+	EncoderHUFF::EncoderHUFF(int width, int height, PIX_TYPE e_type, int quality): EncoderComp(width, height, e_type, quality){//huffyuv 版本
 		format = e_type;
 		if (format == PIX_TYPE_YUY2 || format == PIX_TYPE_UYVY || format == PIX_TYPE_YUYV || format == PIX_TYPE_I422 ) {
 			encoder = new ::huffyuv(width, height, height > ::huffyuv::interlaced_threshold, false, ::huffyuv::format_type::yuyv, ::huffyuv::predictor_type::left);

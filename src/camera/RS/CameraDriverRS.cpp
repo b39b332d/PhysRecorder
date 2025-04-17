@@ -54,8 +54,7 @@ namespace capture {
             CameraStream*& cam_stream = streams_map[stream_name];
             CameraProfileRS* profile = NULL;
             if (cam_stream == NULL) {
-                cam_stream = new CameraStreamRS(rs_sensor, this);
-                cam_stream->stream_name = stream_name;
+                cam_stream = new CameraStreamRS(stream_name, rs_sensor, this);
                 profile = new CameraProfileRS(stream_profile, cam_stream);
                 cam_stream->default_profile = profile;
                 ((CameraStreamRS*)(cam_stream))->stream_index = profile->rs_profile.stream_index();
@@ -96,30 +95,30 @@ namespace capture {
                 device->onDeviceReadingFailed(); if (since) { delete since; } });
 
             rs_sensor.start([this, t, since](rs2::frame frame) {
-            CameraStream* pts = nullptr;
-            long long current_ts = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                CameraStream* pts = nullptr;
+                long long current_ts = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-            device_lock.lock();
-            if (status != CameraDevice::CS_RUNNING) {
+                device_lock.lock();
+                if (status != CameraDevice::CS_RUNNING) {
+                    device_lock.unlock();
+                    return;
+                }
+                for (auto s : enabled_streams) {
+                    if (((CameraStreamRS*)s)->stream_index == frame.get_profile().stream_index()) {
+                        pts = s;
+                    }
+                }
                 device_lock.unlock();
-                return;
-            }
-            for (auto s : enabled_streams) {
-                if (((CameraStreamRS*)s)->stream_index == frame.get_profile().stream_index()) {
-                    pts = s;
+                if (pts == nullptr) {
+                    stop(false);
+                    return;
                 }
-            }
-            device_lock.unlock();
-            if (pts == nullptr) {
-                stop(false);
-                return;
-            }
-            if (*since == LLONG_MAX) *since = current_ts- frame.get_timestamp() * 1e3;
-            pts->write(pts->selected_profile->createFrame(
-                 frame.get_timestamp() * 1e3+ *since, (unsigned char*)(frame.get_data()), frame.get_data_size(), [frame]() {
+                if (*since == LLONG_MAX) *since = current_ts- frame.get_timestamp() * 1e3;
+                pts->write(pts->selected_profile->createFrame(
+                     frame.get_timestamp() * 1e3+ *since, (unsigned char*)(frame.get_data()), frame.get_data_size(), [frame]() {
 
-                }
-            ));
+                    }
+                ));
             });
         }
         catch (...) {
@@ -466,8 +465,8 @@ namespace capture {
     }
 
 
-    CameraStreamRS::CameraStreamRS(rs2::sensor& rs_sensor, CameraDevice* device) :
-        rs_sensor(rs_sensor), CameraStream(device)
+    CameraStreamRS::CameraStreamRS(const std::string& stream_name,rs2::sensor& rs_sensor, CameraDevice* device) :
+        rs_sensor(rs_sensor), CameraStream(stream_name,device)
     {
     }
 

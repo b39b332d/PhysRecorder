@@ -26,7 +26,7 @@ public:
    void frame_ready(QList<RawFrame*> main_frames, QList<RawFrame*> other_frames, cv::Rect2i face);
 	   
    Q_SIGNAL void frameReady(const QImage&);
-   Q_SIGNAL void device_selected(capture::CameraDevice*);
+   Q_SIGNAL void stream_selected(capture::CameraStream*);
    Q_SIGNAL void set_roi(cv::Rect2i);
 
 };

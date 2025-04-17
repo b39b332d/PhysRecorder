@@ -114,6 +114,8 @@ struct RawFrame {
 };
 typedef std::vector<std::vector<RawFrame*>> FrameSet;
 
+
+
 struct EncodedFrame {
 	unsigned char* data = nullptr;
 	unsigned int size = 0;

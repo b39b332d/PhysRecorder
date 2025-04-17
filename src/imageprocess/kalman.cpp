@@ -44,6 +44,10 @@ void KFTracking::init(const cv::Rect2i& face, float ts, float m_noise) {
 	this->ts = ts;
 }
 void KFTracking::update(const cv::Rect2i& face, float ts, float m_noise) {
+	if (!is_init) {
+		init(face, ts, m_noise);
+		return;
+	}
 	dt = ts - this->ts;
 	this->ts = ts;
 	set_dt(dt);

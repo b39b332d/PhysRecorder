@@ -10,6 +10,8 @@
 #include<qcustomplot.h>
 #include<unordered_map>
 #include<unordered_set>
+
+#include "inference.h"
 class OverlapAdding;
 class SignalProcess : public QThread
 {
@@ -20,7 +22,7 @@ public:
 
     Q_SIGNAL void sqiReady(int channel,float, float);
     Q_SIGNAL void fftReady(const QImage&);
-    Q_SLOT void processSignal(cv::Scalar,double);
+    Q_SLOT void processSignal(FaceRoi* roi);
     Q_SLOT void  processPPG(double ppg, double ts);
     Q_SLOT void reset_ppg();
     Q_SLOT void reset_rppg();

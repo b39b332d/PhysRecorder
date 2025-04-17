@@ -1,5 +1,6 @@
 #include <CameraDriver.h>
 #include <algorithm>
+#include <chrono>
 namespace capture {
 
 
@@ -15,6 +16,10 @@ namespace capture {
         profile->stream->selected_profile = profile;
 		return true;
 	}
+    bool CameraDevice::is_stream_enabled(CameraStream* stream) {
+        std::unique_lock dl(device_lock);
+        return enabled_streams.contains(stream);
+    }
 
     bool CameraDevice::init() {
         if (status == CS_STANDBY) {
@@ -28,8 +33,6 @@ namespace capture {
             for (auto [_, s] : streams_map) {
                 s->selected_profile = s->default_profile;
             }
-            device_friendly_name = device_name;
-            std::replace(device_friendly_name.begin(), device_friendly_name.end(), ':', '-');
             return true;
         }
         else

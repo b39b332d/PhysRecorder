@@ -109,7 +109,7 @@ void Converter::frame_ready(QList<RawFrame*> main_frames,QList<RawFrame*> other_
             }
             cvt_puttext(RawFrame_PROFILE_(pframe)->stream, m_frame, current_time);
             if (click_event_type == -1)
-                emit device_selected(nullptr);
+                emit stream_selected(nullptr);
             else if (click_event_type == 2) {
                 if (start_pt.contains(click_point) && start_pt.contains(click_point_end)) {
                     auto p1 = (click_point - start_point) / scaled;
@@ -140,9 +140,9 @@ void Converter::frame_ready(QList<RawFrame*> main_frames,QList<RawFrame*> other_
                         cvt_puttext(RawFrame_PROFILE_(pframe)->stream, m_frame, current_time);
 
                         if (click_event_type == 1 && start_pt.contains(click_point))
-                            emit device_selected(RawFrame_PROFILE_(pframe)->stream->device);
+                            emit stream_selected(RawFrame_PROFILE_(pframe)->stream);
                         else if (click_event_type == -1)
-                            emit device_selected(nullptr);
+                            emit stream_selected(nullptr);
                     }
                     else {
                         Rect2i start_pt(start_point, Size2i( residual_width ,scaled_size.height ));
@@ -153,9 +153,9 @@ void Converter::frame_ready(QList<RawFrame*> main_frames,QList<RawFrame*> other_
                             m_frame, m_frame.size(), 0, 0, INTER_NEAREST);
 
                         if (click_event_type == 1 && start_pt.contains(click_point))
-                            emit device_selected(RawFrame_PROFILE_(pframe)->stream->device);
+                            emit stream_selected(RawFrame_PROFILE_(pframe)->stream);
                         else if (click_event_type == -1)
-                            emit device_selected(nullptr);
+                            emit stream_selected(nullptr);
                     }
                 }
                 start_point.x += scaled_size.width;
@@ -202,12 +202,12 @@ void Converter::frame_ready(QList<RawFrame*> main_frames,QList<RawFrame*> other_
             cvt_puttext(RawFrame_PROFILE_(frame)->stream, m_frame, current_time);
 
             if (click_event_type == 1 && start_pt.contains(click_point))
-                emit device_selected(RawFrame_PROFILE_(frame)->stream->device);
+                emit stream_selected(RawFrame_PROFILE_(frame)->stream);
             else if (click_event_type == 2) {
                 if (start_pt.contains(click_point) && start_pt.contains(click_point_end)) {
                     auto p1 = (click_point - start_pt.tl()) / scale_dst;
                     auto p2 = (click_point_end - start_pt.tl()) / scale_dst;
-                    emit device_selected(RawFrame_PROFILE_(frame)->stream->device);
+                    emit stream_selected(RawFrame_PROFILE_(frame)->stream);
                     emit set_roi(cv::Rect2i(p1, p2));
                 }
             }

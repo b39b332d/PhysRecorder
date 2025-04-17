@@ -1,6 +1,7 @@
 #include "CameraDriverMVis.h"
 
 #include <codecvt>
+#include <chrono>
 #include <iostream>
 
 namespace capture {
@@ -102,9 +103,8 @@ namespace capture {
         CameraLoadParameter(cam_device, PARAMETER_TEAM_DEFAULT);
 
 
-        only_stream = new CameraStreamMVis(this);
+        only_stream = new CameraStreamMVis("Video",this);
         streams_map["Video"] = only_stream;
-        only_stream->stream_name = "Video";
         CameraProfile* first_profile= nullptr;
         for (int i = 0; i < m_sCameraInfo.iImageSizeDesc; i++) {
             CameraProfile* p= new CameraProfileMVis(&m_sCameraInfo.pImageSizeDesc[i], only_stream);
@@ -195,8 +195,8 @@ namespace capture {
     }
 
 
-    CameraStreamMVis::CameraStreamMVis( CameraDevice* device):
-        CameraStream(device)
+    CameraStreamMVis::CameraStreamMVis(const std::string& stream_name, CameraDevice* device):
+        CameraStream(stream_name,device)
     {
     }
 

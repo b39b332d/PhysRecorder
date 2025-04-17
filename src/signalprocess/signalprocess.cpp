@@ -52,8 +52,10 @@ SignalProcess::SignalProcess(QLabel* videoLabel)
     }
 }
 
-void SignalProcess::processSignal(cv::Scalar bgr_signal, double ts) {
-
+void SignalProcess::processSignal(FaceRoi *roi) {
+	cv::Scalar bgr_signal(roi->r,roi->g,roi->b);
+	double ts = roi->ts;
+    delete roi;
     if (current_ts == 0) {
         int64_t ts_temp = ts * 1000;
         current_ts = (double)(ts_temp - ts_temp % 10) / 1000;

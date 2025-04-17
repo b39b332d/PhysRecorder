@@ -46,8 +46,8 @@ namespace capture {
     }
 
 
-    CameraStreamMSMF::CameraStreamMSMF(CameraDeviceMSMF* pdevice, IMFSourceReader* pReader, DWORD stream_idx, IMFMediaType* default_native_profile) :
-        CameraStream(pdevice), stream_idx(stream_idx)
+    CameraStreamMSMF::CameraStreamMSMF(const std::string& stream_name,CameraDeviceMSMF* pdevice, IMFSourceReader* pReader, DWORD stream_idx, IMFMediaType* default_native_profile) :
+        CameraStream(stream_name,pdevice), stream_idx(stream_idx)
     {
         auto default_profile = new CameraProfileMSMF(this, default_native_profile);
         if (!default_profile->is_valid()) {
@@ -55,14 +55,8 @@ namespace capture {
             delete default_profile;
         }
 
-        GUID majorType;
         HRESULT hr = S_OK;
-        hr = default_native_profile->GetGUID(MF_MT_MAJOR_TYPE, &majorType);
-        THROW_HR(hr, "GetGUID Error");
-        if (majorType == MFMediaType_Video)
-            stream_name = std::format("{}:{}", "Video", stream_idx);
-        else
-            return;
+
         //else if (majorType == MFMediaType_Audio)
             //stream_name = std::format("{}:{}", "Audio", stream_idx);
         //else        
@@ -399,10 +393,19 @@ namespace capture {
                 break;
             }
             THROW_HR(hr, "GetCurrentMediaType Error");
-            auto s = new CameraStreamMSMF(this, pReader, dwStreamIndex, pType);
-            if (!s->is_valid()) delete s;
-            else {
-                streams_map[s->stream_name] = s;
+
+            GUID majorType;
+            hr = pType->GetGUID(MF_MT_MAJOR_TYPE, &majorType);
+            THROW_HR(hr, "GetGUID Error");
+            if (majorType == MFMediaType_Video) {
+                std::string stream_name;
+                stream_name = std::format("{}:{}", "Video", dwStreamIndex);
+
+                auto s = new CameraStreamMSMF(stream_name, this, pReader, dwStreamIndex, pType);
+                if (!s->is_valid()) delete s;
+                else {
+                    streams_map[s->stream_name] = s;
+                }
             }
 
             ++dwStreamIndex;

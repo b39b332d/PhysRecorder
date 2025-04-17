@@ -21,7 +21,7 @@ namespace capture {
     class CameraStreamMVis :public CameraStream {
     public:
         int stream_index;
-        CameraStreamMVis(CameraDevice* device);
+        CameraStreamMVis(const std::string& stream_name,CameraDevice* device);
 
     };
     class CameraDeviceMVis :public CameraDevice {

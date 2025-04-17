@@ -68,7 +68,7 @@ namespace capture {
     class CameraStreamMSMF :public CameraStream {
     public:
         DWORD stream_idx;
-        CameraStreamMSMF(CameraDeviceMSMF* pdevice, IMFSourceReader* pReader, DWORD stream_idx, IMFMediaType* default_native_profile);
+        CameraStreamMSMF(const std::string& stream_name,CameraDeviceMSMF* pdevice, IMFSourceReader* pReader, DWORD stream_idx, IMFMediaType* default_native_profile);
 
     };
     class CameraDeviceMSMF :public CameraDevice {

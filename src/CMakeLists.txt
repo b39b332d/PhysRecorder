@@ -4,6 +4,8 @@ set(utils_dir ${CMAKE_CURRENT_SOURCE_DIR}/utils)
 
 set(PROJECT_SOURCES
         mainwindow.cpp
+        worker_handler.cpp
+        video_ui.cpp
         mainwindow.ui
         imageviewer.cpp
 
@@ -11,6 +13,7 @@ set(PROJECT_SOURCES
         capture.cpp
 
         signalprocess/signalprocess.cpp
+        imageprocess/color_extractor.hpp
         
         ${utils_dir}/cnpy.cpp
         ${utils_dir}/qcustomplot.cpp
@@ -41,7 +44,13 @@ add_subdirectory(recorder)
 add_subdirectory(utils)
 add_subdirectory(audio)
 
-target_link_libraries(PhyRecorder_main PRIVATE  Qt6::Widgets  cam_driver phy_recorder serial phy_signal)
+target_link_libraries(PhyRecorder_main PRIVATE  
+Qt6::Widgets  
+cam_driver 
+phy_recorder 
+serial 
+phy_signal
+face_tracking)
 
 
 

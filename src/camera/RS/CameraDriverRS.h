@@ -20,7 +20,7 @@ namespace capture {
     public:
         int stream_index;
         rs2::sensor rs_sensor;
-        CameraStreamRS(rs2::sensor&, CameraDevice* device);
+        CameraStreamRS(const std::string& stream_name,rs2::sensor&, CameraDevice* device);
 
     };
     class CameraDeviceRS :public CameraDevice {

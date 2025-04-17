@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <set>
 #include <type_traits>
+#include <algorithm>
 #define cam_frame_buf_len 16
 
 
@@ -76,7 +77,6 @@ namespace capture {
     public:
         std::mutex device_lock;
         std::string device_name; // display name
-        std::string device_friendly_name; // save name
         std::unordered_map<std::string, CameraStream*> streams_map;
         std::set<CameraStream*> enabled_streams;
         std::condition_variable device_cond;
@@ -107,6 +107,7 @@ namespace capture {
         void clear();
         bool register_stream(CameraProfile* profile);
         void unregister_stream(CameraStream* stream = NULL);
+        bool is_stream_enabled(CameraStream* stream);
         void onDeviceReadingFailed() {
             setStatusIf(CameraDevice::CS_STANDBY);
             std::unique_lock l(device_lock);
@@ -177,8 +178,6 @@ namespace capture {
 
 
 
-        PIX_TYPE encoder_method=PIX_TYPE_MJPG;
-        int encoder_quality = 90;
     };
     class CameraStream {
     public:
@@ -194,7 +193,10 @@ namespace capture {
         std::unordered_map<std::string, std::set<CameraProfile*,
             Cmp>> profiles_map;
 
-        CameraStream(CameraDevice* device) :device(device) {
+        CameraStream(const std::string& stream_name,CameraDevice* device) :device(device) , stream_name(stream_name){
+            stream_friendly_name = device->device_name+"_"+ stream_name;
+            std::replace(stream_friendly_name.begin(), stream_friendly_name.end(), ':', '-');
+
         }
         virtual ~CameraStream() {
             for (auto& [_, ps] : profiles_map)
@@ -234,6 +236,9 @@ namespace capture {
         float previous_fps = 0;
         std::chrono::steady_clock::time_point previous_fps_time = std::chrono::steady_clock::now();
 
+        PIX_TYPE encoder_method = PIX_TYPE_MJPG;
+        int encoder_quality = 90;
+        std::string stream_friendly_name; // save name
     private:
         const size_t capacity_=50; // max 1000 fps
     };
