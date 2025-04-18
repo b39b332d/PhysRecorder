@@ -13,7 +13,7 @@
 #include <qcombobox.h>
 
 QT_BEGIN_NAMESPACE
-namespace Ui { class MainWindow; }
+namespace Ui { class Video; class MainWindow;}
 QT_END_NAMESPACE
 
 
@@ -21,17 +21,18 @@ class Capture;
 class Converter;
 class MultiSelectComboBox;
 class SignalProcess;
+class QToolBar;
 class VideoUI :public QWidget {
 
 	Q_OBJECT
 public:
 
-	VideoUI(Ui::MainWindow *ui, SignalProcess* signalProcess, QWidget* parent = nullptr);
+	VideoUI(QWidget* parent = nullptr);
 	~VideoUI();
+	void init(Ui::MainWindow* main_ui, SignalProcess* signalProcess);
 	void start_record(const std::string& save_prefix);
 	void stop_record();
 private:
-	Ui::MainWindow* ui;
 
 	QCheckBox* camopt_checkBox[(int)capture::CameraDevice::DEVICE_OPTION_CNT];
 	QPushButton* camopt_pushButton[(int)capture::CameraDevice::DEVICE_OPTION_CNT];
@@ -46,6 +47,12 @@ private:
 	MultiSelectComboBox* comboBox_cameras;
 	MultiSelectComboBox* comboBox_stream;
 	QLineEdit* textedit_streamname;
+	QToolBar* toolBarCamera;
+
+
+	QAction* actionStartCamera;
+	QAction* actionrefreshCamera;
+	QPushButton* actionTracking;
 
 	QTimer cam_option_changed_timer;
 	uint32_t cam_option_changed = 0;
@@ -63,6 +70,7 @@ private:
 	void lock_camera_info_play(bool lock = true);
 	void loadCameraOptions(capture::CameraStream* stream);
 
+	Ui::Video* ui;
 private slots:
 	void onActionStartCamera();
 	void onActionRefreshCamera();

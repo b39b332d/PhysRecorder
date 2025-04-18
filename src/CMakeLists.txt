@@ -7,6 +7,7 @@ set(PROJECT_SOURCES
         worker_handler.cpp
         video_ui.cpp
         mainwindow.ui
+        video.ui
         imageviewer.cpp
 
         converter.cpp

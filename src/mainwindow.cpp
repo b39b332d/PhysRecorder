@@ -244,9 +244,9 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     QObject::connect(&watcher, &QFileSystemWatcher::fileChanged,this, &MainWindow::onFileChanged);
 
     splash.showMessage("Init capture");
+    videoui = ui->video_ui;
 
-
-	videoui = new VideoUI(ui, signalProcess,this);
+	videoui->init(ui, signalProcess);
 
     worker.wait();
     splash.showMessage("Done");
@@ -520,7 +520,6 @@ void MainWindow::stop_record() {
             ui->actionRecord->setIcon(style()->standardIcon(QStyle::SP_DialogYesButton));
             ui->actionRecord->setToolTip("Start Recording");
             ui->toolBarRecord->setEnabled(true);
-            ui->VideoBox->setDisabled(false);
             ui->boxCamOfs->setDisabled(false);
             ui->spinRecordTime->setDisabled(false);
             ui->filenameLineEdit->setDisabled(false);
