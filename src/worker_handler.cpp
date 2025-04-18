@@ -28,7 +28,7 @@ void Worker::wait()
     m_running.wait(true);
 }
 
-
+// Function to set the cursor to busy or normal state
 void setCursorBusy(bool busy) {
     static int busy_count = 0;
     if (busy) {

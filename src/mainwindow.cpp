@@ -11,7 +11,6 @@
 #include <MultiSelectComboBox.h>
 #include "signalprocess.h"
 #include <video_ui.h>
-#include <capture.h>
 double win_length=8;
 
 void MainWindow::refresh_plot() {
@@ -29,7 +28,7 @@ void MainWindow::refresh_plot() {
 }
 void MainWindow::closeEvent(QCloseEvent* event)
 {
-    if (is_recording) {
+    if (record_timer->isActive()) {
         QMessageBox::StandardButton reply = QMessageBox::question(
             this,
             tr("Close Application"),
@@ -112,19 +111,19 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     ui->actionstopSerial->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
 
 
-    comboBox_serial = new MultiSelectComboBox(ui->toolBarSD);
+    comboBox_serial = new MultiSelectComboBox(ui->toolBarSerial);
     comboBox_serial->setFixedWidth(150);
-    ui->toolBarSD->insertWidget(ui->actionstopSerial, comboBox_serial);
+    ui->toolBarSerial->insertWidget(ui->actionstopSerial, comboBox_serial);
     connect(comboBox_serial, &MultiSelectComboBox::selectionChanged, this, &MainWindow::onSerialSelected);
     connect(comboBox_serial, &MultiSelectComboBox::highLightSelect, this, &MainWindow::onSerialHighted);
 
 
-    textedit_serialname = new QLineEdit(ui->toolBarSD);
+    textedit_serialname = new QLineEdit(ui->toolBarSerial);
     textedit_serialname->setMinimumWidth(150);
     textedit_serialname->setMaximumWidth(200);
     textedit_serialname->setDisabled(true);
     textedit_serialname->setPlaceholderText("Serial Filename");
-    ui->toolBarSD->addWidget(textedit_serialname);
+    ui->toolBarSerial->addWidget(textedit_serialname);
 
 
 
@@ -200,10 +199,7 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
 
     splash.showMessage("Detecting Serial Device...");
     
-
     on_actionrefreshSerial_triggered();
-
-
 
     splash.showMessage("Connect signals");
 
@@ -240,11 +236,6 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
         ui->labelCamOfs->setText("0.0ms");
         });
     
-    //connect(capture->signalProcess, &SignalProcess::signalReady, this, &MainWindow::addSignal);
-
-    //connect(capture, &Capture::finished, this, &MainWindow::on_stopButton_clicked);
-    //connect(capture, &Capture::finished, this, &MainWindow::capFinished);
-
     refresh_plot_timer->start(50);
 
     sharedFilePath = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/phyrecorder_ipc.temp";
@@ -253,6 +244,7 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     QObject::connect(&watcher, &QFileSystemWatcher::fileChanged,this, &MainWindow::onFileChanged);
 
     splash.showMessage("Init capture");
+
 
 	videoui = new VideoUI(ui, signalProcess,this);
 
@@ -439,13 +431,12 @@ void MainWindow::setfft(const QImage& image) {
 
 std::string MainWindow::start_record(std::string save_prefix ="") {
     setCursorBusy(true);
-    ui->toolBarRC->setEnabled(false);
+    ui->toolBarRecord->setEnabled(false);
     ui->actionRecord->setIcon(style()->standardIcon(QStyle::SP_DialogNoButton));
     ui->actionRecord->setToolTip("Stop Recording");
     ui->spinRecordTime->setDisabled(true);
     ui->boxCamOfs->setDisabled(true);
     ui->filenameLineEdit->setDisabled(true);
-    ui->VideoBox->setDisabled(true);
     int time = ui->spinRecordTime->value();
     if (time == 0) {
         time = 30;
@@ -494,9 +485,10 @@ std::string MainWindow::start_record(std::string save_prefix ="") {
     ui->filenameLineEdit->setText("<"+QString::fromStdString(save_prefix)+">");
     std::ranges::replace(save_prefix, ':', '-');
 
+    videoui->start_record(save_prefix);
+
     worker.run_with_call_back(
         [this, save_prefix]() {
-            videoui->start_record(save_prefix);
             for (auto s : comboBox_serial->getSelectedItems()) {
                 SerialReader* reader = comboBox_serial->itemData(s).value<SerialReader*>();
                 reader->startRecording(save_prefix + reader->friendly_name);
@@ -504,12 +496,8 @@ std::string MainWindow::start_record(std::string save_prefix ="") {
             }
         },
         [this]() {
-            recorder_lock.lock();
-            is_recording = true;
-            recorder_lock.unlock();
-
             record_timer->start();
-            ui->toolBarRC->setEnabled(true);
+            ui->toolBarRecord->setEnabled(true);
             setCursorBusy(false);
         }
     );
@@ -519,13 +507,10 @@ void MainWindow::stop_record() {
     if (record_timer->isActive())
         record_timer->stop();
     setCursorBusy(true);
-    ui->toolBarRC->setEnabled(false);
+    ui->toolBarRecord->setEnabled(false);
     ui->spinRecordTime->setValue(spin_record_last_time);
     ui->filenameLineEdit->setText(filenameLineEdit_name);
 
-    recorder_lock.lock();
-    is_recording = false;
-    recorder_lock.unlock();
     worker.run_with_call_back([this]() {
         for (auto s : rec_SerialReaders)  s->stopRecording();
             rec_SerialReaders.clear();
@@ -534,7 +519,7 @@ void MainWindow::stop_record() {
         [this]() {
             ui->actionRecord->setIcon(style()->standardIcon(QStyle::SP_DialogYesButton));
             ui->actionRecord->setToolTip("Start Recording");
-            ui->toolBarRC->setEnabled(true);
+            ui->toolBarRecord->setEnabled(true);
             ui->VideoBox->setDisabled(false);
             ui->boxCamOfs->setDisabled(false);
             ui->spinRecordTime->setDisabled(false);
@@ -545,7 +530,7 @@ void MainWindow::stop_record() {
     
 }
 void MainWindow::onRecordToggled() {
-    if (is_recording) {
+    if (record_timer->isActive()) {
         emitFileSignal(false);
         stop_record();
     }
@@ -553,7 +538,6 @@ void MainWindow::onRecordToggled() {
         spin_record_last_time = ui->spinRecordTime->value();
         auto save_path = start_record();
         emitFileSignal(true,save_path.c_str());
-        
     }
 }
 
@@ -570,9 +554,9 @@ void MainWindow::onFileChanged(const QString& path) {
         QString status = messageParts[1];
         QString currentPid = QString::number(QCoreApplication::applicationPid());
         if (senderPid != currentPid) {
-            if (status == "__stop" && is_recording)
+            if (status == "__stop" && record_timer->isActive())
                 stop_record();
-            else if (status == "__start" && !is_recording) {
+            else if (status == "__start" && !record_timer->isActive()) {
                 spin_record_last_time = ui->spinRecordTime->value();
                 ui->spinRecordTime->setValue(-1);
                 start_record(messageParts[2].toStdString());

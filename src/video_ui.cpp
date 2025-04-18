@@ -8,19 +8,23 @@
 VideoUI::VideoUI(Ui::MainWindow* ui, SignalProcess* signalProcess, QWidget* parent)
     :QWidget(parent), ui(ui), worker(this)
 {
+    setVisible(false);
+    ui->actionStartCamera->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+    ui->actionrefreshCamera->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
 
-    comboBox_cameras = new MultiSelectComboBox(ui->toolBarRS);
-    comboBox_stream = new MultiSelectComboBox(ui->toolBarRS);
-    comboBox_profile_type = new QComboBox(ui->toolBarRS);
-    comboBox_profile = new QComboBox(ui->toolBarRS);
+    comboBox_cameras = new MultiSelectComboBox(ui->toolBarCamera);
+    comboBox_stream = new MultiSelectComboBox(ui->toolBarCamera);
+    comboBox_profile_type = new QComboBox(ui->toolBarCamera);
+    comboBox_profile = new QComboBox(ui->toolBarCamera);
+    comboBox_cameras->setFixedHeight(30);
     comboBox_cameras->setFixedWidth(225);
     comboBox_stream->setFixedWidth(110);
     comboBox_profile_type->setFixedWidth(60);
     comboBox_profile->setFixedWidth(130);
-    ui->toolBarRS->addWidget(comboBox_cameras);
-    ui->toolBarRS->addWidget(comboBox_stream);
-    ui->toolBarRS->addWidget(comboBox_profile_type);
-    ui->toolBarRS->addWidget(comboBox_profile);
+    ui->toolBarCamera->addWidget(comboBox_cameras);
+    ui->toolBarCamera->addWidget(comboBox_stream);
+    ui->toolBarCamera->addWidget(comboBox_profile_type);
+    ui->toolBarCamera->addWidget(comboBox_profile);
     connect(comboBox_cameras, &MultiSelectComboBox::highLightSelect, this, &VideoUI::onCameraHighLighted);
     connect(comboBox_cameras, &MultiSelectComboBox::selectionChanged, this, &VideoUI::onCameraSelected);
     connect(comboBox_stream, &MultiSelectComboBox::highLightSelect, this, &VideoUI::onStreamHighLighted);
@@ -28,21 +32,18 @@ VideoUI::VideoUI(Ui::MainWindow* ui, SignalProcess* signalProcess, QWidget* pare
     connect(comboBox_profile_type, &QComboBox::activated, this, &VideoUI::onProfileTypeSelected);
     connect(comboBox_profile, &QComboBox::activated, this, &VideoUI::onProfileSelected);
     
-    
-    ui->actionStartTrigger->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
-    ui->actionrefreshCamera->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
-    connect(ui->actionStartTrigger, &QAction::triggered, this, &VideoUI::onActionStartCamera);
-    connect(ui->actionrefreshCamera, &QAction::triggered, this, &VideoUI::onActionRefreshCamera);
+    //connect(ui->actionStartCamera, &QAction::triggered, this, &VideoUI::onActionStartCamera);
+    //connect(ui->actionrefreshCamera, &QAction::triggered, this, &VideoUI::onActionRefreshCamera);
 
 
-    textedit_streamname = new QLineEdit(ui->toolBarRS);
+    textedit_streamname = new QLineEdit(ui->toolBarCamera);
     textedit_streamname->setMaximumWidth(200);
     textedit_streamname->setDisabled(true);
     textedit_streamname->setPlaceholderText("Device Filename");
-    ui->toolBarRS->addWidget(textedit_streamname);
+    ui->toolBarCamera->addWidget(textedit_streamname);
 
 
-    onActionRefreshCamera();
+    //onActionRefreshCamera();
 
 
     converter = new Converter(ui->q_video);
@@ -53,7 +54,7 @@ VideoUI::VideoUI(Ui::MainWindow* ui, SignalProcess* signalProcess, QWidget* pare
     converter->moveToThread(converterThread);
     connect(capture, &Capture::device_disabled, this, &VideoUI::onCaptureDeviceDisabled);
     connect(capture, &Capture::updateFrame, converter, &Converter::frame_ready);
-    auto o = QObject::connect(converter, &Converter::frameReady, ui->q_video, &ImageViewer::setImage);
+    connect(converter, &Converter::frameReady, ui->q_video, &ImageViewer::setImage);
     connect(converter, &Converter::stream_selected, this, &VideoUI::onDeviceSelected);
 
     converterThread->start();
@@ -159,6 +160,8 @@ VideoUI::VideoUI(Ui::MainWindow* ui, SignalProcess* signalProcess, QWidget* pare
     ui->VideoBox->setDisabled(true);
 
     capture->start();
+
+    worker.wait();
 }
 
 VideoUI::~VideoUI()
@@ -168,26 +171,50 @@ VideoUI::~VideoUI()
 
 void VideoUI::start_record(const std::string& save_prefix)
 {
-    for (int i = 0; i < comboBox_cameras->count(); i++) {
-        capture::CameraDevice* device = comboBox_cameras->itemData(i).value<capture::CameraDevice*>();
-        if (device->is_running()) {
-            for (auto stream : device->enabled_streams) {
-                auto f_name = save_prefix + stream->stream_friendly_name;
-                std::ranges::replace(f_name, ':', '-');
-                auto v_rec = new MediaWriter(f_name,
-                    stream->selected_profile->resolution, stream->selected_profile->ratio, stream->selected_profile->format,
-                    stream->encoder_method, stream->encoder_quality);
-                rec_maps[stream] = v_rec;
-            }
-        }
-    }
+    setCursorBusy(true);
+    ui->VideoBox->setDisabled(true);
 
+    worker.run_with_call_back(
+        [this, save_prefix]() {
+            for (int i = 0; i < comboBox_cameras->count(); i++) {
+                capture::CameraDevice* device = comboBox_cameras->itemData(i).value<capture::CameraDevice*>();
+                if (device->is_running()) {
+                    for (auto stream : device->enabled_streams) {
+                        auto f_name = save_prefix + stream->stream_friendly_name;
+                        std::ranges::replace(f_name, ':', '-');
+                        auto v_rec = new MediaWriter(f_name,
+                            stream->selected_profile->resolution, stream->selected_profile->ratio, stream->selected_profile->format,
+                            stream->encoder_method, stream->encoder_quality);
+                        rec_maps[stream] = v_rec;
+                    }
+                }
+            }
+        },
+        [this]() {
+            recorder_lock.lock();
+            is_recording = true;
+            recorder_lock.unlock();
+            setCursorBusy(false);
+        }
+    );
 }
 
 void VideoUI::stop_record()
 {
-    for (auto& [stream, rec] : rec_maps) delete rec;
-    rec_maps.clear();
+    setCursorBusy(true);
+
+    worker.run_with_call_back(
+        [this]() {
+            for (auto& [stream, rec] : rec_maps) delete rec;
+            rec_maps.clear();
+        },
+        [this]() {
+            recorder_lock.lock();
+            is_recording = false;
+            recorder_lock.unlock();
+            setCursorBusy(false);
+        }
+    );
 }
 
 void VideoUI::lock_camera_info_play(bool lock) {
@@ -196,8 +223,8 @@ void VideoUI::lock_camera_info_play(bool lock) {
     comboBox_stream->setDisabled(lock);
     if (lock) {
         ui->VideoBox->setDisabled(false);
-        ui->actionStartTrigger->setToolTip("Stop");
-        ui->actionStartTrigger->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
+        ui->actionStartCamera->setToolTip("Stop");
+        ui->actionStartCamera->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
 
         ui->VideoBox->show();
         textedit_streamname->disconnect(this);
@@ -211,8 +238,8 @@ void VideoUI::lock_camera_info_play(bool lock) {
     }
     else {
         ui->VideoBox->setDisabled(true);
-        ui->actionStartTrigger->setToolTip("Play");
-        ui->actionStartTrigger->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+        ui->actionStartCamera->setToolTip("Play");
+        ui->actionStartCamera->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
 
         ui->VideoBox->hide();
         textedit_streamname->disconnect(this);
@@ -246,7 +273,7 @@ void VideoUI::onCameraSelected(int idx, bool is_selected) {
     comboBox_stream->clear();
     comboBox_profile_type->clear();
     comboBox_profile->clear();
-    ui->actionStartTrigger->setDisabled(true);
+    ui->actionStartCamera->setDisabled(true);
 
     setCursorBusy(true);
     capture::CameraDevice* device = comboBox_cameras->itemData(idx).value<capture::CameraDevice*>();
@@ -313,7 +340,7 @@ void VideoUI::switchCameraStatus(capture::CameraDevice* device, bool open) {
                     capture->selected_stream = comboBox_stream->getHighLightData().value<capture::CameraStream*>();
                     lock_camera_info_play(true);
                 }
-                ui->actionStartTrigger->setDisabled(false);
+                ui->actionStartCamera->setDisabled(false);
                 setCursorBusy(false);
             });
     }
@@ -340,14 +367,14 @@ void VideoUI::onCameraHighLighted(int idx, bool is_highlight) {
 
         }
         onStreamHighLighted(-1, false);
-        ui->actionStartTrigger->setDisabled(true);
+        ui->actionStartCamera->setDisabled(true);
         setCursorBusy(false);
     }
     else {
         comboBox_stream->clear();
         comboBox_profile_type->clear();
         comboBox_profile->clear();
-        ui->actionStartTrigger->setDisabled(true);
+        ui->actionStartCamera->setDisabled(true);
         lock_camera_info_play(false);
         capture->selected_stream = nullptr;
         return;
@@ -359,9 +386,9 @@ void VideoUI::onStreamSelected(int idx, bool is_selected) {
     if (is_selected) {
         LoadStreamProfiles(stream);
         if (comboBox_stream->getSelectedItems().size() != 0)
-            ui->actionStartTrigger->setDisabled(false);
+            ui->actionStartCamera->setDisabled(false);
         else
-            ui->actionStartTrigger->setDisabled(true);
+            ui->actionStartCamera->setDisabled(true);
     }
     else {
         comboBox_profile_type->clear();
@@ -394,7 +421,7 @@ void VideoUI::onStreamHighLighted(int idx, bool is_highlight) {
             capture->selected_stream = stream;
             converter->set_roi({ 0,0,0,0 });
             lock_camera_info_play(true);
-            ui->actionStartTrigger->setDisabled(false);
+            ui->actionStartCamera->setDisabled(false);
             loadCameraOptions(stream);
         }
     }
@@ -429,10 +456,10 @@ void VideoUI::onProfileTypeSelected(int idx) {
 
 void VideoUI::onProfileSelected(int idx) {
     //setCursorBusy(true);
-    //ui->toolBarRS->setDisabled(true);
+    //ui->toolBarCamera->setDisabled(true);
 
-    ui->actionStartTrigger->setDisabled(false);
-    ui->toolBarRS->setDisabled(false);
+    ui->actionStartCamera->setDisabled(false);
+    ui->toolBarCamera->setDisabled(false);
     //setCursorBusy(false);
 }
 
@@ -679,7 +706,7 @@ void VideoUI::onActionRefreshCamera() {
     comboBox_profile_type->clear();
     comboBox_profile_type->setCurrentIndex(-1);
     comboBox_cameras->setDisabled(true);
-    ui->actionStartTrigger->setDisabled(true);
+    ui->actionStartCamera->setDisabled(true);
     lock_camera_info_play(false);
     static capture::devices_set_t current_devices;
     worker.run_with_call_back(
@@ -699,7 +726,7 @@ void VideoUI::onActionRefreshCamera() {
 
 void VideoUI::onActionStartCamera() {
     setCursorBusy(true);
-    ui->actionStartTrigger->setDisabled(true);
+    ui->actionStartCamera->setDisabled(true);
     int device_idx = comboBox_cameras->getHighLight();
     capture::CameraDevice* device = comboBox_cameras->getHighLightData().value<capture::CameraDevice*>();
 

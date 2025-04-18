@@ -29,7 +29,7 @@
       <item>
        <widget class="QTabWidget" name="VideoBox">
         <property name="currentIndex">
-         <number>2</number>
+         <number>0</number>
         </property>
         <widget class="QWidget" name="tab_camera">
          <attribute name="title">
@@ -1657,7 +1657,7 @@
        </widget>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="toolBarRC">
+       <layout class="QHBoxLayout" name="toolBarRecord">
         <item>
          <widget class="QPushButton" name="actionRecord">
           <property name="minimumSize">
@@ -1740,7 +1740,13 @@
     </item>
    </layout>
   </widget>
-  <widget class="QToolBar" name="toolBarRS">
+  <widget class="QToolBar" name="toolBarCamera">
+   <property name="minimumSize">
+    <size>
+     <width>0</width>
+     <height>0</height>
+    </size>
+   </property>
    <property name="windowTitle">
     <string>toolBar</string>
    </property>
@@ -1753,10 +1759,16 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="actionStartTrigger"/>
+   <addaction name="actionStartCamera"/>
    <addaction name="actionrefreshCamera"/>
   </widget>
-  <widget class="QToolBar" name="toolBarSD">
+  <widget class="QToolBar" name="toolBarSerial">
+   <property name="minimumSize">
+    <size>
+     <width>0</width>
+     <height>0</height>
+    </size>
+   </property>
    <property name="windowTitle">
     <string>toolBar_2</string>
    </property>
@@ -1772,7 +1784,7 @@
    <addaction name="actionrefreshSerial"/>
    <addaction name="actionstopSerial"/>
   </widget>
-  <action name="actionStartTrigger">
+  <action name="actionStartCamera">
    <property name="enabled">
     <bool>false</bool>
    </property>

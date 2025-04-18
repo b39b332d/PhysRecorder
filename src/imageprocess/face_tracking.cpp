@@ -213,7 +213,7 @@ void FaceTracking::reset()
 {
 	std::unique_lock<std::mutex> lock(status_lock);
 	buffer->reset();
-	if (last_status != TK_STATIC || last_status != TK_DISABLE) {
+	if (last_status != TK_STATIC && last_status != TK_DISABLE) {
 		need_reset = true;
 		last_status = TK_NOFACE;
 		est_face = { 0,0,0,0 };
@@ -238,7 +238,7 @@ void FaceTracking::set_roi(cv::Rect2i roi) {
 	std::unique_lock<std::mutex> lock(status_lock);
 	buffer->reset();
 	if (roi.width == 0 || roi.height == 0) {
-		if (last_status != TK_STATIC || last_status != TK_DISABLE) {
+		if (last_status != TK_STATIC && last_status != TK_DISABLE) {
 			need_reset = true;
 		}
 		last_status = TK_NOFACE;
@@ -256,7 +256,7 @@ void FaceTracking::disable_tracking() {
 	std::unique_lock<std::mutex> lock(status_lock);
 	buffer->reset();
 	on_face_lost();
-	if (last_status != TK_STATIC || last_status != TK_DISABLE) {
+	if (last_status != TK_STATIC && last_status != TK_DISABLE) {
 		need_reset = true;
 	}
 	est_face = { 0,0,0,0 };
