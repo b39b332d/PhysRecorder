@@ -216,11 +216,9 @@ void VideoUI::start_record(const std::string& save_prefix)
                     for (auto stream : device->enabled_streams) {
                         auto f_name = save_prefix + stream->stream_friendly_name;
                         std::ranges::replace(f_name, ':', '-');
-                        stream->stream_lock.lock();
                         auto v_rec = new MediaWriter(f_name,
                             stream->resolution, stream->ratio, stream->format,
                             stream->encoder_method, stream->encoder_quality);
-                        stream->stream_lock.unlock();
                         rec_maps[stream] = v_rec;
                     }
                 }
@@ -654,29 +652,26 @@ void VideoUI::loadCameraOptions(capture::CameraStream* stream) {
 
     if(is_lossless){
         ui->pushButton_process_mode->setText("Lossless");
-        ui->tab_postprocess_grid->setEnabled(false);
+        ui->lossy_grid->setEnabled(false);
     }
     else {
         ui->pushButton_process_mode->setText("Lossy");
-        ui->tab_postprocess_grid->setEnabled(true);
+        ui->lossy_grid->setEnabled(true);
     }
 	connect(ui->pushButton_process_mode, &QPushButton::clicked, this, [this]() {
         if (ui->pushButton_process_mode->text() == "Lossless") {
             ui->pushButton_process_mode->setText("Lossy");
-            ui->slider_process_rot_slider->setValue(ui->slider_process_rot_slider->value() * 90);
             ui->slider_process_rot_slider->setMaximum(360);
-            ui->pushButton_process_rot->setText(QString::number(ui->slider_process_rot_slider->value()) + "\xc2\xb0");
-            ui->tab_postprocess_grid->setEnabled(true);
+            ui->slider_process_rot_slider->setValue(ui->slider_process_rot_slider->value() * 90);
+            ui->lossy_grid->setEnabled(true);
         }
         else {
             ui->pushButton_process_mode->setText("Lossless");
-            ui->slider_process_rot_slider->setValue(0);
             ui->slider_process_rot_slider->setMaximum(3);
-            ui->pushButton_process_rot->setText("0\xc2\xb0");
-            ui->tab_postprocess_grid->setEnabled(false);
+            ui->slider_process_rot_slider->setValue(0);
+            ui->lossy_grid->setEnabled(false);
         }
-        stream_option_changed |= (1 << 7);
-        stream_option_changed |= (1 << 11);
+        stream_option_changed |= (1 << capture::STREAM_MODE);
         if (!cam_option_changed_timer.isActive()) cam_option_changed_timer.start(100);
         });
 
@@ -686,7 +681,7 @@ void VideoUI::loadCameraOptions(capture::CameraStream* stream) {
         else
             ui->checkBox_process_fliplr->setChecked(false);
         connect(ui->checkBox_process_fliplr, &QCheckBox::toggled, this, [this](bool checked) {
-            stream_option_changed |= (1 << 9);
+            stream_option_changed |= (1 << capture::STREAM_FLIP_LR);
             if (!cam_option_changed_timer.isActive()) cam_option_changed_timer.start(100);
             });
         ui->checkBox_process_flipud->disconnect(this);
@@ -695,7 +690,7 @@ void VideoUI::loadCameraOptions(capture::CameraStream* stream) {
         else
             ui->checkBox_process_flipud->setChecked(false);
         connect(ui->checkBox_process_flipud, &QCheckBox::toggled, this, [this](bool checked) {
-            stream_option_changed |= (1 << 10);
+            stream_option_changed |= (1 << capture::STREAM_FLIP_UD);
             if (!cam_option_changed_timer.isActive()) cam_option_changed_timer.start(100);
             });
         ui->slider_process_rot_slider->disconnect(this);
@@ -708,14 +703,11 @@ void VideoUI::loadCameraOptions(capture::CameraStream* stream) {
                 ui->pushButton_process_rot->setText(QString::number(ui->slider_process_rot_slider->value() * 90) + "\xc2\xb0");
             else
                 ui->pushButton_process_rot->setText(QString::number(ui->slider_process_rot_slider->value()) + "\xc2\xb0");
-            stream_option_changed |= (1 << 11);
+            stream_option_changed |= (1 << capture::STREAM_ROTATE);
             if (!cam_option_changed_timer.isActive()) cam_option_changed_timer.start(100);
             });
-        connect(ui->pushButton_process_rot, &QCheckBox::toggled, this, [this](bool checked) {
+        connect(ui->pushButton_process_rot, &QPushButton::clicked, this, [this](bool checked) {
             ui->slider_process_rot_slider->setValue(0);
-            ui->pushButton_process_rot->setText("0\xc2\xb0");
-            stream_option_changed |= (1 << 11);
-            if (!cam_option_changed_timer.isActive()) cam_option_changed_timer.start(100);
             });
 
 
@@ -768,7 +760,7 @@ void VideoUI::loadCameraOptions(capture::CameraStream* stream) {
                 ui->lineEdit_crop_roi->setProperty("roi_w", QVariant::fromValue(resol.width));
                 ui->lineEdit_crop_roi->setProperty("roi_h", QVariant::fromValue(resol.height));
             }
-            stream_option_changed |= (1 << 8);
+            stream_option_changed |= (1 << capture::STREAM_CROP_X);
             if (!cam_option_changed_timer.isActive()) cam_option_changed_timer.start(100);
         });
         connect(ui->lineEdit_crop_roi, &SilentLineEdit::rightClicked,this, [this, resol]() {
@@ -777,7 +769,7 @@ void VideoUI::loadCameraOptions(capture::CameraStream* stream) {
             ui->lineEdit_crop_roi->setProperty("roi_y", QVariant::fromValue(0));
             ui->lineEdit_crop_roi->setProperty("roi_w", QVariant::fromValue(resol.width));
             ui->lineEdit_crop_roi->setProperty("roi_h", QVariant::fromValue(resol.height));
-            stream_option_changed |= (1 << 8);
+            stream_option_changed |= (1 << capture::STREAM_CROP_X);
             if (!cam_option_changed_timer.isActive()) cam_option_changed_timer.start(100);
             });
 
@@ -806,7 +798,6 @@ void VideoUI::set_sensor_property() {
     }
     cam_option_changed = 0;
     bool need_enable = false;
-    std::unique_lock l(stream->stream_lock);
     for (int opt = 0; opt < capture::STREAM_LOSSY_OPTION_CNT; opt++) {
 
         if ((stream_option_changed & (1 << opt)) != 0) {
@@ -827,7 +818,7 @@ void VideoUI::set_sensor_property() {
 
     if (stream->get_option(capture::STREAM_MODE).value == STREAM_OPTION_LOSSLESS)need_enable = false;
 
-    if ((stream_option_changed & (1 << 9)) != 0) {
+    if ((stream_option_changed & (1 << capture::STREAM_FLIP_LR)) != 0) {
 		if (ui->checkBox_process_fliplr->isChecked())
             stream->set_option(capture::STREAM_FLIP_LR, { 1,capture::OPTION_MANUAL });
 		else
@@ -835,7 +826,7 @@ void VideoUI::set_sensor_property() {
     }
     need_enable = (!stream->is_default(capture::STREAM_FLIP_LR));
 
-    if ((stream_option_changed & (1 << 10)) != 0) {
+    if ((stream_option_changed & (1 << capture::STREAM_FLIP_UD)) != 0) {
         if (ui->checkBox_process_flipud->isChecked())
             stream->set_option(capture::STREAM_FLIP_UD, { 1,capture::OPTION_MANUAL });
         else
@@ -843,7 +834,7 @@ void VideoUI::set_sensor_property() {
     }
     need_enable = (!stream->is_default(capture::STREAM_FLIP_UD));
 
-    if ((stream_option_changed & (1 << 11)) != 0) {
+    if ((stream_option_changed & (1 << capture::STREAM_ROTATE)) != 0) {
         if (ui->pushButton_process_mode->text() == "Lossless")
             stream->set_option(capture::STREAM_ROTATE, { ui->slider_process_rot_slider->value() * 90,capture::OPTION_MANUAL });
         else
@@ -852,7 +843,7 @@ void VideoUI::set_sensor_property() {
     need_enable = (!stream->is_default(capture::STREAM_ROTATE));
 
 
-    if ((stream_option_changed & (1 << 8)) != 0) {
+    if ((stream_option_changed & (1 << capture::STREAM_CROP_X)) != 0) {
         unsigned x = ui->lineEdit_crop_roi->property("roi_x").toUInt();
         unsigned y = ui->lineEdit_crop_roi->property("roi_y").toUInt();
         unsigned w = ui->lineEdit_crop_roi->property("roi_w").toUInt();
@@ -867,7 +858,7 @@ void VideoUI::set_sensor_property() {
     need_enable = (!stream->is_default(capture::STREAM_CROP_WIDTH));
     need_enable = (!stream->is_default(capture::STREAM_CROP_HEIGHT));
 
-    if ((stream_option_changed & (1 << 7)) != 0) {
+    if ((stream_option_changed & (1 << capture::STREAM_MODE)) != 0) {
         if (ui->pushButton_process_mode->text() == "Lossless") {
             stream->set_option(capture::STREAM_MODE, { STREAM_OPTION_LOSSLESS,need_enable?capture::OPTION_MANUAL: capture::OPTION_AUTO });
         }

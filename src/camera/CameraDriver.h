@@ -160,6 +160,7 @@ namespace capture {
     } STREAM_OPTION;
     class CameraStream: public Options {
         CameraProfile* selected_profile = NULL;
+        std::mutex stream_lock;
     public:
         inline RawFrame* createEmptyFrame() {
             auto f = new RawFrame{
@@ -167,7 +168,6 @@ namespace capture {
             };
             return f;
         }
-        std::mutex stream_lock;
         Resolution resolution;
         PIX_TYPE format;
         Ratio ratio;
@@ -181,6 +181,11 @@ namespace capture {
         CameraProfile* default_profile = NULL;
         //Transform transform;
         long long last_valid_ts = 0;
+
+        virtual void set_option_native(int option, const option_status& value) {
+            std::unique_lock l(stream_lock);
+            configurations[option].current = value;
+        };
 
         bool is_valid() { return default_profile != NULL; }
         std::unordered_map<std::string, std::set<CameraProfile*,
