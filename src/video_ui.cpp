@@ -16,7 +16,9 @@ VideoUI::VideoUI(QWidget* parent)
 void VideoUI::on_convert_set_roi(cv::Rect rect) {
     if (ui->pushButton_crop_roi->isChecked()) {
         if (rect.width > 100 && rect.height > 100) {
-            ui->lineEdit_crop_roi->setText(QString::asprintf("(%d,%d,%d,%d)", rect.x, rect.y, rect.width, rect.height));
+            unsigned x = ui->lineEdit_crop_roi->property("roi_x").toUInt();
+            unsigned y = ui->lineEdit_crop_roi->property("roi_y").toUInt();
+            ui->lineEdit_crop_roi->setText(QString::asprintf("(%d,%d,%d,%d)", rect.x+x, rect.y+y, rect.width, rect.height));
             emit ui->lineEdit_crop_roi->editingFinished();
         }
         ui->tab_postprocess->setEnabled(true);

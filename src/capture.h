@@ -29,7 +29,7 @@ public:
     capture::CameraStream* selected_stream = nullptr;
     Capture(FaceTracking* face_tracking);
 
-    Q_SIGNAL void updateFrame(QList<RawFrame*> main_frames, QList<RawFrame*> other_frames, cv::Rect2i);
+    Q_SIGNAL void updateFrame(RawFrame* main_frames, QList<RawFrame*> other_frames, cv::Rect2i);
     Q_SIGNAL void device_disabled(capture::CameraDevice*);
 
 private:

@@ -20,10 +20,13 @@ class Converter : public QObject {
    cv::Mat m_canves;
 
    QImage q_frame;
-
+   Resolution previous = { 0, };
+   QSet<capture::CameraProfile*> previous_profiles;
+   capture::CameraProfile* previous_main =nullptr;
+   std::chrono::steady_clock::time_point previous_time = std::chrono::steady_clock::now();
 public:
    Converter(ImageViewer* videoLabel,QObject * parent = nullptr);
-   void frame_ready(QList<RawFrame*> main_frames, QList<RawFrame*> other_frames, cv::Rect2i face);
+   void frame_ready(RawFrame* main_frames, QList<RawFrame*> other_frames, cv::Rect2i face);
 	   
    Q_SIGNAL void frameReady(const QImage&);
    Q_SIGNAL void stream_selected(capture::CameraStream*);

@@ -62,7 +62,7 @@ void Capture::run()
          }
         RawFrame* raw_frame = NULL;
         QList<RawFrame*> otherFrames;
-        QList<RawFrame*> mainFrames;
+        RawFrame* mainFrame = nullptr;
         cv::Mat color_mat;
         RawFrame* c_frame;
         for (auto devices : enabled_devices) {
@@ -82,7 +82,7 @@ void Capture::run()
                             color_mat = temp_mat;
                             c_frame = frame;
                         }
-                        mainFrames.push_back(frame);
+                        mainFrame = frame;
                     }
                     else
                         otherFrames.push_back(frame);
@@ -90,7 +90,7 @@ void Capture::run()
                 else {
                     RawFrame* frame_place_holder = stream->createEmptyFrame();
                     if (selected_stream == stream) {
-                        mainFrames.push_back(frame_place_holder);
+                        mainFrame = frame_place_holder;
                     }
                     else
                         otherFrames.push_back(frame_place_holder);
@@ -130,7 +130,7 @@ void Capture::run()
         }
 		face_tracking->tracking(c_frame);
         imp_finish:
-        emit updateFrame(mainFrames, otherFrames, face_tracking->get_roi());
+        emit updateFrame(mainFrame, otherFrames, face_tracking->get_roi());
 
         recorder_lock.lock();
         if (is_recording) {

@@ -27,18 +27,15 @@ inline void cvt_puttext(capture::CameraStream*stream, cv::Mat& m_frame, std::chr
 }
 
 
-QSet<capture::CameraProfile*> previous_profiles;
-QSet<capture::CameraProfile*> previous_main;
-std::chrono::steady_clock::time_point previous_time = std::chrono::steady_clock::now();
 
 
 #define Rawframe_cv_img(frame) *((cv::Mat*)(frame->bgr_frame))
-void Converter::frame_ready(QList<RawFrame*> main_frames,QList<RawFrame*> other_frames,Rect2i face) {
+void Converter::frame_ready(RawFrame* main_frame,QList<RawFrame*> other_frames,Rect2i face) {
     auto current_time = std::chrono::steady_clock::now();
     int total_width = videoLabel->width();
     int total_height = videoLabel->height();
     QSet<capture::CameraProfile*> current_profiles;
-    QSet<capture::CameraProfile*> current_main;
+    capture::CameraProfile* current_main =nullptr;
     Point2i click_point, click_point_end;
     videoLabel->event_lock.lock();
     int click_event_type = videoLabel->click_event_type;
@@ -50,11 +47,9 @@ void Converter::frame_ready(QList<RawFrame*> main_frames,QList<RawFrame*> other_
     videoLabel->event_lock.unlock();
 
 
-
-
-    for (auto frame : main_frames) {
-        current_profiles.insert((capture::CameraProfile*)(frame->profile));
-        current_main.insert((capture::CameraProfile*)(frame->profile));
+    if (main_frame != nullptr) {
+        current_profiles.insert((capture::CameraProfile*)(main_frame->profile)); 
+        current_main = (capture::CameraProfile*)(main_frame->profile);
     }
     for (auto frame : other_frames) {
         current_profiles.insert((capture::CameraProfile*)(frame->profile));
@@ -68,17 +63,18 @@ void Converter::frame_ready(QList<RawFrame*> main_frames,QList<RawFrame*> other_
         dst_size = widget_size;
         m_canves = Mat::zeros(dst_size, CV_8UC3);
     }
-    if (current_profiles != previous_profiles || current_main != previous_main) {
+    if (current_profiles != previous_profiles || current_main != previous_main ||
+        (main_frame != nullptr && RawFrame_WIDTH_(main_frame) != previous.width && RawFrame_HEIGHT_(main_frame)!= previous.height)) {
         m_canves = Mat::zeros(dst_size, CV_8UC3);
+        if(main_frame)
+            previous = RawFrame_PROFILE_(main_frame)->resolution;
     }
-    if (main_frames.size() != 0) {
+    if (main_frame != nullptr) {
         int other_height = 100;
         int main_dst_height = total_height - other_height;
-        int main_width = 0;
+        int main_width = (float)(RawFrame_WIDTH_(main_frame)) * main_dst_height / RawFrame_HEIGHT_(main_frame);
         int max_width = 0;
-        for (auto pframe : main_frames) {
-            main_width += (float)(RawFrame_WIDTH_(pframe)) * main_dst_height / RawFrame_HEIGHT_(pframe);
-        }
+
         int dst_height; Point2i start_point;
         if (main_width <= total_width) {
             dst_height = main_dst_height;
@@ -88,16 +84,16 @@ void Converter::frame_ready(QList<RawFrame*> main_frames,QList<RawFrame*> other_
             dst_height = (float)main_dst_height / main_width * total_width;
             start_point = Point2i(0, (main_dst_height - dst_height) / 2);
         }            
-        for (auto pframe : main_frames) {
-            float scaled = (float)dst_height / RawFrame_HEIGHT_(pframe);
-            Size2i scaled_size(scaled * RawFrame_WIDTH_(pframe), dst_height);
+        if (true) {
+            float scaled = (float)dst_height / RawFrame_HEIGHT_(main_frame);
+            Size2i scaled_size(scaled * RawFrame_WIDTH_(main_frame), dst_height);
             Rect2i start_pt(start_point, scaled_size);
             m_frame = Mat(m_canves, start_pt);
-            if (pframe->bgr_frame != nullptr) {
-                cv::resize(Rawframe_cv_img(pframe),
+            if (main_frame->bgr_frame != nullptr) {
+                cv::resize(Rawframe_cv_img(main_frame),
                     m_frame, scaled_size, 0, 0, INTER_NEAREST);
             }
-            else if (new_profiles.contains(RawFrame_PROFILE_(pframe))) {
+            else if (new_profiles.contains(RawFrame_PROFILE_(main_frame))) {
                 m_frame.setTo(cv::Scalar::all(0));
                 int baseline = 0;
                 cv::Size textSize = cv::getTextSize("no signal", cv::FONT_HERSHEY_SIMPLEX, 1.0, 1, &baseline);
@@ -107,7 +103,7 @@ void Converter::frame_ready(QList<RawFrame*> main_frames,QList<RawFrame*> other_
             if (face.area() != 0) {
                 rectangle(m_frame, Rect(face.tl() * scaled, face.br() * scaled), Scalar_<int>(255, 0, 0));
             }
-            cvt_puttext(RawFrame_PROFILE_(pframe)->stream, m_frame, current_time);
+            cvt_puttext(RawFrame_PROFILE_(main_frame)->stream, m_frame, current_time);
             if (click_event_type == -1)
                 emit stream_selected(nullptr);
             else if (click_event_type == 2) {
@@ -120,8 +116,7 @@ void Converter::frame_ready(QList<RawFrame*> main_frames,QList<RawFrame*> other_
             else if (click_event_type == 1) {
                 emit set_roi({0,0,0,0});
             }
-            pframe->release();
-            start_point.x += scaled_size.width;
+            main_frame->release();
         }
 
         start_point = Point2i (0, main_dst_height);
