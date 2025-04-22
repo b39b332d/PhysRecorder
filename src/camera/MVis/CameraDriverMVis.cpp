@@ -45,7 +45,7 @@ namespace capture {
                     long long current_ts = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                     if (since == -1) since = current_ts- sFrameInfo.uiTimeStamp * 100;
                     only_stream->write(
-                        only_stream->selected_profile->createFrame(
+                        only_stream->get_current_profile()->createFrame(
                             sFrameInfo.uiTimeStamp * 100 + since, (unsigned char*)frame,
                             sFrameInfo.uBytes,
                             [frame]() {
@@ -76,7 +76,7 @@ namespace capture {
         if (CameraSetFrameSpeed(cam_device, 2) != CAMERA_STATUS_SUCCESS)
         return false;
         since = -1;
-        if (CameraSetImageResolution(cam_device, &((CameraProfileMVis*)(only_stream->selected_profile))->resol) != CAMERA_STATUS_SUCCESS)
+        if (CameraSetImageResolution(cam_device, &((CameraProfileMVis*)(only_stream->get_current_profile()))->resol) != CAMERA_STATUS_SUCCESS)
         return false;
         camera_read_thread = new std::thread(&CameraDeviceMVis::camera_read_loop,this);
         if (CameraPlay(cam_device) != CAMERA_STATUS_SUCCESS)
@@ -116,7 +116,7 @@ namespace capture {
 
         for (int i = 0; i < DEVICE_OPTION_CNT; i++) {
             switch ((DEVICE_OPTION)i) {
-            case CameraDevice::DEVICE_EXPOSURE:
+            case DEVICE_EXPOSURE:
             {
                 double line_time, exp_time;
                 CameraGetExposureLineTime(cam_device, &line_time);
@@ -148,17 +148,17 @@ namespace capture {
                     opt_range.support_type = OPTION_MANUAL;
                 }
                 opt_range.current.value = num_line;
-                configurations[i] = opt_range;
+                set_option_range(i, opt_range);
             }
                 break;;
-            case CameraDevice::DEVICE_WHITE_BALANCE:
+            case DEVICE_WHITE_BALANCE:
 
                 break;
-            case CameraDevice::DEVICE_GAIN:
+            case DEVICE_GAIN:
                 break;
-            case CameraDevice::DEVICE_LIGHT:
+            case DEVICE_LIGHT:
                 break;
-            case CameraDevice::DEVICE_GAMMA:
+            case DEVICE_GAMMA:
                 break;
             case DEVICE_CONTRAST:
                 break;
@@ -180,7 +180,7 @@ namespace capture {
     void CameraDeviceMVis::set_option_native(DEVICE_OPTION option, const option_status& value)
     {
         switch (option) {
-        case CameraDevice::DEVICE_EXPOSURE:
+        case DEVICE_EXPOSURE:
             if (value.status_type == OPTION_AUTO) {
                 CameraSetAeState(cam_device, 1);
             }

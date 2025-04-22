@@ -7,53 +7,8 @@
 #include <QSharedPointer>
 #include <algorithm>
 #include <windows.h>
-#include <opencv2/imgcodecs.hpp>
-
-
 #include <inference_openvino.h>
-
-#define RawFrame_CVIMG_(frame) (cv::Mat*)(frame->bgr_frame)
-inline cv::Mat* raw2cvmat_bgr(RawFrame* frame) {
-    if(frame->bgr_frame!= nullptr)
-        return RawFrame_CVIMG_(frame);
-    cv::Mat* out_image;
-    if(RawFrame_FORMAT_(frame) != PIX_TYPE_BGR8)
-        out_image = new cv::Mat(RawFrame_WIDTH_(frame), RawFrame_HEIGHT_(frame), CV_8UC3);
-    switch (RawFrame_FORMAT_(frame)) {
-    case PIX_TYPE_BGR8:  out_image = new cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC3, frame->raw_frame); break;
-    case PIX_TYPE_RGB8:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC3, frame->raw_frame), *out_image, cv::COLOR_RGB2BGR); break;
-    case PIX_TYPE_RGBA:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC4, frame->raw_frame), *out_image, cv::COLOR_RGBA2BGR); break;
-    case PIX_TYPE_BGRA:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC4, frame->raw_frame), *out_image, cv::COLOR_BGRA2BGR); break;
-
-    case PIX_TYPE_RGB5:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC2, frame->raw_frame), *out_image, cv::COLOR_BGR5552RGB); break;
-    case PIX_TYPE_BGR5:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC2, frame->raw_frame), *out_image, cv::COLOR_BGR5552BGR); break;
-    case PIX_TYPE_RGB6:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC2, frame->raw_frame), *out_image, cv::COLOR_BGR5552RGB); break;
-    case PIX_TYPE_BGR6:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC2, frame->raw_frame), *out_image, cv::COLOR_BGR5552BGR); break;
-
-    case PIX_TYPE_YUY2:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC2, frame->raw_frame), *out_image, cv::COLOR_YUV2BGR_YUY2); break;
-    case PIX_TYPE_NV12:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame) * 1.5, RawFrame_WIDTH_(frame), CV_8UC1, frame->raw_frame), *out_image, cv::COLOR_YUV2BGR_NV12); break;
-
-    case PIX_TYPE_UYVY:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC2, frame->raw_frame), *out_image, cv::COLOR_YUV2BGR_UYVY); break;
-    case PIX_TYPE_Y12I:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC2, frame->raw_frame), *out_image, cv::COLOR_YUV2BGR_I420); break;
-    case PIX_TYPE_L8:  cv::cvtColor(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC1, frame->raw_frame), *out_image, cv::COLOR_GRAY2BGR); break;
-    case PIX_TYPE_L16: cv::extractChannel(cv::Mat(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_8UC2, frame->raw_frame), *out_image, 0);break;
-    case PIX_TYPE_D16:
-    case PIX_TYPE_Z16:
-    {
-        cv::Mat temp_img(RawFrame_HEIGHT_(frame), RawFrame_WIDTH_(frame), CV_16UC1, frame->raw_frame);
-        cv::Mat log_img;
-        temp_img.convertTo(log_img, CV_8UC1, 0.05);
-        cv::applyColorMap(log_img, *out_image, cv::COLORMAP_RAINBOW);
-
-    }break;
-    case PIX_TYPE_MJPG:  cv::imdecode(cv::Mat(frame->raw_frame_len, 1, CV_8UC1, frame->raw_frame), cv::IMREAD_COLOR, out_image); break;
-    default: return nullptr;
-    };
-    frame->bgr_frame = out_image;
-    frame->free_funcs.push([out_image]() {delete out_image; });
-    return RawFrame_CVIMG_(frame);
-}
-
+#include <ImageDecoder.h>
 
 
 
@@ -72,6 +27,7 @@ uchar depthb_p[] = { 0,0,0,255,255,128 };
 
 Capture::Capture(FaceTracking* face_tracking):face_tracking(face_tracking)
 {
+	th = new std::thread(&Capture::run, this);
 }
 
 //cv::Mat Capture::LUT_16_reinterpret_cast(cv::Mat mat, cv::Mat dst)
@@ -113,11 +69,17 @@ void Capture::run()
             for (auto stream : devices->enabled_streams) {
                 if (frame_set.contains(stream)) {
                     auto frame = frame_set[stream].back();
-                    cv::Mat* temp_mat = raw2cvmat_bgr(frame);
+                    cv::Mat temp_mat;
+                    if (frame->bgr_frame == nullptr) {
+                        temp_mat = capture::decode_bgr(frame);
+                        frame->bgr_frame = new cv::Mat(temp_mat);
+                        frame->free_funcs.push([frame]() { delete (cv::Mat*)frame->bgr_frame; });
+                    }else
+						temp_mat = *(cv::Mat*)(frame->bgr_frame);
                     frame->acquire();
                     if (selected_stream == stream) {
                         if (color_mat.empty()) {
-                            color_mat = *temp_mat;
+                            color_mat = temp_mat;
                             c_frame = frame;
                         }
                         mainFrames.push_back(frame);
@@ -126,8 +88,7 @@ void Capture::run()
                         otherFrames.push_back(frame);
                 }
                 else {
-                    RawFrame* frame_place_holder = new RawFrame;
-                    frame_place_holder->profile = stream->selected_profile;
+                    RawFrame* frame_place_holder = stream->createEmptyFrame();
                     if (selected_stream == stream) {
                         mainFrames.push_back(frame_place_holder);
                     }

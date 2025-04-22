@@ -11,14 +11,14 @@ namespace {
 MultiSelectComboBox::MultiSelectComboBox(QWidget* aParent) :
     QComboBox(aParent),
     mListWidget(new QListWidget(this)),
-    mLineEdit(new QLineEdit(this)),
+    mLineEdit(new SilentLineEdit(this)),
     m_list_custom_info(new QList<QVariant>),
     current_selected_items(new QSet<int>)
 {
 
 
     mLineEdit->setReadOnly(true);
-    mLineEdit->installEventFilter(this);
+    connect(mLineEdit, &SilentLineEdit::leftClicked, this, &MultiSelectComboBox::showPopup);
 
     setModel(mListWidget->model());
     setView(mListWidget);
@@ -86,7 +86,8 @@ void MultiSelectComboBox::stateChanged(int aState)
             else if(is_disabled){
                 // dehighlight previous highlight item and do nothing
                 setText(QString("%1/%2 Selected")
-                    .arg(getSelectedItems().size()).arg(m_list_custom_info->size()));                if (highLight != -1) {
+                    .arg(getSelectedItems().size()).arg(m_list_custom_info->size()));                
+                if (highLight != -1) {
                     emit highLightSelect(highLight, false);
                     highLight = -1;
                 }
@@ -123,9 +124,12 @@ void MultiSelectComboBox::stateChanged(int aState)
             if (highLight != -1) {
                 emit highLightSelect(highLight, false);
             }
+            if (highLight != sender_idx) {
+                highLight = sender_idx;
+                emit highLightSelect(highLight, true);
+            }
             current_selected_items->insert(sender_idx);
             setText(getItemText(sender_idx));
-            highLight = sender_idx;
             emit selectionChanged(sender_idx, true);
         }
     }
@@ -392,14 +396,6 @@ void MultiSelectComboBox::wheelEvent(QWheelEvent* aWheelEvent)
     Q_UNUSED(aWheelEvent);
 }
 
-bool MultiSelectComboBox::eventFilter(QObject* aObject, QEvent* aEvent)
-{
-    if (aObject == mLineEdit && aEvent->type() == QEvent::MouseButtonRelease) {
-        showPopup();
-        return false;
-    }
-    return false;
-}
 
 void MultiSelectComboBox::keyPressEvent(QKeyEvent* aEvent)
 {

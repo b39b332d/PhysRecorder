@@ -8,6 +8,8 @@ add_library(cam_driver STATIC
 "CameraDriver.cpp"
 "CameraCapture.cpp"
 )
+add_subdirectory(decoder)
+target_link_libraries(cam_driver PUBLIC cam_decoder)
 
 target_include_directories(cam_driver PUBLIC ./ ${utils_dir}/)
 set( CAM_DRIVER_FUNC ) 
@@ -38,8 +40,6 @@ target_link_libraries(cam_test_rs PRIVATE ${OpenCV_LIBS} realsense)
 target_include_directories(cam_test_rs PRIVATE ./)
 
 
-
-
-add_executable(cam_driver_test EXCLUDE_FROM_ALL cam_driver_test.cpp 
-)
+add_executable(cam_driver_test EXCLUDE_FROM_ALL cam_driver_test.cpp )
 target_link_libraries(cam_driver_test PRIVATE ${OpenCV_LIBS} ${MSMF_LIBS} cam_driver)
+

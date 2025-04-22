@@ -52,7 +52,7 @@ function(custom_target_install tgt)
             configure_file(${CMAKE_SOURCE_DIR}/cmake/DeployDep.cmake DeployDep.cmake @ONLY)
             install(RUNTIME_DEPENDENCY_SET TGT_INSTALL_SET 
                 DIRECTORIES ${INSTALL_DEP_PATHS} $ENV{Path}
-                PRE_EXCLUDE_REGEXES "^qt6.*\.dll" "^api-ms-win-crt-.*\.dll" ".*\.exe" # "[/\/]vc[^/\/]*$"  "[/\/]msvc[^/\/]*$" 
+                PRE_EXCLUDE_REGEXES "^qt6.*\.dll" "^api-ms-win-.*\.dll" ".*\.exe" # "[/\/]vc[^/\/]*$"  "[/\/]msvc[^/\/]*$" 
                 POST_INCLUDE_REGEXES  "[/\/]msvc[^/\/]*$" "[/\/]vcruntime[^/\/]*$"
                 POST_EXCLUDE_REGEXES  [[.*[/\/]qt[/\/].*\.dll]] [[.*[/\/]system32[/\/].*\.dll]]
             )

@@ -2,7 +2,7 @@
 
 #include <QComboBox>
 #include <QListWidget>
-
+#include <SilentLineEdit.h>
 class MultiSelectComboBox : public QComboBox
 {
     Q_OBJECT
@@ -49,7 +49,6 @@ public slots:
 
 protected:
     void wheelEvent(QWheelEvent* aWheelEvent) override;
-    bool eventFilter(QObject* aObject, QEvent* aEvent) override;
     void keyPressEvent(QKeyEvent* aEvent) override;
 
 private:
@@ -58,7 +57,7 @@ private:
     void itemClicked(int aIndex);
 
     QListWidget* mListWidget;
-    QLineEdit* mLineEdit;
+    SilentLineEdit* mLineEdit;
     QList<QVariant>* m_list_custom_info;
     QSet<int>* current_selected_items;
     int highLight = -1;

@@ -34,9 +34,13 @@ public:
 	void stop_record();
 private:
 
-	QCheckBox* camopt_checkBox[(int)capture::CameraDevice::DEVICE_OPTION_CNT];
-	QPushButton* camopt_pushButton[(int)capture::CameraDevice::DEVICE_OPTION_CNT];
-	QSlider* camopt_slider[(int)capture::CameraDevice::DEVICE_OPTION_CNT];
+	QCheckBox* camopt_checkBox[(int)capture::DEVICE_OPTION_CNT];
+	QPushButton* camopt_pushButton[(int)capture::DEVICE_OPTION_CNT];
+	QSlider* camopt_slider[(int)capture::DEVICE_OPTION_CNT];
+
+	QCheckBox* streamopt_checkBox[capture::STREAM_OPTION_CNT- capture::STREAM_CONTRAST];
+	QPushButton* streamopt_pushButton[capture::STREAM_OPTION_CNT - capture::STREAM_CONTRAST];
+	QSlider* streamopt_slider[capture::STREAM_OPTION_CNT - capture::STREAM_CONTRAST];
 
 	Capture* capture;
 	ColorExtractor* face_tracking;
@@ -56,6 +60,7 @@ private:
 
 	QTimer cam_option_changed_timer;
 	uint32_t cam_option_changed = 0;
+	uint32_t stream_option_changed = 0;
 
 	Worker worker;
 
@@ -69,13 +74,15 @@ private:
 
 	void lock_camera_info_play(bool lock = true);
 	void loadCameraOptions(capture::CameraStream* stream);
+	void connect_option_set(int opt, QSlider** sliders, QCheckBox** checkboxs, QPushButton** pushButtons
+		, capture::Options* option, uint32_t&);
 
 	Ui::Video* ui;
 private slots:
 	void onActionStartCamera();
 	void onActionRefreshCamera();
 	void encoder_changed();
-
+	void on_convert_set_roi(cv::Rect rect);
 	void onCameraSelected(int, bool);
 	void onCameraHighLighted(int, bool);
 	void onProfileTypeSelected(int);

@@ -15,6 +15,7 @@
 #include <QThread>
 #include <worker_handler.h>
 
+
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
@@ -29,7 +30,6 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QSplashScreen&,QWidget *parent = nullptr);
     ~MainWindow();
-private:
     Ui::MainWindow* ui;
 
     std::unordered_set<SerialReader*> rec_SerialReaders;

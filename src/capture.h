@@ -1,6 +1,5 @@
 #ifndef CAPTURE_H
 #define CAPTURE_H
-#include <QThread >
 #include <string>
 #include <vector>
 #include <opencv2/imgproc.hpp>
@@ -9,6 +8,7 @@
 #include <MediaWriter.h>
 #include <CameraCapture.h>
 #include <face_tracking.h>
+#include <QObject>
 
 
 extern std::mutex recorder_lock;
@@ -16,7 +16,7 @@ extern std::string record_prefix;
 extern bool is_recording;
 extern std::unordered_map<capture::CameraStream*, MediaWriter*> rec_maps;
 
-class Capture : public QThread
+class Capture : public QObject
 {
     Q_OBJECT
 
@@ -33,6 +33,7 @@ public:
     Q_SIGNAL void device_disabled(capture::CameraDevice*);
 
 private:
+    std::thread* th;
     void run();
 
 };

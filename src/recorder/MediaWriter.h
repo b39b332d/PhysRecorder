@@ -9,7 +9,7 @@
 #include <set>
 
 class MediaWriter {
-	gwavi_t* container_writer;
+	gwavi_t* container_writer = nullptr;
 	encoder::stream_encoder* stream_p;
 	std::thread write_file_thread;
 

@@ -12,6 +12,9 @@
 #define IS_PIX_TYPE_RGB(PIX) (PIX==PIX_TYPE_RGB8||PIX==PIX_TYPE_BGR8)
 #define IS_PIX_CHAR_TYPE_RGB(PIX) (PIX_FOURCC_TO_UINT32(PIX)==PIX_TYPE_RGB8||PIX_FOURCC_TO_UINT32(PIX)==PIX_TYPE_BGR8)
 
+#define IS_PIX_TYPE_YUV_420(PIX) (PIX==PIX_TYPE_I420||PIX==PIX_TYPE_NV12||PIX==PIX_TYPE_NV21||PIX==PIX_TYPE_Y12I)
+#define IS_PIX_TYPE_YUV_422(PIX) (PIX==PIX_TYPE_I422||PIX==PIX_TYPE_UYVY||PIX==PIX_TYPE_YUY2)
+#define IS_PIX_TYPE_TOCV(PIX) (PIX==PIX_TYPE_RGB8||PIX==PIX_TYPE_BGR8||PIX==PIX_TYPE_RGBA||PIX==PIX_TYPE_BGRA||PIX==PIX_TYPE_ARGB)
 typedef enum {
 	PIX_TYPE_DEFINE_MACRO(RAW),
 	PIX_TYPE_DEFINE_MACRO(RGB8),
@@ -88,12 +91,17 @@ struct Ratio {
 
 
 #define RawFrame_PROFILE_(f) ((capture::CameraProfile*)((f)->profile))
-#define RawFrame_WIDTH_(f) RawFrame_PROFILE_(f)->resolution.width
-#define RawFrame_HEIGHT_(f) RawFrame_PROFILE_(f)->resolution.height
-#define RawFrame_FORMAT_(f) RawFrame_PROFILE_(f)->format
+#define RawFrame_PROFILE_WIDTH_(f) RawFrame_PROFILE_(f)->resolution.width
+#define RawFrame_PROFILE_HEIGHT_(f) RawFrame_PROFILE_(f)->resolution.height
+#define RawFrame_PROFILE_FORMAT_(f) RawFrame_PROFILE_(f)->format
+#define RawFrame_WIDTH_(f) f->resolution.width
+#define RawFrame_HEIGHT_(f) f->resolution.height
+#define RawFrame_FORMAT_(f) f->format
 struct RawFrame {
 	unsigned char* raw_frame = nullptr;
 	unsigned int raw_frame_len;
+	Resolution resolution;
+	PIX_TYPE format;
 	long long frame_ts; // microseconds
 	void* profile;
 	std::atomic<int> ref_cnt=0;

@@ -1,5 +1,5 @@
 
-add_executable(utils_test EXCLUDE_FROM_ALL utils_test.cc )
+add_executable(utils_test EXCLUDE_FROM_ALL utils_test.cc)
 
 target_link_libraries(utils_test PRIVATE  ${OpenCV_LIBS} ${delayimp_LIB})
 

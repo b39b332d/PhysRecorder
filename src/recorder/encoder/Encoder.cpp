@@ -1,8 +1,8 @@
+#include "Encoder.h"
 
 #define UNICODE
 #include <thread>
 #include <vector>
-#include <semaphore>
 #include <queue>
 #include <mutex>
 #include <iostream>
@@ -12,8 +12,19 @@
 #include JPEG_ENCODER_HEADER
 #include <EncoderHUFF.hpp>
 #include <EncoderRAW.hpp>
+#include <semaphore>
 namespace encoder {
 
+	EncoderComp* get_pencoder(int width, int height, PIX_TYPE e_type, int quality, PIX_TYPE d_type) {
+		if (d_type == PIX_TYPE_MJPG)
+			return new JPEG_ENCODER(width, height, e_type, quality);
+		else if (d_type == PIX_TYPE_HFYU)
+			return new EncoderHUFF(width, height, e_type, quality);
+		else if (d_type == PIX_TYPE_RAW)
+			return new EncoderRaw(width, height, e_type, quality);
+		else
+			return nullptr;
+	}
 	std::set<PIX_TYPE> get_supported_encoders(PIX_TYPE t) {
 		std::set<PIX_TYPE> ts;
 		if (JPEG_ENCODER::is_support(t))ts.insert(PIX_TYPE_MJPG);
@@ -30,25 +41,26 @@ namespace encoder {
 		std::condition_variable frame_n_cond;
 		int next_out_frame_n = 0;
 		const char * fourcc;
-	public:
 		EncoderComp* pencoder = nullptr;
+	public:
 		int next_in_frame_n = 0;
+
+		void* stream_get_info( unsigned int& len) {
+			len = pencoder->additional_data_size;
+			return pencoder->additional_data;
+		}
+
 		stream_encoder(int width,int height, PIX_TYPE e_type, int quality, PIX_TYPE d_type):
 			fourcc(fourcc)
 		{
-
-			if (d_type == PIX_TYPE_MJPG)
-				pencoder = new JPEG_ENCODER(width, height, e_type, quality); 
-			else if (d_type == PIX_TYPE_HFYU)
-				pencoder = new EncoderHUFF(width, height, e_type, quality);
-			else if (d_type == PIX_TYPE_RAW)
-				pencoder = new EncoderRaw(width, height, e_type, quality);
-			else
-				pencoder = nullptr;
+			pencoder = get_pencoder(width,  height,  e_type,  quality,  d_type);
 			return;
 		}
 		~stream_encoder() {
 			delete pencoder;
+		}
+		EncodedFrame* encode(RawFrame* rgbData) {
+			return pencoder->encode(rgbData);
 		}
 
 		inline void push(EncodedFrame* frame, int n) {
@@ -96,11 +108,6 @@ namespace encoder {
 	std::counting_semaphore<CPU_COUNT * 2> in_valid = std::counting_semaphore<CPU_COUNT * 2>(0);
 	std::mutex in_lock;
 	std::queue<frame_container*> frames_in;
-	void *stream_get_info(stream_encoder* enc, unsigned int& len) {
-		len = enc->pencoder->additional_data_size;
-		return enc->pencoder->additional_data;
-	}
-
 	void enc_thread() {
 		while (true) {
 			in_valid.acquire();
@@ -122,7 +129,7 @@ namespace encoder {
 				stream_p->push(nullptr, frame->frame_n);
 			}
 			else {
-				auto frame_out = stream_p->pencoder->encode(frame->frame_p);
+				auto frame_out = stream_p->encode(frame->frame_p);
 				stream_p->push(frame_out, frame->frame_n);
 
 			}
@@ -169,6 +176,10 @@ namespace encoder {
 			encoder_init();
 		}
 		return new stream_encoder(width, height, e_type, quality, d_type);
+	}
+	void* stream_get_info(stream_encoder*s, unsigned int& a)
+	{
+		return s->stream_get_info(a);
 	}
 	void delete_stream(stream_encoder* stream_p) {
 		delete stream_p;

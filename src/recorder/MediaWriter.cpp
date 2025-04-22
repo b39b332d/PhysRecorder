@@ -16,7 +16,7 @@ void MediaWriter::write_file() {
 MediaWriter::MediaWriter(const std::string& save_path, Resolution size, Ratio fps, PIX_TYPE e_type, PIX_TYPE d_type, int quality) {
 	stream_p = encoder::add_stream(size.width, size.height, e_type, d_type, quality);
 	unsigned int a_size = 0;
-	void* a_p = stream_get_info(stream_p, a_size);
+	void* a_p = stream_get_info(stream_p,a_size);
 	if (d_type == PIX_TYPE_RAW) {
 		d_type = e_type;
 	}

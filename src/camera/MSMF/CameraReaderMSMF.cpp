@@ -32,7 +32,7 @@ namespace capture {
             if (since == nullptr) since = new long long (current_ts - llTimestamp / 10);
             pSample->ConvertToContiguousBuffer(&pBuffer);
             pBuffer->Lock(&pBuf, &LEN, &CURRLEN);
-            RawFrame* frame = pstr->selected_profile->createFrame(
+            RawFrame* frame = pstr->get_current_profile()->createFrame(
                  llTimestamp/10+ *since, pBuf, CURRLEN, [pBuffer] {
                     pBuffer->Unlock();
                     pBuffer->Release();

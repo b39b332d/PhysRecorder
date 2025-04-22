@@ -12,11 +12,13 @@
 #include <set>
 #include <type_traits>
 #include <algorithm>
+#include <ImageDecoder.h>
 #define cam_frame_buf_len 16
-
+#include <Option.hpp>
 
 
 namespace capture {
+
     class CameraStream;
     class CameraDevice;
     class CameraProfile {
@@ -24,13 +26,13 @@ namespace capture {
         CameraStream* stream;
         CameraProfile(CameraStream* stream) :stream(stream) {}
         Resolution resolution;
-        Ratio ratio;
         PIX_TYPE format;
+        Ratio ratio;
         inline RawFrame* createFrame(long long ts,
             unsigned char* frame, unsigned int len,
             const std::function<void()>& declloc) {
             auto f = new RawFrame{
-                frame,len,ts,this
+                frame,len,resolution,format,ts,this
             };
             f->free_funcs.push(declloc);
             f->ref_cnt = 1;
@@ -55,25 +57,28 @@ namespace capture {
     };
 
     typedef enum {
-        OPTION_INVALID=0,
-        OPTION_AUTO,
-        OPTION_MANUAL
-    } OPTION_TYPE;
-    struct option_status {
-        int value;
-        OPTION_TYPE status_type;
-    };
-    struct option_range {
-        bool is_supported;
-        int min;
-        int max;
-        int step;
-        double scaled_factor;
-        OPTION_TYPE support_type;
-        option_status def;
-        option_status current;
-    };
-    class CameraDevice {
+        DEVICE_PAN = 0,
+        DEVICE_TILT,
+        DEVICE_ROLL,
+        DEVICE_ZOOM,
+        DEVICE_EXPOSURE,
+        DEVICE_IRIS,
+        DEVICE_FOCUS,
+        DEVICE_LIGHT,
+        DEVICE_CONTRAST,
+        DEVICE_HUE,
+        DEVICE_SATURATION,
+        DEVICE_SHARPNESS,
+        DEVICE_GAMMA,
+        DEVICE_WHITE_BALANCE,
+        DEVICE_GAIN,
+        DEVICE_BRIGHTNESS,
+        DEVICE_BACKLIGHT,
+        DEVICE_COLOR_ENABLED,
+        DEVICE_OPTION_CNT
+    } DEVICE_OPTION;
+
+    class CameraDevice :public Options {
     public:
         std::mutex device_lock;
         std::string device_name; // display name
@@ -81,6 +86,7 @@ namespace capture {
         std::set<CameraStream*> enabled_streams;
         std::condition_variable device_cond;
 
+        CameraDevice() :Options(DEVICE_OPTION_CNT) {};
         typedef enum {
             CS_STANDBY = -1,
             CS_UNINIT = -2,
@@ -128,82 +134,71 @@ namespace capture {
         }
 
 
-        typedef enum {
-            DEVICE_PAN = 0,
-            DEVICE_TILT,
-            DEVICE_ROLL,
-            DEVICE_ZOOM,
-            DEVICE_EXPOSURE,
-            DEVICE_IRIS,
-            DEVICE_FOCUS,
-            DEVICE_LIGHT,
-            DEVICE_CONTRAST,
-            DEVICE_HUE,
-            DEVICE_SATURATION,
-            DEVICE_SHARPNESS,
-            DEVICE_GAMMA,
-            DEVICE_WHITE_BALANCE,
-            DEVICE_GAIN,
-            DEVICE_BRIGHTNESS,
-            DEVICE_BACKLIGHT,
-            DEVICE_COLOR_ENABLED,
-            DEVICE_OPTION_CNT
-        } DEVICE_OPTION;
-        option_range configurations[DEVICE_OPTION_CNT] = {0,};
-
-
-        option_range get_option_range(DEVICE_OPTION option){
-            return configurations[option];
-        }
-        option_status get_option(DEVICE_OPTION option) {
-            if (configurations[option].is_supported) {
-            return configurations[option].current;
-            }
-            return {0,};
-        }
-        bool set_option(DEVICE_OPTION option, const option_status& value) {
-            if (configurations[option].is_supported) {
-                set_option_native(option, value);
-                return true;
-            }
-            return false;
-        }
-        option_status get_reset_option(DEVICE_OPTION option) {
-            return configurations[option].def;
-        }
-
-
-        //virtual option_status get_option_native(DEVICE_OPTION option) = 0;
-        virtual void set_option_native(DEVICE_OPTION option, const option_status& value) = 0;
-
-
 
     };
-    class CameraStream {
+
+#define STREAM_OPTION_LOSSLESS 0 
+#define STREAM_OPTION_LOSSY 1
+    typedef enum {
+        STREAM_CONTRAST=0,
+        STREAM_BRIGHTNESS,
+        STREAM_SHARPNESS,
+        STREAM_WHITEBALANCE,
+        STREAM_SATURATION,
+        STREAM_VALUE,
+        // lossy above
+        STREAM_MODE,
+        STREAM_FLIP_LR,
+        STREAM_FLIP_UD,
+        STREAM_ROTATE,
+        STREAM_CROP_X,
+        STREAM_CROP_Y,
+        STREAM_CROP_WIDTH,
+        STREAM_CROP_HEIGHT,
+        STREAM_OPTION_CNT,
+        STREAM_LOSSY_OPTION_CNT = STREAM_MODE
+    } STREAM_OPTION;
+    class CameraStream: public Options {
+        CameraProfile* selected_profile = NULL;
     public:
+        inline RawFrame* createEmptyFrame() {
+            auto f = new RawFrame{
+                nullptr,0,resolution,PIX_TYPE_UNK,0,selected_profile
+            };
+            return f;
+        }
+        std::mutex stream_lock;
+        Resolution resolution;
+        PIX_TYPE format;
+        Ratio ratio;
+		CameraProfile* get_current_profile() {
+			return selected_profile;
+		}
         using Cmp = std::integral_constant<decltype(&CameraProfile::cmp_profile), &CameraProfile::cmp_profile>;
 
         std::string stream_name;
         CameraDevice* device;
-        CameraProfile* selected_profile = NULL;
         CameraProfile* default_profile = NULL;
+        //Transform transform;
         long long last_valid_ts = 0;
 
         bool is_valid() { return default_profile != NULL; }
         std::unordered_map<std::string, std::set<CameraProfile*,
             Cmp>> profiles_map;
 
-        CameraStream(const std::string& stream_name,CameraDevice* device) :device(device) , stream_name(stream_name){
-            stream_friendly_name = device->device_name+"_"+ stream_name;
-            std::replace(stream_friendly_name.begin(), stream_friendly_name.end(), ':', '-');
-
-        }
+        void set_current_profile(CameraProfile* profile);
+        CameraStream(const std::string& stream_name, CameraDevice* device);
         virtual ~CameraStream() {
             for (auto& [_, ps] : profiles_map)
                 for (auto p : ps)
                     delete p;
         }
         void write(RawFrame* item) {
+            stream_lock.lock();
+            postprocess(item, this);
+            resolution = item->resolution;
+			format = item->format;
+            stream_lock.unlock();
             std::lock_guard<std::mutex> lock(device->device_lock);
             if (frame_queue.size() == capacity_) {
                 frame_queue.front()->release();

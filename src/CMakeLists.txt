@@ -19,6 +19,7 @@ set(PROJECT_SOURCES
         ${utils_dir}/cnpy.cpp
         ${utils_dir}/qcustomplot.cpp
         ${utils_dir}/MultiSelectComboBox.cpp
+        ${utils_dir}/SilentLineEdit.cpp
 )
 add_library( PhyRecorder_main SHARED
     ${PROJECT_SOURCES}

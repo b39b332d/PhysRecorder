@@ -45,6 +45,7 @@ set(Qt6_ROOT  CACHE PATH "Qt root directory")
 set(Realsense_ROOT CACHE PATH "RealSense root directory")
 set(MVis_ROOT  CACHE PATH "MindVision SDK Root directory")
 set(MKL_DIR  CACHE PATH "MKL cmake directory")
+set(LIBYUV_PATH  CACHE PATH "libyuv.dll path")
 
 set(ENIGMAVBCONXOLE_EXE CACHE PATH "ENIGMA_BOX executable path")
 set(UPX_EXE CACHE PATH "Ultimate Packer for eXecutables executable path")
@@ -187,7 +188,52 @@ find_package(Realsense)
 list(APPEND INSTALL_DEP_PATHS "${Realsense_ROOT}/bin/x64/")
 
 ####### FIND libyuv
-add_subdirectory(libyuv EXCLUDE_FROM_ALL)
+if(MSVC)
+    find_library(libyuv_build_lib libyuv.dll HINT ${LIBYUV_PATH})
+    if(libyuv_build_lib)
+        set(libyuv_dll ${libyuv_build_lib} )
+        set(libyuv_include ${LIBYUV_PATH}/include)
+        add_library(yuv SHARED IMPORTED )
+        set_target_properties(yuv PROPERTIES
+            IMPORTED_IMPLIB ${libyuv_build_lib}
+            IMPORTED_LOCATION ${LIBYUV_PATH}/libyuv.dll
+            INTERFACE_INCLUDE_DIRECTORIES  ${LIBYUV_PATH}/include
+        )
+        list(APPEND INSTALL_DEP_PATHS "${LIBYUV_PATH}")
+        set(libyuv_status "local")
+    elseif(DOWNLOAD_URL)
+        FetchContent_Declare(
+            libyuv_build
+            URL "${DOWNLOAD_URL}/libyuv.zip"
+            DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+            OVERRIDE_FIND_PACKAGE
+        )
+        FetchContent_MakeAvailable(libyuv_build)
+        find_library(libyuv_build libyuv.dll HINT ${libyuv_build_SOURCE_DIR})
+        add_library(yuv SHARED IMPORTED )
+        set_target_properties(yuv PROPERTIES
+            IMPORTED_IMPLIB ${libyuv_build}
+            IMPORTED_LOCATION "${libyuv_build_SOURCE_DIR}/libyuv.dll"
+            INTERFACE_INCLUDE_DIRECTORIES  ${libyuv_build_SOURCE_DIR}/include
+        )
+        list(APPEND INSTALL_DEP_PATHS "${libyuv_build_SOURCE_DIR}")
+        set(libyuv_status "download")
+    endif()
+endif()
+if(NOT TARGET yuv)
+    FetchContent_Declare(
+        libyuv
+        GIT_REPOSITORY  https://gitcode.com/gh_mirrors/li/libyuv.git
+        GIT_TAG main
+        EXCLUDE_FROM_ALL
+    )
+    FetchContent_MakeAvailable(libyuv)
+    target_include_directories(yuv INTERFACE "${libyuv_SOURCE_DIR}/include/")
+    set(libyuv_status ${CMAKE_CXX_COMPILER_ID})
+endif()
+
+include(ExternalProject)
+
 
 ####### build
 include(cmake/install_target.cmake)
@@ -195,7 +241,6 @@ add_subdirectory(src)
 add_subdirectory(data)
 
 ####### summary
-
 get_target_property(qt6_lib_inc Qt6::Core INTERFACE_INCLUDE_DIRECTORIES)
 message(STATUS "Qt6 library status:")
 message(STATUS "    config: ${Qt6_DIR}")
@@ -207,6 +252,10 @@ message(STATUS "    config: ${OpenCV_DIR}")
 message(STATUS "    version: ${OpenCV_VERSION}")
 message(STATUS "    libraries: ${OpenCV_LIBS}")
 message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
+get_target_property(yuv_include_dirs yuv INTERFACE_INCLUDE_DIRECTORIES)
+message(STATUS "libyuv library status:")
+message(STATUS "    build: ${libyuv_status}")
+message(STATUS "    include path: ${yuv_include_dirs}")
 if(MKL_FOUND)
     get_target_property(mkl_type MKL::MKL TYPE)
     message(STATUS "MKL library status:")

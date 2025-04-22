@@ -83,7 +83,7 @@ namespace capture {
     {
         std::vector<rs2::stream_profile> pfs;
         for (auto& s : enabled_streams) {
-            pfs.push_back(((CameraProfileRS*)(s->selected_profile))->rs_profile);
+            pfs.push_back(((CameraProfileRS*)(s->get_current_profile()))->rs_profile);
         }
         if (enabled_streams.size() == 0)
             return false;
@@ -114,7 +114,7 @@ namespace capture {
                     return;
                 }
                 if (*since == LLONG_MAX) *since = current_ts- frame.get_timestamp() * 1e3;
-                pts->write(pts->selected_profile->createFrame(
+                pts->write(pts->get_current_profile()->createFrame(
                      frame.get_timestamp() * 1e3+ *since, (unsigned char*)(frame.get_data()), frame.get_data_size(), [frame]() {
 
                     }
@@ -165,7 +165,7 @@ namespace capture {
 
         for (int i = 0; i < DEVICE_OPTION_CNT; i++) {
             switch ((DEVICE_OPTION)i) {
-            case CameraDevice::DEVICE_EXPOSURE:
+            case DEVICE_EXPOSURE:
                 if (rs_sensor.supports(RS2_OPTION_EXPOSURE)) {
                     option_range opt_range = { 0, };
                     rs2::option_range range = rs_sensor.get_option_range(RS2_OPTION_EXPOSURE);
@@ -191,10 +191,10 @@ namespace capture {
                         opt_range.support_type = OPTION_MANUAL;
                     }
                     opt_range.current.value = roundf(rs_sensor.get_option(RS2_OPTION_EXPOSURE) * opt_range.scaled_factor);
-                    configurations[i] = opt_range;
+                    set_option_range(i,opt_range);
                 }
                 break;;
-            case CameraDevice::DEVICE_WHITE_BALANCE:
+            case DEVICE_WHITE_BALANCE:
                 if (rs_sensor.supports(RS2_OPTION_WHITE_BALANCE)) {
                     option_range opt_range = { 0, };
                     rs2::option_range range = rs_sensor.get_option_range(RS2_OPTION_WHITE_BALANCE);
@@ -220,11 +220,11 @@ namespace capture {
                         opt_range.support_type = OPTION_MANUAL;
                     }
                     opt_range.current.value = roundf(rs_sensor.get_option(RS2_OPTION_WHITE_BALANCE) * opt_range.scaled_factor);
-                    configurations[i] = opt_range;
+                    set_option_range(i,opt_range);
 
                 }
                 break;
-            case CameraDevice::DEVICE_GAIN:
+            case DEVICE_GAIN:
                 if (rs_sensor.supports(RS2_OPTION_DIGITAL_GAIN)) {
                     is_color = false;
                     option_range opt_range = { 0, };
@@ -255,15 +255,15 @@ namespace capture {
                         opt_range.current.value = roundf(o);
                         opt_range.current.status_type = OPTION_MANUAL;
                     }
-                    configurations[i] = opt_range;
+                    set_option_range(i,opt_range);
                 }
                 else {
                     auto color_gain = get_option_sensor(rs_sensor, RS2_OPTION_GAIN);
                     is_color = true;
-                    configurations[DEVICE_GAIN] = color_gain;
+                    set_option_range(DEVICE_GAIN, color_gain);
                 }
                 break;
-            case CameraDevice::DEVICE_LIGHT:
+            case DEVICE_LIGHT:
                 if (rs_sensor.supports(RS2_OPTION_LASER_POWER)) {
                     is_led = false;
                     option_range opt_range = { 0, };
@@ -291,7 +291,7 @@ namespace capture {
                         if (roundf(range.def) == 2)
                             opt_range.def.status_type = OPTION_AUTO;
                     }
-                    configurations[i] = opt_range;
+                    set_option_range(i,opt_range);
                 }
                 else if(rs_sensor.supports(RS2_OPTION_LED_POWER)) {
                     is_led = true;
@@ -307,29 +307,29 @@ namespace capture {
                     opt_range.current.value = roundf(rs_sensor.get_option(RS2_OPTION_LED_POWER) * opt_range.scaled_factor);
                     opt_range.current.status_type = OPTION_MANUAL;
                     opt_range.support_type = OPTION_MANUAL;
-                    configurations[i] = opt_range;
+                    set_option_range(i,opt_range);
                 }
                 break;
-            case CameraDevice::DEVICE_GAMMA:
-                configurations[i] = get_option_sensor(rs_sensor, RS2_OPTION_GAMMA);
+            case DEVICE_GAMMA:
+                set_option_range(i, get_option_sensor(rs_sensor, RS2_OPTION_GAMMA));
                 break;
             case DEVICE_CONTRAST:
-                configurations[i] = get_option_sensor(rs_sensor, RS2_OPTION_CONTRAST);
+                set_option_range(i, get_option_sensor(rs_sensor, RS2_OPTION_CONTRAST));
                 break;
             case DEVICE_HUE:
-                configurations[i] = get_option_sensor(rs_sensor, RS2_OPTION_HUE);
+                set_option_range(i, get_option_sensor(rs_sensor, RS2_OPTION_HUE));
                 break;
             case DEVICE_SATURATION:
-                configurations[i] = get_option_sensor(rs_sensor, RS2_OPTION_SATURATION);
+                set_option_range(i, get_option_sensor(rs_sensor, RS2_OPTION_SATURATION));
                 break;
             case DEVICE_SHARPNESS:
-                configurations[i] = get_option_sensor(rs_sensor, RS2_OPTION_SHARPNESS);
+                set_option_range(i, get_option_sensor(rs_sensor, RS2_OPTION_SHARPNESS));
                 break;
             case DEVICE_BACKLIGHT:
-                configurations[i] = get_option_sensor(rs_sensor, RS2_OPTION_BACKLIGHT_COMPENSATION);
+                set_option_range(i, get_option_sensor(rs_sensor, RS2_OPTION_BACKLIGHT_COMPENSATION));
                 break;
             case DEVICE_BRIGHTNESS:
-                configurations[i] = get_option_sensor(rs_sensor, RS2_OPTION_BRIGHTNESS);
+                set_option_range(i, get_option_sensor(rs_sensor, RS2_OPTION_BRIGHTNESS));
                 break;
 
             }
@@ -367,7 +367,7 @@ namespace capture {
                 configurations[option].current.value = value.value;
             }
             break;
-        case CameraDevice::DEVICE_WHITE_BALANCE:
+        case DEVICE_WHITE_BALANCE:
             if (value.status_type == OPTION_AUTO) {
                 rs_sensor.set_option(RS2_OPTION_ENABLE_AUTO_WHITE_BALANCE, 1);
                 configurations[option].current.status_type = OPTION_AUTO;
@@ -384,7 +384,7 @@ namespace capture {
                 configurations[option].current.value = value.value;
             }
             break;
-        case CameraDevice::DEVICE_GAIN:
+        case DEVICE_GAIN:
             if (is_color) {
                 set_signle_option_native(DEVICE_GAIN, RS2_OPTION_GAIN, value);
             }
@@ -399,7 +399,7 @@ namespace capture {
                 }
             }
             break;
-        case CameraDevice::DEVICE_LIGHT:
+        case DEVICE_LIGHT:
             if (!is_led) {
                 if (value.status_type == OPTION_AUTO) {
                      rs_sensor.set_option(RS2_OPTION_EMITTER_ENABLED, 1);

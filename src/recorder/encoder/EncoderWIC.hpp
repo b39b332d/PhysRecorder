@@ -94,9 +94,9 @@ namespace encoder {
 			auto f = GUID_WICPixelFormat24bppBGR;
 			pFrameEncode->SetPixelFormat(&f);
 			auto hr = pFrameEncode->QueryInterface(IID_PPV_ARGS(&planarFrame));
-			c[0] = (unsigned char*)malloc(width * height);
-			c[1] = (unsigned char*)malloc(width * height / 2);
-			c[2] = (unsigned char*)malloc(width * height / 2);
+			c[0] = (unsigned char*)malloc(width * height * 2);
+			c[1] = c[0] + (width * height);
+			c[2] = c[1] + (width * height / 2);
 			if(e_type == PIX_TYPE_UYVY)
 				libyuv::UYVYToI422(rgbData->raw_frame, width * 2,
 					c[0], width, c[1], width / 2, c[2], width / 2, width, height);
@@ -126,8 +126,6 @@ namespace encoder {
 			planarFrame->Release();
 
 			free(c[0]);
-			free(c[1]);
-			free(c[2]);
 		}
 		else if (e_type == PIX_TYPE_NV12) {
 			unsigned char* c[5];
