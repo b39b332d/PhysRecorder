@@ -238,7 +238,7 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     
     refresh_plot_timer->start(50);
 
-    sharedFilePath = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/phyrecorder_ipc.temp";
+    sharedFilePath = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/physrecorder_ipc.temp";
 
     watcher.addPath(sharedFilePath);
     QObject::connect(&watcher, &QFileSystemWatcher::fileChanged,this, &MainWindow::onFileChanged);

@@ -4,7 +4,7 @@
     <img src="https://gitee.com/b39b332d/phy_recorder/raw/master/data/resources/icon.png" alt="Logo" width="80" height="80">
   </a>
 
-  <h3 align="center">PhyRecorder</h3>
+  <h3 align="center">PhysRecorder</h3>
 
   <p align="center">
     Physiological Signal & Realsense Recorder
@@ -68,7 +68,7 @@
 * C++
 * CMake
 * [Qt 6.3.1](https://www.qt.io/)
-* [OpenCV 4.8.0](https://opencv.org/) With [OpenVINO 2023.0](https://storage.openvinotoolkit.org/repositories/openvino/packages/2023.1/windows) DL
+* [OpenCV 4.10.0](https://opencv.org/) With [OpenVINO 2024.5](https://storage.openvinotoolkit.org/repositories/openvino/packages/2023.1/windows) DL
 * [RealSense SDK 2](https://www.intelrealsense.com/sdk-2/)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -86,27 +86,21 @@
 
 * OpenCV
   ```Powershell
-    # Use Proxy
-    $env:HTTP_PROXY = "http://127.0.0.1:28080"
-    $env:HTTPS_PROXY = "http://127.0.0.1:28080"
-    # Use MKL
-    "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
     cmake -G "Visual Studio 17 2022" -A "x64" `
 		-DBUILD_JAVA=OFF -DBUILD_opencv_python2=OFF -DBUILD_opencv_python3=OFF -DBUILD_FAT_JAVA_LIB=OFF `
 		-DMKL_WITH_OPENMP=ON -DMKL_WITH_TBB=ON `
-		-DOPENCV_DNN_OPENVINO=ON -DWITH_OPENVINO=ON`
-		-DOpenVINO_DIR= <OPENVINO_PATH>`
+		-DWITH_IPP=ON -DBUILD_WITH_DYNAMIC_IPP=ON `
+		-DOPENCV_IPP_ENABLE_ALL=ON -DBUILD_WITH_DYNAMIC_IPP=ON `
+		-DOPENCV_DNN_OPENVINO=ON -DWITH_OPENVINO=ON `
+		-DOpenVINO_DIR="D:\Users\b39b3\Source\opencv\w_openvino_toolkit_windows_2024.5.0.17288.7975fa5da0c_x86_64\runtime\cmake" `
+		-DMKL_ROOT_DIR="C:\Program Files (x86)\Intel\oneAPI\mkl\2024.2" `
+		-DEigen3_DIR="D:/Users/b39b3/Source/SRC/SignalProcessor/eigen-master/INSTALL/share/eigen3/cmake" `
 		-DENABLE_CXX11=ON `
 		-DCPU_BASELINE=AVX2 `
 		-DBUILD_PERF_TESTS=OFF `
 		-DBUILD_TESTS=OFF `
-		-DVIDEOIO_PLUGIN_LIST=all `
 		-DBUILD_opencv_world=OFF `
-		-DWITH_LIBREALSENSE=ON `
-		-DWITH_QT=ON `#Fancy imshow window
-		-DLIBREALSENSE_LIBRARIES="C:/Program Files (x86)/Intel RealSense SDK 2.0/lib/x64" `
-		-DLIBREALSENSE_INCLUDE_DIR="C:/Program Files (x86)/Intel RealSense SDK 2.0/include" `
-		-DWITH_QT=ON -DWITH_OPENGL=ON -DWITH_TBB=ON ../
+		-DWITH_OPENGL=ON -DWITH_TBB=ON -DWITH_VTK=OFF ../
     cmake --build ./ --config Release
     cmake --install ./ --config Release --prefix ./install/release
     cmake --build ./ --config Debug
@@ -127,17 +121,12 @@
    ```powershell
    mkdir ./build
    cd ./build
-   cmake ../`
-         -DOpenCV_BUILD_Path=/Path_to_OpenCV_Dir/`
-         -DQt6_ROOT=/Path_to_Qt6_Dir/`
-         -DREALSENSE_DIR=/Path_to_Realsense_Dir/`
-         -DOpenVINO_DIR=/Path_to_OpenVino_Dir/`
-         -DMKL_DIR=/Path_to_MKL_Dir/ # Use MKL`
+   cmake ../
    ```
-4. build and install target PhyRecorder
+4. build and install target PhysRecorder
    ```powershell
-   cmake --build ./ --config Release --target PhyRecorder
-   cmake --install ./ --config Release --target PhyRecorder
+   cmake --build ./ --config Release --target PhysRecorder
+   cmake --install ./ --config Release --target PhysRecorder
    ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>

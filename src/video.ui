@@ -27,7 +27,7 @@
    <item>
     <widget class="QTabWidget" name="VideoBox">
      <property name="currentIndex">
-      <number>3</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="tab_camera">
       <attribute name="title">

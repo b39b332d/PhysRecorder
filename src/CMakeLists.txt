@@ -21,20 +21,20 @@ set(PROJECT_SOURCES
         ${utils_dir}/MultiSelectComboBox.cpp
         ${utils_dir}/SilentLineEdit.cpp
 )
-add_library( PhyRecorder_main SHARED
+add_library( PhysRecorder_main SHARED
     ${PROJECT_SOURCES}
 )
 
 find_library(delayimp_LIB NAMES  delayimp REQUIRED)
-set_target_properties(PhyRecorder_main PROPERTIES 
+set_target_properties(PhysRecorder_main PROPERTIES 
     AUTOUIC ON
     AUTOMOC ON
     AUTORCC ON
 )
 
-target_include_directories(PhyRecorder_main PRIVATE ./ ${utils_dir})
+target_include_directories(PhysRecorder_main PRIVATE ./ ${utils_dir})
 
-target_compile_definitions(PhyRecorder_main
+target_compile_definitions(PhysRecorder_main
     PRIVATE
     PROJECT_ROOT_PATH="./data/")
 
@@ -46,7 +46,7 @@ add_subdirectory(recorder)
 add_subdirectory(utils)
 add_subdirectory(audio)
 
-target_link_libraries(PhyRecorder_main PRIVATE  
+target_link_libraries(PhysRecorder_main PRIVATE  
 Qt6::Widgets  
 cam_driver 
 phy_recorder 
@@ -59,22 +59,22 @@ face_tracking
 
 
 set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_SOURCE_DIR}/data/resources/appicon.rc")
-add_executable( PhyRecorder
+add_executable( PhysRecorder
     WIN32
     main.cpp
     ${CMAKE_SOURCE_DIR}/data/styles/darkstyle.qrc
     ${APP_ICON_RESOURCE_WINDOWS}
 )
-set_target_properties(PhyRecorder PROPERTIES 
+set_target_properties(PhysRecorder PROPERTIES 
     RESOURCE "${CMAKE_SOURCE_DIR}/data/resources/icon.ico"
     WIN32_EXECUTABLE TRUE
     AUTOUIC ON
     AUTOMOC ON
     AUTORCC ON
 )
-target_link_libraries(PhyRecorder PRIVATE PhyRecorder_main Qt6::Widgets ${delayimp_LIB})
-target_compile_definitions( PhyRecorder
+target_link_libraries(PhysRecorder PRIVATE PhysRecorder_main Qt6::Widgets ${delayimp_LIB})
+target_compile_definitions( PhysRecorder
     PRIVATE
     PROJECT_ROOT_PATH="./data/")
-target_link_options(PhyRecorder PRIVATE "/DELAYLOAD:PhyRecorder_main.dll")
-custom_target_install(PhyRecorder)
+target_link_options(PhysRecorder PRIVATE "/DELAYLOAD:PhysRecorder_main.dll")
+custom_target_install(PhysRecorder)
