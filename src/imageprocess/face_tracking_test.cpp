@@ -5,8 +5,8 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/videoio.hpp>
 int main() {
-	InferenceDLIB ov_inf;
-	//InferenceOV ov_inf;
+	//InferenceDLIB ov_inf;
+	InferenceOV ov_inf;
 	FaceTracking tracker(&ov_inf);
 
 	//cv::VideoCapture cap("//A406-server/nbslab-public/数据集/ECG-Fitness/视频版/00/01/c920-1.avi");
@@ -14,6 +14,9 @@ int main() {
 	std::thread a([&tracker]() {
 		cv::VideoCapture cap(1);
 		cv::Mat frame;
+		cap.set(cv::CAP_PROP_FRAME_WIDTH, 1920);
+		// Set the height
+		cap.set(cv::CAP_PROP_FRAME_HEIGHT, 1080);
 		tracker.set_roi({ 0,0,0,0 });
 		while (1) {
 			cap >> frame;

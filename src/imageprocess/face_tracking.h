@@ -8,7 +8,7 @@
 #include <frame_types.h>
 #include <kalman.h>
 
-#define DEBUG_LEVEL 1
+#define DEBUG_LEVEL 0
 
 #if DEBUG_LEVEL >0
 #include <iostream>
@@ -52,6 +52,8 @@ private:
 			confidence += score * kf.dt * 5 * (1 - confidence) * (1 - confidence);
 		else
 			confidence += score * kf.dt * 10 * confidence * confidence;
+		if (confidence > 1)confidence = 1;
+		else if (confidence <-1)confidence = -1;
 	}
 
 	static cv::Rect2i rectify(const cv::Rect2i& dst, const cv::Size2i& size);

@@ -30,7 +30,6 @@ FaceTracking::~FaceTracking() {
 		delete thread;
 	}
 	delete buffer;
-	delete inf_backend;
 }
 cv::Rect2i FaceTracking::get_face(std::vector<FaceBox>& faces) {
 	cv::Rect2i current_face;
@@ -53,7 +52,6 @@ cv::Rect2i FaceTracking::get_face(std::vector<FaceBox>& faces) {
 		// kalman filter
 		float face_stable_score = face_iou * face[0].second; // 0-1, 1 means the face is stable
 		update_confidence(face_stable_score);
-		PRINT_DEBUG("face color: %d %d %d %d\n", est_face.x, est_face.y, current_face.x, current_face.y);
 
 		if (face_iou > 0.95) current_face = est_face;
 	}

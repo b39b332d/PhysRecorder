@@ -1,8 +1,8 @@
 #include "inference.h"
 #include "inference_openvino.h"
 #include "inference_dlib.h"
-InferenceOV* openvino_inference;
-InferenceDLIB* dlib_inference;
+InferenceOV* openvino_inference = nullptr;
+InferenceDLIB* dlib_inference = nullptr;
 Inference* Inference::get_inference(InferenceType inf_type)
 {
 	if (inf_type == INF_OPENVINO) {

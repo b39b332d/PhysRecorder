@@ -196,6 +196,10 @@ void VideoUI::init(Ui::MainWindow* main_ui, SignalProcess* signalProcess)
         capture->rot = val;
         this->ui->button_rotation->setText(QString::number(val) + "\xc2\xb0");
         });
+    connect(ui->slider_scale, &QSlider::valueChanged, this, [this](int val) {
+        capture->scale = (double)val/100.0;
+        ui->pushButton_scale->setText(QString::number(capture->scale));
+        });
 
 
     connect(ui->comboBox_codec, &QComboBox::currentIndexChanged, this, &VideoUI::encoder_changed);
@@ -203,11 +207,45 @@ void VideoUI::init(Ui::MainWindow* main_ui, SignalProcess* signalProcess)
     connect(ui->button_rotation, &QPushButton::clicked, this, [this]() {
         this->ui->scroll_rotation->setValue(0);
         });
+
+    connect(ui->pushButton_scale, &QPushButton::clicked, this, [this]() {
+        ui->slider_scale->setValue(100);
+        });
+
     connect(ui->checkBox_fliplr, &QCheckBox::toggled, this, [this](bool checked) {
         capture->is_fliplr = checked;
         });
     connect(ui->checkBox_flipud, &QCheckBox::toggled, this, [this](bool checked) {
         capture->is_flipud = checked;
+        });
+
+    connect(ui->pushButton_pre_reset, &QPushButton::clicked, this, [this]() {
+        emit ui->pushButton_scale->clicked();
+        emit ui->button_rotation->clicked();
+        if(ui->checkBox_fliplr->isChecked())
+            emit ui->checkBox_fliplr->toggled(false);
+        if (ui->checkBox_flipud->isChecked())
+            emit ui->checkBox_flipud->toggled(false);
+
+        });
+
+    connect(ui->comboBox_inf_method, &QComboBox::currentIndexChanged, this, [this, signalProcess](int idx) {
+        setCursorBusy(true);
+        disconnect(face_tracking);
+        worker.run_with_call_back([idx,this]() {
+            capture->setInference(nullptr);
+            delete face_tracking;
+            if (idx == 0)
+                face_tracking = new ColorExtractor(Inference::get_inference(INF_OPENVINO));
+            else
+                face_tracking = new ColorExtractor(Inference::get_inference(INF_DLIB));
+            capture->setInference(face_tracking);
+            }, [this, signalProcess]() {
+                connect(face_tracking, &ColorExtractor::on_signal_ready, signalProcess, &SignalProcess::processSignal);
+                connect(face_tracking, &ColorExtractor::on_face_lost, signalProcess, &SignalProcess::reset_rppg);
+                setCursorBusy(false);
+                }
+                );
         });
 
     ui->VideoBox->hide();

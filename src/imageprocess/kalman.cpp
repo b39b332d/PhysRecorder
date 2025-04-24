@@ -8,7 +8,7 @@ KFTracking::KFTracking():KF(6, 4) {
 	cv::setIdentity(KF.errorCovPost);
 }
 
-void KFTracking::set_dt(float dt) {
+void KFTracking::set_dt(double dt) {
 	float dt_2 = dt * dt;
 	float dt_3 = dt_2 * dt;
 	float dt_4 = dt_3 * dt;
@@ -30,7 +30,7 @@ void KFTracking::set_dt(float dt) {
 }
 
 
-void KFTracking::init(const cv::Rect2i& face, float ts, float m_noise) {
+void KFTracking::init(const cv::Rect2i& face, double ts, float m_noise) {
 	m_noise *= m_noise;
 	KF.statePost.at<float>(0) = (float)face.x + (float)face.width / 2;
 	KF.statePost.at<float>(1) = (float)face.y + (float)face.height / 2;
@@ -44,7 +44,7 @@ void KFTracking::init(const cv::Rect2i& face, float ts, float m_noise) {
 	this->ts = ts;
 	is_init = true;
 }
-void KFTracking::update(const cv::Rect2i& face, float ts, float m_noise) {
+void KFTracking::update(const cv::Rect2i& face, double ts, float m_noise) {
 	if (!is_init) {
 		init(face, ts, m_noise);
 		return;
@@ -65,7 +65,7 @@ void KFTracking::update(const cv::Rect2i& face, float ts, float m_noise) {
 	KF.predict();
 	KF.correct(measurement);
 }
-cv::Rect2i KFTracking::predict(float dt) {
+cv::Rect2i KFTracking::predict(double dt) {
 	set_dt(dt);
 	cv::Mat prediction = KF.transitionMatrix * KF.statePost;
 	float width = prediction.at<float>(2);

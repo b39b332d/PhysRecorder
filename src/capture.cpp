@@ -25,11 +25,9 @@ Capture::Capture(FaceTracking* face_tracking):face_tracking(face_tracking)
 void Capture::setInference(FaceTracking* ft)
 {
     if (face_tracking != nullptr) {
-        auto t = face_tracking;
         tracking_lock.lock();
         face_tracking = nullptr;
         tracking_lock.unlock();
-        delete t;
     }
     face_tracking = ft;
 }
@@ -116,7 +114,7 @@ void Capture::run()
                 }
             }
         }
-        RawFrame* show_frame = nullptr;
+        RawFrame* show_frame = c_frame;
         int rot_current = rot;
         cv::Mat show_mat;
         cv::Rect2i face_region;
@@ -127,12 +125,12 @@ void Capture::run()
             goto imp_finish;
         }
 
-        if (rot != 0) {
+        if (rot_current != 0 || scale != 1.0) {
             // get rotation matrix for rotating the image around its center in pixel coordinates
             cv::Point2f center((color_mat.cols - 1) / 2.0, (color_mat.rows - 1) / 2.0);
-            rot_mat = cv::getRotationMatrix2D(center, rot, scale);
+            rot_mat = cv::getRotationMatrix2D(center, rot_current, scale);
             // determine bounding rectangle, center not relevant
-            cv::Rect2f bbox = cv::RotatedRect(cv::Point2f(), color_mat.size(), rot).boundingRect2f();
+            cv::Rect2f bbox = cv::RotatedRect(cv::Point2f(), color_mat.size(), rot_current).boundingRect2f();
             cv::Size2i vid_size_show = bbox.size();
             // adjust transformation matrix
             rot_mat.at<double>(0, 2) += bbox.width / 2.0 - color_mat.cols / 2.0;
@@ -144,17 +142,14 @@ void Capture::run()
 
         // flip
         if (is_fliplr)
-            if(is_flipud) cv::flip(rot != 0 ? show_mat: color_mat, show_mat, -1);
-            else cv::flip(rot != 0 ? show_mat : color_mat, show_mat, 1);
+            if(is_flipud) cv::flip(rot_current != 0 ? show_mat: color_mat, show_mat, -1);
+            else cv::flip(rot_current != 0 ? show_mat : color_mat, show_mat, 1);
         else
-            if(is_flipud)cv::flip(rot != 0 ? show_mat : color_mat, show_mat, 0);
+            if(is_flipud)cv::flip(rot_current != 0 ? show_mat : color_mat, show_mat, 0);
         if (!show_mat.empty()) {
             auto t = new cv::Mat(show_mat);
-            show_frame = new RawFrame{ t->data,(unsigned)(t->datastart-t->dataend),Resolution{(unsigned)t->cols,(unsigned)t->rows},PIX_TYPE_BGR8,c_frame->frame_ts,c_frame->profile,0,t };
+            show_frame = new RawFrame{ t->data,(unsigned)(t->datastart-t->dataend),Resolution{(unsigned)t->cols,(unsigned)t->rows},PIX_TYPE_BGR8,c_frame->frame_ts,c_frame->profile,1,t };
             show_frame->free_funcs.push([c_frame, t]() {c_frame->release(); delete t; });
-        }
-        else {
-            show_frame = c_frame;
         }
 
 
@@ -165,6 +160,8 @@ void Capture::run()
                 last_stream = selected_stream;
                 face_tracking->reset();
             }
+
+            qDebug() << show_frame->frame_ts;
 		    face_tracking->tracking(show_frame);
             face_region = face_tracking->get_roi();
         }

@@ -64,7 +64,7 @@ void Converter::frame_ready(RawFrame* main_frame,QList<RawFrame*> other_frames,R
         m_canves = Mat::zeros(dst_size, CV_8UC3);
     }
     if (current_profiles != previous_profiles || current_main != previous_main ||
-        (main_frame != nullptr && RawFrame_WIDTH_(main_frame) != previous.width && RawFrame_HEIGHT_(main_frame)!= previous.height)) {
+        (main_frame != nullptr&& main_frame->bgr_frame != nullptr &&( RawFrame_WIDTH_(main_frame) != previous.width || RawFrame_HEIGHT_(main_frame)!= previous.height))) {
         m_canves = Mat::zeros(dst_size, CV_8UC3);
         if(main_frame)
             previous = RawFrame_PROFILE_(main_frame)->resolution;
