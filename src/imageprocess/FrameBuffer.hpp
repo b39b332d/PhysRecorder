@@ -24,6 +24,7 @@ public:
 			frame_queue.front()->release();
 			frame_queue.pop();
 		}
+		if(frame)
 		frame->acquire();
 		frame_queue.push(frame);
 		frame_mutex.unlock();

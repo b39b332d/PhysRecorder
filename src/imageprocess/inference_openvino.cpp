@@ -76,23 +76,34 @@ InferenceOV::InferenceOV() {
 	std::string path_net_facedetect = root_path + "models/intel/face-detection-retail-0005/FP16/face-detection-retail-0005";
 	std::string path_net_landmarks = root_path + "models/intel/facial-landmarks-35-adas-0002/FP16/facial-landmarks-35-adas-0002";
 	std::string resource_path = root_path + "resources/";
+	nets_face = std::vector<cv::dnn::Net>(2);
+	nets_landmarks = std::vector<cv::dnn::Net>(2);
 	threads_n = 2;
 	cv::Mat test_faces = cv::imread(resource_path + "faces.jpg");
 	cv::Mat test_face = cv::imread(resource_path + "face.jpg");
-	for (int i = 0; i < threads_n; i++) {
+	auto face_func = [&](int i) {
 		auto net_face = cv::dnn::readNetFromModelOptimizer(path_net_facedetect + ".xml", path_net_facedetect + ".bin");
 		net_face.setPreferableBackend(cv::dnn::DNN_BACKEND_INFERENCE_ENGINE);
 		net_face.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
 		net_face.setInput(cv::dnn::blobFromImage(test_faces, 1, cv::Size(300, 300)));
 		net_face.forward();
-		nets_face.push_back(net_face);
-
+		nets_face[i] = net_face;
+		};
+	auto lmdk_func = [&](int i) {
 		auto net_landmarks = cv::dnn::readNetFromModelOptimizer(path_net_landmarks + ".xml", path_net_landmarks + ".bin");
 		net_landmarks.setPreferableBackend(cv::dnn::DNN_BACKEND_INFERENCE_ENGINE);
 		net_landmarks.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
 		net_landmarks.setInput(cv::dnn::blobFromImage(test_face, 1, cv::Size(60, 60)));
 		net_landmarks.forward();
-		nets_landmarks.push_back(net_landmarks);
-
+		nets_landmarks[i] = net_landmarks;
+		};
+	std::vector<std::thread> ths;
+	ths.emplace_back( face_func,0);
+	ths.emplace_back(face_func, 1);
+	ths.emplace_back(lmdk_func, 0);
+	ths.emplace_back(lmdk_func, 1);
+	for (auto& th : ths) {
+		th.join();
 	}
+
 }

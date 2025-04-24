@@ -232,8 +232,26 @@ if(NOT TARGET yuv)
     set(libyuv_status ${CMAKE_CXX_COMPILER_ID})
 endif()
 
-include(ExternalProject)
+####### Find dlib
+FetchContent_Declare(
+    dlib
+    URL https://pypi.tuna.tsinghua.edu.cn/packages/14/4c/8444567b0b82b0c146fd746f96751ffc7feb25e5ed628c35b88b9673c2ff/dlib-19.24.8.tar.gz
+    URL_HASH SHA256=9135900983e279b5e5d0b1bb31b684a3054ea4f3ea1b1c69e8a675659271003d
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    SOURCE_SUBDIR  dlib
+    EXCLUDE_FROM_ALL
+)
 
+set(DLIB_NO_GUI_SUPPORT TRUE CACHE BOOL "" FORCE)
+set(DLIB_USE_LAPACK TRUE CACHE BOOL "" FORCE)
+set(DLIB_USE_BLAS FALSE CACHE BOOL "" FORCE)
+set(DLIB_USE_MKL_SEQUENTIAL TRUE CACHE BOOL "" FORCE) # must be SEQUENTIAL or link error, idk y
+set(DLIB_PNG_SUPPORT FALSE CACHE BOOL "" FORCE)
+set(DLIB_GIF_SUPPORT FALSE CACHE BOOL "" FORCE)
+set(DLIB_JPEG_SUPPORT FALSE CACHE BOOL "" FORCE)
+set(DLIB_USE_MKL_FFT TRUE CACHE BOOL "" FORCE)
+set(DLIB_USE_FFMPEG FALSE CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(dlib)
 
 ####### build
 include(cmake/install_target.cmake)
@@ -256,6 +274,9 @@ get_target_property(yuv_include_dirs yuv INTERFACE_INCLUDE_DIRECTORIES)
 message(STATUS "libyuv library status:")
 message(STATUS "    build: ${libyuv_status}")
 message(STATUS "    include path: ${yuv_include_dirs}")
+message(STATUS "dlib library status:")
+message(STATUS "    version: ${DLIB_VERSION}")
+message(STATUS "    lapack: ${DLIB_USE_LAPACK}")
 if(MKL_FOUND)
     get_target_property(mkl_type MKL::MKL TYPE)
     message(STATUS "MKL library status:")

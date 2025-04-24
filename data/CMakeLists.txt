@@ -20,5 +20,22 @@ foreach(net_name IN LISTS SUBDIRS)
         file(DOWNLOAD "https://storage.openvinotoolkit.org/repositories/open_model_zoo/2023.0/models_bin/1/${net_name}/${net_acc}/${net_name}.bin"
                 ${CMAKE_CURRENT_SOURCE_DIR}/models/intel/${net_name}/${net_acc}/${net_name}.bin INACTIVITY_TIMEOUT 10 SHOW_PROGRESS)
     endif()
+    endforeach()
 endforeach()
-endforeach()
+
+set(DLIB_MODEL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/models/dlib/shape_predictor_68_face_landmarks_GTX.dat)
+    message(asdasdas"${DLIB_MODEL_PATH}")
+if(NOT EXISTS "${DLIB_MODEL_PATH}")
+    FetchContent_Declare(
+        bz2_build
+        URL "https://versaweb.dl.sourceforge.net/project/gnuwin32/bzip2/1.0.5/bzip2-1.0.5-bin.zip"
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+        OVERRIDE_FIND_PACKAGE
+    )
+    FetchContent_MakeAvailable(bz2_build)
+
+    file(DOWNLOAD "https://raw.gitcode.com/gh_mirrors/dl/dlib-models/raw/master/shape_predictor_68_face_landmarks_GTX.dat.bz2"
+            ${DLIB_MODEL_PATH}.bz2 INACTIVITY_TIMEOUT 30 SHOW_PROGRESS)
+    execute_process(COMMAND ${bz2_build_SOURCE_DIR}/bin/bzip2.exe -d ${DLIB_MODEL_PATH}.bz2 OUTPUT_VARIABLE extract_out)
+    file(REMOVE ${DLIB_MODEL_PATH}.bz2)
+endif()

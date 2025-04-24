@@ -17,17 +17,40 @@ using namespace cv;
 using namespace cnpy;
 using namespace cv::dnn;
 
-std::mutex recorder_lock;
-bool is_recording = false;
-std::unordered_map<capture::CameraStream*, MediaWriter*> rec_maps;
-
-uchar depthr_p[] = { 255,255,255,0,0,64 };
-uchar depthg_p[] = { 0,165,255,255,0,64 };
-uchar depthb_p[] = { 0,0,0,255,255,128 };
-
 Capture::Capture(FaceTracking* face_tracking):face_tracking(face_tracking)
 {
 	th = new std::thread(&Capture::run, this);
+}
+
+void Capture::setInference(FaceTracking* ft)
+{
+    if (face_tracking != nullptr) {
+        auto t = face_tracking;
+        tracking_lock.lock();
+        face_tracking = nullptr;
+        tracking_lock.unlock();
+        delete t;
+    }
+    face_tracking = ft;
+}
+
+void Capture::startRecord(bool is_start)
+{
+    recorder_lock.lock();
+    is_recording = is_start;
+    recorder_lock.unlock();
+    if (!is_start) {
+        for (auto& [stream, rec] : rec_maps) delete rec;
+        rec_maps.clear();
+    }
+}
+
+void Capture::recordStream(capture::CameraStream* stream, const std::string& file_name)
+{
+    auto v_rec = new MediaWriter(file_name,
+        stream->resolution, stream->ratio, stream->format,
+        stream->encoder_method, stream->encoder_quality);
+    rec_maps[stream] = v_rec;
 }
 
 //cv::Mat Capture::LUT_16_reinterpret_cast(cv::Mat mat, cv::Mat dst)
@@ -62,9 +85,8 @@ void Capture::run()
          }
         RawFrame* raw_frame = NULL;
         QList<RawFrame*> otherFrames;
-        RawFrame* mainFrame = nullptr;
         cv::Mat color_mat;
-        RawFrame* c_frame;
+        RawFrame* c_frame=nullptr;
         for (auto devices : enabled_devices) {
             for (auto stream : devices->enabled_streams) {
                 if (frame_set.contains(stream)) {
@@ -78,11 +100,8 @@ void Capture::run()
 						temp_mat = *(cv::Mat*)(frame->bgr_frame);
                     frame->acquire();
                     if (selected_stream == stream) {
-                        if (color_mat.empty()) {
-                            color_mat = temp_mat;
-                            c_frame = frame;
-                        }
-                        mainFrame = frame;
+                        color_mat = temp_mat;
+                        c_frame = frame;
                     }
                     else
                         otherFrames.push_back(frame);
@@ -90,47 +109,69 @@ void Capture::run()
                 else {
                     RawFrame* frame_place_holder = stream->createEmptyFrame();
                     if (selected_stream == stream) {
-                        mainFrame = frame_place_holder;
+                        c_frame = frame_place_holder;
                     }
                     else
                         otherFrames.push_back(frame_place_holder);
                 }
             }
         }
-
+        RawFrame* show_frame = nullptr;
         int rot_current = rot;
+        cv::Mat show_mat;
+        cv::Rect2i face_region;
         cv::Mat rot_mat;
-        if (color_mat.empty() ) {
+
+        if (c_frame == nullptr || c_frame->is_empty()) {
+            face_region = { 0,0,0,0 };
             goto imp_finish;
         }
-        // rotation
-        if (rot_current != 0) {
+
+        if (rot != 0) {
             // get rotation matrix for rotating the image around its center in pixel coordinates
             cv::Point2f center((color_mat.cols - 1) / 2.0, (color_mat.rows - 1) / 2.0);
-            rot_mat = cv::getRotationMatrix2D(center, rot_current, 1.0);
-            cv::Mat* dst = new cv::Mat;
-            cv::warpAffine(color_mat, *dst, rot_mat, color_mat.size());
-            color_mat = *dst;
-            c_frame->bgr_frame = dst;
-            c_frame->free_funcs.push([dst]() {delete dst; });
+            rot_mat = cv::getRotationMatrix2D(center, rot, scale);
+            // determine bounding rectangle, center not relevant
+            cv::Rect2f bbox = cv::RotatedRect(cv::Point2f(), color_mat.size(), rot).boundingRect2f();
+            cv::Size2i vid_size_show = bbox.size();
+            // adjust transformation matrix
+            rot_mat.at<double>(0, 2) += bbox.width / 2.0 - color_mat.cols / 2.0;
+            rot_mat.at<double>(1, 2) += bbox.height / 2.0 - color_mat.rows / 2.0;
+
+            cv::warpAffine(color_mat, show_mat, rot_mat, vid_size_show);
         }
+
+
         // flip
         if (is_fliplr)
-            if(is_flipud)cv::flip(color_mat, color_mat, -1);
-            else cv::flip(color_mat, color_mat, 1);
+            if(is_flipud) cv::flip(rot != 0 ? show_mat: color_mat, show_mat, -1);
+            else cv::flip(rot != 0 ? show_mat : color_mat, show_mat, 1);
         else
-            if(is_flipud)cv::flip(color_mat, color_mat, 0);
+            if(is_flipud)cv::flip(rot != 0 ? show_mat : color_mat, show_mat, 0);
+        if (!show_mat.empty()) {
+            auto t = new cv::Mat(show_mat);
+            show_frame = new RawFrame{ t->data,(unsigned)(t->datastart-t->dataend),Resolution{(unsigned)t->cols,(unsigned)t->rows},PIX_TYPE_BGR8,c_frame->frame_ts,c_frame->profile,0,t };
+            show_frame->free_funcs.push([c_frame, t]() {c_frame->release(); delete t; });
+        }
+        else {
+            show_frame = c_frame;
+        }
+
 
 		// tracking
-
-        static capture::CameraStream* current_stream = nullptr;
-        if (selected_stream != current_stream) {
-            current_stream = selected_stream;
-            face_tracking->reset();
+        tracking_lock.lock();
+        if(face_tracking!= nullptr){
+            if (selected_stream != last_stream) {
+                last_stream = selected_stream;
+                face_tracking->reset();
+            }
+		    face_tracking->tracking(show_frame);
+            face_region = face_tracking->get_roi();
         }
-		face_tracking->tracking(c_frame);
+        tracking_lock.unlock();
+
         imp_finish:
-        emit updateFrame(mainFrame, otherFrames, face_tracking->get_roi());
+        emit updateFrame(show_frame, otherFrames, face_region);
 
         recorder_lock.lock();
         if (is_recording) {

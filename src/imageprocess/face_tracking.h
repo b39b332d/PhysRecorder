@@ -8,7 +8,7 @@
 #include <frame_types.h>
 #include <kalman.h>
 
-#define DEBUG_LEVEL 0
+#define DEBUG_LEVEL 1
 
 #if DEBUG_LEVEL >0
 #include <iostream>

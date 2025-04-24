@@ -142,7 +142,7 @@ void MultiSelectComboBox::setHighLight(int idx, bool is_hightlight) {
         setText(QString("%1/%2 Selected")
             .arg(getSelectedItems().size()).arg(m_list_custom_info->size()));
     }
-    else if(highLight != idx && is_hightlight){
+    else if(is_hightlight){
         if (highLight != -1) {
             emit highLightSelect(highLight, false);
         }
@@ -299,10 +299,6 @@ void MultiSelectComboBox::setIndexSelect(int i, bool selected)
             current_selected_items->insert(i);
         else
             current_selected_items->remove(i);
-        if (!selected && i == highLight) {
-            emit highLightSelect(highLight, false);
-            highLight = -1;
-        }
     }
 }
 

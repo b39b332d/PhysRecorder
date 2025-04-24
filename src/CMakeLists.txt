@@ -52,7 +52,8 @@ cam_driver
 phy_recorder 
 serial 
 phy_signal
-face_tracking)
+face_tracking
+)
 
 
 
@@ -71,7 +72,7 @@ set_target_properties(PhyRecorder PROPERTIES
     AUTOMOC ON
     AUTORCC ON
 )
-target_link_libraries(PhyRecorder PRIVATE PhyRecorder_main Qt6::Widgets  ${delayimp_LIB})
+target_link_libraries(PhyRecorder PRIVATE PhyRecorder_main Qt6::Widgets ${delayimp_LIB})
 target_compile_definitions( PhyRecorder
     PRIVATE
     PROJECT_ROOT_PATH="./data/")

@@ -13,7 +13,7 @@ VideoUI::VideoUI(QWidget* parent)
     ui->setupUi(this);
 }
 
-void VideoUI::on_convert_set_roi(cv::Rect rect) {
+void VideoUI::onConvertSetROI(cv::Rect rect) {
     if (ui->pushButton_crop_roi->isChecked()) {
         if (rect.width > 100 && rect.height > 100) {
             unsigned x = ui->lineEdit_crop_roi->property("roi_x").toUInt();
@@ -92,7 +92,7 @@ void VideoUI::init(Ui::MainWindow* main_ui, SignalProcess* signalProcess)
 
     converterThread->start();
 
-    connect(converter, &Converter::set_roi, this, &VideoUI::on_convert_set_roi);
+    connect(converter, &Converter::set_roi, this, &VideoUI::onConvertSetROI);
 
     connect(face_tracking, &ColorExtractor::on_signal_ready, signalProcess, &SignalProcess::processSignal);
     connect(face_tracking, &ColorExtractor::on_face_lost, signalProcess, &SignalProcess::reset_rppg);
@@ -141,16 +141,16 @@ void VideoUI::init(Ui::MainWindow* main_ui, SignalProcess* signalProcess)
 
 
 #define match_qobj_streamopts(n,name) \
-    streamopt_checkBox[##n] = ui->checkBox_p##name; \
-    streamopt_slider[##n] = ui->slider_p##name; \
-    streamopt_pushButton[##n] = ui->pushButton_p##name
+    streamopt_checkBox[capture::##n] = ui->checkBox_p##name; \
+    streamopt_slider[capture::##n] = ui->slider_p##name; \
+    streamopt_pushButton[capture::##n] = ui->pushButton_p##name
 
-    match_qobj_streamopts(0, contrast);
-    match_qobj_streamopts(1, brightness);
-    match_qobj_streamopts(2, sharpness);
-    match_qobj_streamopts(3, white_balance);
-    match_qobj_streamopts(4, saturation);
-    match_qobj_streamopts(5, value);
+    match_qobj_streamopts(STREAM_CONTRAST, contrast);
+    match_qobj_streamopts(STREAM_BRIGHTNESS, brightness);
+    match_qobj_streamopts(STREAM_SHARPNESS, sharpness);
+    match_qobj_streamopts(STREAM_WHITEBALANCE, white_balance);
+    match_qobj_streamopts(STREAM_SATURATION, saturation);
+    match_qobj_streamopts(STREAM_VALUE, value);
 
 
     connect(ui->pushButton_resetVideo, &QPushButton::clicked, this, [this]() {
@@ -167,6 +167,24 @@ void VideoUI::init(Ui::MainWindow* main_ui, SignalProcess* signalProcess)
             }
         }
         });
+    connect(ui->pushButton_process_reset, &QPushButton::clicked, this, [this]() {
+        if (ui->pushButton_process_mode->text() == "Lossy") {
+            emit ui->pushButton_process_mode->clicked();
+        }
+        else {
+            emit ui->pushButton_process_rot->clicked();
+        }
+
+        ui->checkBox_process_fliplr->setChecked(false);
+        ui->checkBox_process_flipud->setChecked(false);
+        ui->lineEdit_crop_roi->setText("-1");
+        emit ui->lineEdit_crop_roi->editingFinished();
+
+        for (int opt = 0; opt < capture::STREAM_LOSSY_OPTION_CNT; opt++) {
+            emit streamopt_pushButton[opt]->clicked();
+        }
+
+        });
 
     connect(&cam_option_changed_timer, &QTimer::timeout, this, [this]() {
         cam_option_changed_timer.stop();
@@ -176,7 +194,7 @@ void VideoUI::init(Ui::MainWindow* main_ui, SignalProcess* signalProcess)
 
     connect(ui->scroll_rotation, &QScrollBar::valueChanged, this, [this](int val) {
         capture->rot = val;
-        this->ui->label_rotation->setText(QString::number(val) + "\xc2\xb0");
+        this->ui->button_rotation->setText(QString::number(val) + "\xc2\xb0");
         });
 
 
@@ -216,18 +234,13 @@ void VideoUI::start_record(const std::string& save_prefix)
                     for (auto stream : device->enabled_streams) {
                         auto f_name = save_prefix + stream->stream_friendly_name;
                         std::ranges::replace(f_name, ':', '-');
-                        auto v_rec = new MediaWriter(f_name,
-                            stream->resolution, stream->ratio, stream->format,
-                            stream->encoder_method, stream->encoder_quality);
-                        rec_maps[stream] = v_rec;
+                        capture->recordStream(stream, f_name);
                     }
                 }
             }
+            capture->startRecord();
         },
         [this]() {
-            recorder_lock.lock();
-            is_recording = true;
-            recorder_lock.unlock();
             setCursorBusy(false);
         }
     );
@@ -239,13 +252,9 @@ void VideoUI::stop_record()
 
     worker.run_with_call_back(
         [this]() {
-            for (auto& [stream, rec] : rec_maps) delete rec;
-            rec_maps.clear();
+            capture->startRecord(false);
         },
         [this]() {
-            recorder_lock.lock();
-            is_recording = false;
-            recorder_lock.unlock();
             ui->VideoBox->setDisabled(false);
             setCursorBusy(false);
         }
@@ -302,6 +311,8 @@ void VideoUI::onCaptureDeviceDisabled(capture::CameraDevice* device) {
     int idx = comboBox_cameras->findData(QVariant::fromValue(device));
     if (idx != -1 && idx == comboBox_cameras->getHighLight()) {
         lock_camera_info_play(false);
+        actionStartCamera->setEnabled(true);
+        comboBox_cameras->setIndexSelect(idx, false);
     }
 }
 void VideoUI::onCameraSelected(int idx, bool is_selected) {
@@ -322,6 +333,7 @@ void VideoUI::onCameraSelected(int idx, bool is_selected) {
             [this, device, idx]() {
                 comboBox_cameras->setHighLight(idx, true);
                 comboBox_cameras->hide();
+                setCursorBusy(false);
             });
     }
     else {
@@ -329,6 +341,32 @@ void VideoUI::onCameraSelected(int idx, bool is_selected) {
     }
 }
 
+void VideoUI::onCameraHighLighted(int idx, bool is_highlight) {
+
+    if (is_highlight) {
+        capture::CameraDevice* device = comboBox_cameras->getHighLightData().value<capture::CameraDevice*>();
+
+        for (auto& [stream_name, stream] : device->streams_map) {
+            if (device->enabled_streams.contains(stream))
+                comboBox_stream->addItem(QString::fromStdString(stream_name), QVariant::fromValue(stream), true);
+            else
+                comboBox_stream->addItem(QString::fromStdString(stream_name), QVariant::fromValue(stream), false);
+
+        }
+        onStreamHighLighted(-1, false);
+        actionStartCamera->setDisabled(true);
+        setCursorBusy(false);
+    }
+    else {
+        comboBox_stream->clear();
+        comboBox_profile_type->clear();
+        comboBox_profile->clear();
+        actionStartCamera->setDisabled(true);
+        lock_camera_info_play(false);
+        capture->selected_stream = nullptr;
+        return;
+    }
+}
 void VideoUI::switchStreamStatus(capture::CameraStream* stream, bool open) {
     capture::CameraDevice* device = stream->device;
     static bool device_start_successed = false;
@@ -354,6 +392,7 @@ void VideoUI::switchStreamStatus(capture::CameraStream* stream, bool open) {
                 lock_camera_info_play(false);
             }
             setCursorBusy(false);
+            actionStartCamera->setDisabled(false);
             });
 
 }
@@ -387,32 +426,6 @@ void VideoUI::switchCameraStatus(capture::CameraDevice* device, bool open) {
                 comboBox_cameras->selectItem(QVariant::fromValue(device), false);
                 setCursorBusy(false);
             });
-    }
-}
-void VideoUI::onCameraHighLighted(int idx, bool is_highlight) {
-
-    if (is_highlight) {
-        capture::CameraDevice* device = comboBox_cameras->getHighLightData().value<capture::CameraDevice*>();
-
-        for (auto& [stream_name, stream] : device->streams_map) {
-            if (device->enabled_streams.contains(stream))
-                comboBox_stream->addItem(QString::fromStdString(stream_name), QVariant::fromValue(stream), true);
-            else
-                comboBox_stream->addItem(QString::fromStdString(stream_name), QVariant::fromValue(stream), false);
-
-        }
-        onStreamHighLighted(-1, false);
-        actionStartCamera->setDisabled(true);
-        setCursorBusy(false);
-    }
-    else {
-        comboBox_stream->clear();
-        comboBox_profile_type->clear();
-        comboBox_profile->clear();
-        actionStartCamera->setDisabled(true);
-        lock_camera_info_play(false);
-        capture->selected_stream = nullptr;
-        return;
     }
 }
 void VideoUI::onStreamSelected(int idx, bool is_selected) {

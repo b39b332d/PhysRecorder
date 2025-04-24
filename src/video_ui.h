@@ -82,7 +82,7 @@ private slots:
 	void onActionStartCamera();
 	void onActionRefreshCamera();
 	void encoder_changed();
-	void on_convert_set_roi(cv::Rect rect);
+	void onConvertSetROI(cv::Rect rect);
 	void onCameraSelected(int, bool);
 	void onCameraHighLighted(int, bool);
 	void onProfileTypeSelected(int);

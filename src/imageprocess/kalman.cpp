@@ -42,6 +42,7 @@ void KFTracking::init(const cv::Rect2i& face, float ts, float m_noise) {
 	cv::setIdentity(KF.errorCovPost);
 	KF.errorCovPost *= m_noise;
 	this->ts = ts;
+	is_init = true;
 }
 void KFTracking::update(const cv::Rect2i& face, float ts, float m_noise) {
 	if (!is_init) {

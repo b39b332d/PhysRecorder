@@ -112,6 +112,9 @@ struct RawFrame {
 	void acquire() {
 		ref_cnt++;
 	}
+	bool is_empty() {
+		return raw_frame == nullptr && bgr_frame == nullptr;
+	}
 	std::queue<std::function<void()>> free_funcs;
 	~RawFrame() {
 		while (!free_funcs.empty()) {
