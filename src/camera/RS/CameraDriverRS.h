@@ -38,10 +38,10 @@ namespace capture {
         ~CameraDeviceRS();
 
          void get_all_option_range_native();
-         void set_option_native(DEVICE_OPTION option, const option_status& value);
+         void set_option_native(int option, const option_status& value) override;
 
     private:
-        void set_signle_option_native(DEVICE_OPTION option, rs2_option opt, const option_status& value);
+        void set_signle_option_native(int option, rs2_option opt, const option_status& value);
     };
 
     std::vector<CameraDevice*> EnumerateCamera_RS();

@@ -42,7 +42,7 @@ namespace capture {
         ~CameraDeviceMVis();
 
          void get_all_option_range_native();
-         void set_option_native(DEVICE_OPTION option, const option_status& value);
+         void set_option_native(int option, const option_status& value) override;
     private :
         void camera_read_loop();
         friend void MVIS_stop();

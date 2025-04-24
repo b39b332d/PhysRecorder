@@ -46,7 +46,11 @@ function(custom_target_install tgt)
             install(SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/DeployQt.cmake)
 
         endif()
-
+        
+        if(MVis IN_LIST tgt_dep_lib)
+            get_target_property(TGT_LINK_FILE MVis IMPORTED_LOCATION)
+            install(FILES ${TGT_LINK_FILE} TYPE BIN)
+        endif()
         
         if(opencv_core IN_LIST tgt_dep_lib)
             configure_file(${CMAKE_SOURCE_DIR}/cmake/DeployDep.cmake DeployDep.cmake @ONLY)
@@ -86,7 +90,7 @@ function(custom_target_install tgt)
                     install(FILES ${dnn_dep_dst} TYPE BIN)
                 endif()
             endif()
-
+            
             install(DIRECTORY ${CMAKE_SOURCE_DIR}/data TYPE BIN PATTERN "styles" EXCLUDE)
             install(SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/DeployDep.cmake)
         endif()

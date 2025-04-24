@@ -1386,6 +1386,9 @@
               <height>16777215</height>
              </size>
             </property>
+            <property name="styleSheet">
+             <string notr="true"> QCheckBox::indicator:disabled {image: url(./data/resources/rc/window_close_disabled.png);width: 14px;height: 14px;}</string>
+            </property>
             <property name="text">
              <string>Brightness</string>
             </property>
@@ -1404,6 +1407,9 @@
               <width>75</width>
               <height>16777215</height>
              </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true"> QCheckBox::indicator:disabled {image: url(./data/resources/rc/window_close_disabled.png);width: 14px;height: 14px;}</string>
             </property>
             <property name="text">
              <string>Sharpness</string>
@@ -1424,6 +1430,9 @@
               <height>16777215</height>
              </size>
             </property>
+            <property name="styleSheet">
+             <string notr="true"> QCheckBox::indicator:disabled {image: url(./data/resources/rc/window_close_disabled.png);width: 14px;height: 14px;}</string>
+            </property>
             <property name="text">
              <string>WB</string>
             </property>
@@ -1442,6 +1451,12 @@
               <width>75</width>
               <height>16777215</height>
              </size>
+            </property>
+            <property name="autoFillBackground">
+             <bool>false</bool>
+            </property>
+            <property name="styleSheet">
+             <string notr="true"> QCheckBox::indicator:disabled {image: url(./data/resources/rc/window_close_disabled.png);width: 14px;height: 14px;}</string>
             </property>
             <property name="text">
              <string>Contrast</string>
@@ -1462,6 +1477,9 @@
               <height>16777215</height>
              </size>
             </property>
+            <property name="styleSheet">
+             <string notr="true"> QCheckBox::indicator:disabled {image: url(./data/resources/rc/window_close_disabled.png);width: 14px;height: 14px;}</string>
+            </property>
             <property name="text">
              <string>Saturation</string>
             </property>
@@ -1480,6 +1498,9 @@
               <width>75</width>
               <height>16777215</height>
              </size>
+            </property>
+            <property name="styleSheet">
+             <string notr="true"> QCheckBox::indicator:disabled {image: url(./data/resources/rc/window_close_disabled.png);width: 14px;height: 14px;}</string>
             </property>
             <property name="text">
              <string>Value</string>

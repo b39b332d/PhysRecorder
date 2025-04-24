@@ -177,7 +177,7 @@ namespace capture {
         }
     }
 
-    void CameraDeviceMVis::set_option_native(DEVICE_OPTION option, const option_status& value)
+    void CameraDeviceMVis::set_option_native(int option, const option_status& value)
     {
         switch (option) {
         case DEVICE_EXPOSURE:

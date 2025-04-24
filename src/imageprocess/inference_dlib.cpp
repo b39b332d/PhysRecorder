@@ -13,7 +13,7 @@ float InferenceDLIB::find_faces(FaceRoi* face, std::vector<FaceBox>& faces, cons
 	for (auto& d : dets) {
 		faces.push_back({ cv::Rect(face->face.x+d.left(),face->face.y+d.top(),d.width(),d.height()),0.9});
 	}
-	return 1;
+	return 10;
 }
 
 float InferenceDLIB::get_roi(FaceRoi* face, std::vector<std::vector<cv::Point2i>>& rois, const int id)
@@ -39,7 +39,7 @@ float InferenceDLIB::get_roi(FaceRoi* face, std::vector<std::vector<cv::Point2i>
 		cv::Point(shape.part(35).x(),shape.part(35).y()),
 		cv::Point(shape.part(45).x(),shape.part(45).y()),
 	};
-	return 1;
+	return 1.0;
 }
 
 InferenceDLIB::InferenceDLIB()

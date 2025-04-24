@@ -229,7 +229,7 @@ namespace capture {
                     is_color = false;
                     option_range opt_range = { 0, };
                     rs2::option_range range = rs_sensor.get_option_range(RS2_OPTION_DIGITAL_GAIN);
-                    opt_range.scaled_factor = 0;
+                    opt_range.scaled_factor = 1;
                     opt_range.min = 1;
                     opt_range.is_supported = true;
                     opt_range.max = 2;
@@ -335,7 +335,7 @@ namespace capture {
             }
         }
     }
-    inline void CameraDeviceRS::set_signle_option_native(DEVICE_OPTION option,rs2_option opt, const option_status& value) {
+    inline void CameraDeviceRS::set_signle_option_native(int option,rs2_option opt, const option_status& value) {
         float value_o = value.value / configurations[option].scaled_factor;
         if (configurations[option].step > 1) {
             if (value.value % configurations[option].step != 0) {
@@ -347,7 +347,7 @@ namespace capture {
         configurations[option].current.value = value.value;
     }
 
-    void CameraDeviceRS::set_option_native(DEVICE_OPTION option, const option_status& value)
+    void CameraDeviceRS::set_option_native(int option, const option_status& value)
     {
         switch (option) {
         case DEVICE_EXPOSURE:

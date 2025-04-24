@@ -95,7 +95,7 @@ namespace capture {
         bool use_gain;
         void get_all_option_range_native(IMFMediaSource* pSource);
         option_status get_option_native(DEVICE_OPTION option);
-        void set_option_native(DEVICE_OPTION option, const option_status& value);
+        void set_option_native(int option, const option_status& value) override;
     };
 
     std::vector<CameraDevice*> EnumerateCamera_MSMF();

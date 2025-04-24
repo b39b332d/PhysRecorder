@@ -149,6 +149,7 @@ namespace capture {
         opt_range.max = max;
         opt_range.step = step;
         opt_range.def.value = def;
+        opt_range.scaled_factor = 1;
         opt_range.def.status_type = OPTION_MANUAL;
         opt_range.support_type = OPTION_MANUAL;
         if (flags == 0x01) {
@@ -302,7 +303,7 @@ namespace capture {
         }
     }
 
-    void CameraDeviceMSMF::set_option_native(DEVICE_OPTION option, const option_status& opt)
+    void CameraDeviceMSMF::set_option_native(int option, const option_status& opt)
     {
         IAMCameraControl* spCameraControl;
         IAMVideoProcAmp* spVideoControl;

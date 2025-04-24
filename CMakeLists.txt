@@ -159,24 +159,28 @@ FetchContent_MakeAvailable(Eigen3)
 ######### FIND PACKEXE
 if(Porject_BUILD_TYPE STREQUAL "release" AND WIN32)
     if(NOT ENIGMAVBCONXOLE_EXE OR NOT UPX_EXE)
-        FetchContent_Declare(
-            BOX_TOOLS
-            URL  "${DOWNLOAD_URL}/box_tools.zip"
-            DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-            OVERRIDE_FIND_PACKAGE
-            EXCLUDE_FROM_ALL
-        )
-        FetchContent_MakeAvailable(BOX_TOOLS)
+        if(${DOWNLOAD_URL})
+            FetchContent_Declare(
+                BOX_TOOLS
+                URL  "${DOWNLOAD_URL}/box_tools.zip"
+                DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+                OVERRIDE_FIND_PACKAGE
+                EXCLUDE_FROM_ALL
+            )
+            FetchContent_MakeAvailable(BOX_TOOLS)
     
-        set(ENIGMAVBCONXOLE_EXE "${box_tools_SOURCE_DIR}/enigmavbconsole.exe")
-        set(UPX_EXE "${box_tools_SOURCE_DIR}/upx.exe")
+            set(ENIGMAVBCONXOLE_EXE "${box_tools_SOURCE_DIR}/enigmavbconsole.exe")
+            set(UPX_EXE "${box_tools_SOURCE_DIR}/upx.exe")
+        endif()
     endif()
-    add_custom_target(generate_boxed_exe
-        COMMAND ${CMAKE_COMMAND} -DEXEC_NAME=PhysRecorder -DUPX_EXE=${UPX_EXE} -DEVB_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}/bin -P ${CMAKE_HOME_DIRECTORY}/cmake/configure_evb_file.cmake 
-        COMMAND ${ENIGMAVBCONXOLE_EXE} ${CMAKE_INSTALL_PREFIX}/bin/PhysRecorder.evb
-        DEPENDS install
-        USES_TERMINAL
-    )
+    if(ENIGMAVBCONXOLE_EXE AND UPX_EXE)
+        add_custom_target(generate_boxed_exe
+            COMMAND ${CMAKE_COMMAND} -DEXEC_NAME=PhysRecorder -DUPX_EXE=${UPX_EXE} -DEVB_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}/bin -P ${CMAKE_HOME_DIRECTORY}/cmake/configure_evb_file.cmake 
+            COMMAND ${ENIGMAVBCONXOLE_EXE} ${CMAKE_INSTALL_PREFIX}/bin/PhysRecorder.evb
+            DEPENDS install
+            USES_TERMINAL
+        )
+    endif()
 endif()
 
 ####### FIND MSMF

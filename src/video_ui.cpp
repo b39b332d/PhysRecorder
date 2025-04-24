@@ -584,15 +584,18 @@ void VideoUI::connect_option_set(int opt,QSlider** sliders,QCheckBox** checkboxs
             });
         if (opt_range.support_type == capture::OPTION_AUTO) {
 
-            connect(checkboxs[opt], &QCheckBox::toggled, this, [pushButtons,sliders, opt, this, &cam_option_changed](bool status) {
+            connect(checkboxs[opt], &QCheckBox::toggled, this, [pushButtons,sliders, opt, this, &cam_option_changed, factor](bool status) {
                 cam_option_changed |= (1 << opt);
                 sliders[opt]->setEnabled(status);
                 if (!status)
                     pushButtons[opt]->setText("AUTO");
+                else
+                    pushButtons[opt]->setText(QString::number(sliders[opt]->value() / factor));
                 if (!cam_option_changed_timer.isActive()) cam_option_changed_timer.start(100);
                 });
         }
         else {
+            checkboxs[opt]->setDisabled(true);
             connect(checkboxs[opt], &QCheckBox::toggled, this, [checkboxs, opt](bool status) {
                 checkboxs[opt]->setChecked(true); });
         }
