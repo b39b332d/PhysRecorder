@@ -161,7 +161,6 @@ void Capture::run()
                 face_tracking->reset();
             }
 
-            qDebug() << show_frame->frame_ts;
 		    face_tracking->tracking(show_frame);
             face_region = face_tracking->get_roi();
         }

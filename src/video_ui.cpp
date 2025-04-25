@@ -26,9 +26,8 @@ void VideoUI::onConvertSetROI(cv::Rect rect) {
     }
     else {
         if (rect.area() == 0) {
-            actionTracking->setText("Untracked");
             actionTracking->setChecked(false);
-            face_tracking->disable_tracking();
+            emit actionTracking->clicked(false);
         }
         else {
             actionTracking->setText("ROI");
@@ -226,6 +225,8 @@ void VideoUI::init(Ui::MainWindow* main_ui, SignalProcess* signalProcess)
             emit ui->checkBox_fliplr->toggled(false);
         if (ui->checkBox_flipud->isChecked())
             emit ui->checkBox_flipud->toggled(false);
+        if (ui->comboBox_inf_method->currentIndex() != 0)
+            ui->comboBox_inf_method->setCurrentIndex(0);
 
         });
 
@@ -239,6 +240,9 @@ void VideoUI::init(Ui::MainWindow* main_ui, SignalProcess* signalProcess)
                 face_tracking = new ColorExtractor(Inference::get_inference(INF_OPENVINO));
             else
                 face_tracking = new ColorExtractor(Inference::get_inference(INF_DLIB));
+
+            actionTracking->setChecked(false);
+            emit actionTracking->clicked(false);
             capture->setInference(face_tracking);
             }, [this, signalProcess]() {
                 connect(face_tracking, &ColorExtractor::on_signal_ready, signalProcess, &SignalProcess::processSignal);
@@ -333,8 +337,16 @@ void VideoUI::lock_camera_info_play(bool lock) {
 
 void VideoUI::onDeviceSelected(capture::CameraStream* stream) {
     if (stream == nullptr) {
-        comboBox_cameras->setHighLight(-1, false);
-        capture->selected_stream = nullptr;
+        if (ui->pushButton_crop_roi->isChecked()) {
+            ui->tab_postprocess->setEnabled(true);
+            ui->pushButton_crop_roi->setChecked(false);
+        }
+        else {
+            comboBox_cameras->setHighLight(-1, false);
+            capture->selected_stream = nullptr;
+            actionTracking->setChecked(false);
+            emit actionTracking->clicked(false);
+        }
     }
     else {
         int idx = comboBox_cameras->findData(QVariant::fromValue(stream->device));
@@ -774,6 +786,9 @@ void VideoUI::loadCameraOptions(capture::CameraStream* stream) {
                 ui->tab_postprocess->setEnabled(false);
             }
             });
+        connect(ui->pushButton_reset_roi, &QPushButton::clicked, this, [this]() {
+            emit ui->lineEdit_crop_roi->rightClicked();
+            });
 
 
         unsigned x = (unsigned)stream->get_option_value(capture::STREAM_CROP_X);
@@ -1013,7 +1028,7 @@ void VideoUI::onActionRefreshCamera() {
         []() {capture::refresh_devices(current_devices); },
         [this]() {
             for (auto& device : current_devices) {
-                comboBox_cameras->addItem(QString::fromStdString(device->device_name), QVariant::fromValue(device));
+                comboBox_cameras->addItem(QString::fromStdString(device->device_name), QVariant::fromValue(device), device->is_running());
             }
             comboBox_cameras->setCurrentIndex(-1);
             comboBox_cameras->setDisabled(false);

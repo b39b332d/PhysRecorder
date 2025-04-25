@@ -16,11 +16,11 @@ MultiSelectComboBox::MultiSelectComboBox(QWidget* aParent) :
     current_selected_items(new QSet<int>)
 {
 
-
     mLineEdit->setReadOnly(true);
     connect(mLineEdit, &SilentLineEdit::leftClicked, this, &MultiSelectComboBox::showPopup);
 
     setModel(mListWidget->model());
+    mListWidget->setStyleSheet("QListView::item{height: 22px}");
     setView(mListWidget);
     setLineEdit(mLineEdit);
 

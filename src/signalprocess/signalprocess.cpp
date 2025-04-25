@@ -63,6 +63,11 @@ void SignalProcess::processSignal(FaceRoi *roi) {
         previous_bgr_ts = ts;
         i_loop = 0;
 
+        graph_r->data()->clear();
+        graph_g->data()->clear();
+        graph_b->data()->clear();
+        graph_pos->data()->clear();
+        graph_pos_end->data()->clear();
         RPPGExtractor::reset(r_channel);
         RPPGExtractor::reset(g_channel);
         RPPGExtractor::reset(b_channel);

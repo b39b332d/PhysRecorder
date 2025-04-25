@@ -216,10 +216,10 @@ namespace capture {
             device->device_cond.notify_all();  // Notify consumer if it's waiting
         }
         void clear() {
-            for (auto f : frame_queue) {
-                f->release();
+            while (frame_queue.size() != 0) {
+                frame_queue.front()->release();
+                frame_queue.pop_front();  // Discard the oldest element
             }
-            frame_queue.clear();
             last_valid_ts = 0; 
 
             count = 0;

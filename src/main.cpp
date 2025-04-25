@@ -4,6 +4,7 @@
 #include <QMessageBox>
 #include <QFile>
 #include <QDir>
+
 __declspec(dllimport) void start_mainwin(QSplashScreen& screen);
 int main(int argc, char *argv[])
 {

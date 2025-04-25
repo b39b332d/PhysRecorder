@@ -145,6 +145,7 @@ find_program(DEPLOYQT_EXECUTABLE windeployqt PATHS "${qtBinDir}" NO_DEFAULT_PATH
 
 ####### FIND MKL
 set(MKL_LINK static)
+set(MKL_THREADING tbb_thread CACHE STRING "" FORCE)
 find_package(MKL)
 
 ####### FIND Eigen3
@@ -245,18 +246,61 @@ FetchContent_Declare(
     SOURCE_SUBDIR  dlib
     EXCLUDE_FROM_ALL
 )
+if(NOT CMAKE_PROPERTY_LIST)
+    execute_process(COMMAND cmake --help-property-list OUTPUT_VARIABLE CMAKE_PROPERTY_LIST)
+    
+    # Convert command output into a CMake list
+    string(REGEX REPLACE ";" "\\\\;" CMAKE_PROPERTY_LIST "${CMAKE_PROPERTY_LIST}")
+    string(REGEX REPLACE "\n" ";" CMAKE_PROPERTY_LIST "${CMAKE_PROPERTY_LIST}")
+    list(REMOVE_DUPLICATES CMAKE_PROPERTY_LIST)
+endif()
+function(print_properties)
+    message("CMAKE_PROPERTY_LIST = ${CMAKE_PROPERTY_LIST}")
+endfunction()
+    
+function(print_target_properties target)
+    if(NOT TARGET ${target})
+      message(STATUS "There is no target named '${target}'")
+      return()
+    endif()
+
+    foreach(property ${CMAKE_PROPERTY_LIST})
+        string(REPLACE "<CONFIG>" "${CMAKE_BUILD_TYPE}" property ${property})
+
+        # Fix https://stackoverflow.com/questions/32197663/how-can-i-remove-the-the-location-property-may-not-be-read-from-target-error-i
+        if(property STREQUAL "LOCATION" OR property MATCHES "^LOCATION_" OR property MATCHES "_LOCATION$")
+            continue()
+        endif()
+
+        get_property(was_set TARGET ${target} PROPERTY ${property} SET)
+        if(was_set)
+            get_target_property(value ${target} ${property})
+            message("${target} ${property} = ${value}")
+        endif()
+    endforeach()
+endfunction()
 
 set(DLIB_NO_GUI_SUPPORT TRUE CACHE BOOL "" FORCE)
-set(DLIB_USE_LAPACK FALSE CACHE BOOL "" FORCE)
-set(DLIB_USE_BLAS FALSE CACHE BOOL "" FORCE)
-set(DLIB_USE_MKL_SEQUENTIAL FALSE CACHE BOOL "" FORCE)
 set(DLIB_PNG_SUPPORT FALSE CACHE BOOL "" FORCE)
 set(DLIB_GIF_SUPPORT FALSE CACHE BOOL "" FORCE)
 set(DLIB_JPEG_SUPPORT FALSE CACHE BOOL "" FORCE)
 set(DLIB_USE_MKL_FFT FALSE CACHE BOOL "" FORCE)
 set(DLIB_USE_FFMPEG FALSE CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(dlib)
+if(MKL_FOUND)
+    set(DLIB_USE_LAPACK TRUE CACHE BOOL "" FORCE)
+    set(DLIB_USE_BLAS TRUE CACHE BOOL "" FORCE)
+    set(DLIB_USE_MKL_WITH_TBB TRUE TRUE CACHE BOOL "" FORCE)
+    set(mkl_tbb ${_tbb_release_lib} CACHE FILEPATH "" FORCE)
+    if(Porject_BUILD_TYPE STREQUAL "debug")
+        set(mkl_tbb_thread ${mkl_tbb_threadd_file} CACHE FILEPATH "" FORCE)
+    endif()
+else()
+    set(DLIB_USE_LAPACK FALSE CACHE BOOL "" FORCE)
+    set(DLIB_USE_BLAS FALSE CACHE BOOL "" FORCE)
+    set(DLIB_USE_MKL_WITH_TBB FALSE TRUE CACHE BOOL "" FORCE)
+endif()
 
+FetchContent_MakeAvailable(dlib)
 ####### build
 include(cmake/install_target.cmake)
 add_subdirectory(src)

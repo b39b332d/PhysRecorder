@@ -24,7 +24,6 @@ foreach(net_name IN LISTS SUBDIRS)
 endforeach()
 
 set(DLIB_MODEL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/models/dlib/shape_predictor_68_face_landmarks_GTX.dat)
-    message(asdasdas"${DLIB_MODEL_PATH}")
 if(NOT EXISTS "${DLIB_MODEL_PATH}")
     FetchContent_Declare(
         bz2_build

@@ -2,7 +2,6 @@
 #include <thread>
 
 #include <dlib/opencv/cv_image.h>
-
 #define DLIB2CV_POINT(pt) (*(cv::Point2i*)&(pt))
 #define CV2DLIB_POINT(pt) (*(dlib::point*)&(pt))
 float InferenceDLIB::find_faces(FaceRoi* face, std::vector<FaceBox>& faces, const int id)
