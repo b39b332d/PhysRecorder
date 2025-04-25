@@ -143,7 +143,7 @@ namespace capture {
         STREAM_CONTRAST=0,
         STREAM_BRIGHTNESS,
         STREAM_SHARPNESS,
-        STREAM_WHITEBALANCE,
+        STREAM_GAMMA,
         STREAM_SATURATION,
         STREAM_VALUE,
         // lossy above

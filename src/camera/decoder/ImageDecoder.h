@@ -4,6 +4,7 @@ class RawFrame;
 namespace capture {
 	class Options;
 	void postprocess(RawFrame* image, Options* transform);
+	void init_postprocess();
 	cv::Mat decode_bgr(RawFrame* image);
 	cv::Mat decode_yuv(RawFrame* image);
 

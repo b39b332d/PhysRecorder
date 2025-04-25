@@ -91,12 +91,12 @@ namespace capture {
         configurations[STREAM_FLIP_LR] = { true, 0,1, 1, 1, OPTION_MANUAL,{ 0,OPTION_MANUAL },{ 0,OPTION_MANUAL } };
         configurations[STREAM_FLIP_UD] = { true, 0,1, 1, 1, OPTION_MANUAL,{ 0,OPTION_MANUAL },{ 0,OPTION_MANUAL } };
         configurations[STREAM_ROTATE] = { true, 0, 360, 1, 1, OPTION_MANUAL,{ 0,OPTION_MANUAL },{ 0,OPTION_MANUAL } };
-        configurations[STREAM_CONTRAST] = { true, 5, 30, 1, 10, OPTION_MANUAL,{ 10,OPTION_MANUAL },{ 10,OPTION_MANUAL } };
+        configurations[STREAM_CONTRAST] = { true, 50, 300, 1, 100, OPTION_MANUAL,{ 100,OPTION_MANUAL },{ 100,OPTION_MANUAL } };
         configurations[STREAM_BRIGHTNESS] = { true, 0, 100, 1, 1, OPTION_MANUAL,{ 0,OPTION_MANUAL },{ 0,OPTION_MANUAL } };
         configurations[STREAM_SHARPNESS] = { true, -30, 30, 1, 10, OPTION_MANUAL,{ 0,OPTION_MANUAL },{ 0,OPTION_MANUAL } };
-        configurations[STREAM_SATURATION] = { true, 5, 30, 1, 10, OPTION_MANUAL,{ 10,OPTION_MANUAL },{ 10,OPTION_MANUAL } };
-        configurations[STREAM_VALUE] = { true, -30, 30, 1, 1, OPTION_MANUAL,{ 0,OPTION_MANUAL },{ 0,OPTION_MANUAL } };
-        configurations[STREAM_WHITEBALANCE] = { true, 0, 2, 1, 1, OPTION_MANUAL,{ 0,OPTION_MANUAL },{ 0,OPTION_MANUAL } };
+        configurations[STREAM_SATURATION] = { true, 50, 300, 1, 100, OPTION_MANUAL,{ 100,OPTION_MANUAL },{ 100,OPTION_MANUAL } };
+        configurations[STREAM_VALUE] = { true, -30, 30, 1, 1, OPTION_AUTO,{ 0,OPTION_MANUAL },{ 0,OPTION_MANUAL } };
+        configurations[STREAM_GAMMA] = { true, 0, 300, 1, 100, OPTION_AUTO,{ 100,OPTION_MANUAL },{ 100,OPTION_MANUAL } };
     }
     void CameraStream::set_current_profile(CameraProfile* profile)
     {

@@ -1,6 +1,7 @@
 #include "CameraCapture.h"
-#include "DriverEnum.h"
+#include "DriverEnum.tmp"
 #include <thread>
+#include<ImageDecoder.h>
 namespace capture {
 
 	devices_set_t enabled_devices;
@@ -16,6 +17,7 @@ namespace capture {
 		devices_map.clear();
 		static bool first_run = true;
 		if (first_run) {
+			init_postprocess();
 			first_run = false;
 		}
 		std::unique_lock l(devices_lock);

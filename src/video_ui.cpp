@@ -147,7 +147,7 @@ void VideoUI::init(Ui::MainWindow* main_ui, SignalProcess* signalProcess)
     match_qobj_streamopts(STREAM_CONTRAST, contrast);
     match_qobj_streamopts(STREAM_BRIGHTNESS, brightness);
     match_qobj_streamopts(STREAM_SHARPNESS, sharpness);
-    match_qobj_streamopts(STREAM_WHITEBALANCE, white_balance);
+    match_qobj_streamopts(STREAM_GAMMA, gamma);
     match_qobj_streamopts(STREAM_SATURATION, saturation);
     match_qobj_streamopts(STREAM_VALUE, value);
 

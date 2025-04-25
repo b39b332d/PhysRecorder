@@ -6,6 +6,13 @@
 #include <libyuv.h>
 #define RawFrame_CVIMG_(frame) (cv::Mat*)(frame->bgr_frame)
 
+
+#include <opencv2/core.hpp> 
+cv::Mat gamma_map;
+void capture::init_postprocess() {
+    gamma_map = cv::imread("data/resources/gamma_precalc.png", cv::IMREAD_GRAYSCALE);
+}
+
 void capture::postprocess(RawFrame* frame,Options *transform)
 {
     if (!transform->get_option(STREAM_MODE).status_type == OPTION_AUTO) return;
@@ -197,7 +204,7 @@ void capture::postprocess(RawFrame* frame,Options *transform)
             if (!transform->is_default(STREAM_SATURATION) ||
                 !transform->is_default(STREAM_VALUE)) {
                 float saturation_factor = transform->get_option_value(STREAM_SATURATION);
-                int value_change = transform->get_option(STREAM_VALUE).value;
+                auto value_change = transform->get_option(STREAM_VALUE);
 
                 if (buffer == nullptr || transform->buffer_len < width * height * 3) {
                     free(buffer);
@@ -214,10 +221,40 @@ void capture::postprocess(RawFrame* frame,Options *transform)
                 cv::split(hsv, hsv_channels);
                 if(saturation_factor !=1)
 				convertScaleAbs(hsv_channels[1], hsv_channels[1], saturation_factor, 0);
-                if (value_change != 0)
-                convertScaleAbs(hsv_channels[2], hsv_channels[2], 1, value_change);
-                cv::merge(hsv_channels, hsv); // Convert back to 8-bit
+                if (value_change.status_type == OPTION_AUTO) {
+                    cv::equalizeHist(hsv_channels[2], hsv_channels[2]);
+                }
+                else if (value_change.value != 0)
+                    convertScaleAbs(hsv_channels[2], hsv_channels[2], 1, value_change.value);
+                cv::merge(hsv_channels, hsv); 
                 cv::cvtColor(hsv, image_temp, cv::COLOR_HSV2BGR);
+            }
+            if (!transform->is_default(STREAM_GAMMA)) {
+                auto gamma = transform->get_option(STREAM_GAMMA);
+                if (gamma.status_type != OPTION_AUTO) {
+                    auto gamma_lut = gamma_map.row(gamma.value);
+                    cv::LUT(image_temp, gamma_lut, image_temp);
+                }
+                else {
+                    if (buffer == nullptr || transform->buffer_len < width * height * 3) {
+                        free(buffer);
+                        transform->buffer_len = width * height * 3;
+                        buffer = (unsigned char*)malloc(width * height * 3);
+                    }
+                    cv::Mat lab(height, width, CV_8UC3, buffer);
+                    cv::cvtColor(image_temp, lab, cv::COLOR_BGR2YUV);
+                    std::vector<cv::Mat> lab_channels(3);
+                    lab_channels[0] = cv::Mat(image_temp.size(), CV_8U, image_temp.data);
+                    lab_channels[1] = cv::Mat(image_temp.size(), CV_8U, image_temp.data + image_temp.size().area());
+                    lab_channels[2] = cv::Mat(image_temp.size(), CV_8U, image_temp.data + 2 * image_temp.size().area());
+                    cv::split(lab, lab_channels);
+
+                    auto clahe = cv::createCLAHE(2.0, { 8, 8 });
+                    clahe->apply(lab_channels[0], lab_channels[0]);
+
+                    cv::merge(lab_channels, lab);
+                    cv::cvtColor(lab, image_temp, cv::COLOR_YUV2BGR);
+                }
             }
             if (rot != 0) {
                 cv::Point2f center((width - 1) / 2.0, (height - 1) / 2.0);

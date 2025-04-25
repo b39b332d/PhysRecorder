@@ -1,2 +1,0 @@
-#include <vector>
-namespace capture {class CameraDevice;std::vector<CameraDevice*> EnumerateCamera_MSMF();std::vector<CameraDevice*> EnumerateCamera_MVis();std::vector<CameraDevice*> EnumerateCamera_RS();std::vector<CameraDevice*>(*enum_drivers[])()={EnumerateCamera_MSMF,EnumerateCamera_MVis,EnumerateCamera_RS,};}

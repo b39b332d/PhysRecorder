@@ -25,7 +25,7 @@ endforeach()
 string(APPEND CAM_DRIVER_REG "};}")
 string(APPEND CAM_DRIVER_DEF "${CAM_DRIVER_REG}")
 
-file(WRITE "DriverEnum.h" 
+file(WRITE "DriverEnum.tmp" 
 "${CAM_DRIVER_DEF}"
 )
 
