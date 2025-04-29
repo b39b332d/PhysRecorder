@@ -6,12 +6,17 @@
 #include <QFile>
 #include <QTextStream>
 #include <qstandardpaths.h>
-#include <windows.h>
 #include <SerialReader.h>
 #include <MultiSelectComboBox.h>
 #include "signalprocess.h"
 #include <video_ui.h>
 double win_length=8;
+
+#if defined(_WIN32) || defined(_WIN64)
+#define EXPORT __declspec(dllexport)
+#else
+#define EXPORT __attribute__((visibility("default")))
+#endif
 
 void MainWindow::refresh_plot() {
 
@@ -525,7 +530,7 @@ void MainWindow::stop_record() {
             ui->filenameLineEdit->setDisabled(false);
             setCursorBusy(false);
         });
-    MessageBeep(MB_OK);
+    QApplication::beep();
     
 }
 void MainWindow::onRecordToggled() {
@@ -581,7 +586,7 @@ bool MainWindow::emitFileSignal(bool is_start,QString msg) {
 }
 
 
-__declspec(dllexport) void start_mainwin(QSplashScreen& screen) {
+EXPORT void start_mainwin(QSplashScreen& screen) {
     MainWindow *w = new MainWindow(screen);
     w->show();
     screen.finish(w);

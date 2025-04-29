@@ -24,15 +24,16 @@ set(PROJECT_SOURCES
 add_library( PhysRecorder_main SHARED
     ${PROJECT_SOURCES}
 )
-
-find_library(delayimp_LIB NAMES  delayimp REQUIRED)
+if (MSVC)
+    find_library(delayimp_LIB NAMES  delayimp REQUIRED)
+endif()
 set_target_properties(PhysRecorder_main PROPERTIES 
     AUTOUIC ON
     AUTOMOC ON
     AUTORCC ON
 )
 
-target_include_directories(PhysRecorder_main PRIVATE ./ ${utils_dir})
+target_include_directories(PhysRecorder_main PRIVATE ./ ${utils_dir} )
 
 target_compile_definitions(PhysRecorder_main
     PRIVATE
@@ -46,17 +47,11 @@ add_subdirectory(recorder)
 add_subdirectory(utils)
 add_subdirectory(audio)
 
-target_link_libraries(PhysRecorder_main PRIVATE  
-Qt6::Widgets  
-cam_driver 
-phy_recorder 
-serial 
-phy_signal
-face_tracking
-)
-
-
-
+set(dep_target cam_driver phy_recorder phy_serial phy_signal face_tracking)
+target_link_libraries(PhysRecorder_main PRIVATE  Qt6::Widgets  ${dep_target})
+set_target_properties(PhysRecorder_main PROPERTIES 
+    CXX_VISIBILITY_PRESET hidden
+    C_VISIBILITY_PRESET hidden)
 
 set(APP_ICON_RESOURCE_WINDOWS "${CMAKE_SOURCE_DIR}/data/resources/appicon.rc")
 add_executable( PhysRecorder
@@ -72,9 +67,8 @@ set_target_properties(PhysRecorder PROPERTIES
     AUTOMOC ON
     AUTORCC ON
 )
-target_link_libraries(PhysRecorder PRIVATE PhysRecorder_main Qt6::Widgets ${delayimp_LIB})
+target_link_libraries(PhysRecorder PRIVATE PhysRecorder_main Qt6::Widgets ${MKL_LIBRARIES} ${delayimp_LIB})
 target_compile_definitions( PhysRecorder
     PRIVATE
     PROJECT_ROOT_PATH="./data/")
-target_link_options(PhysRecorder PRIVATE "/DELAYLOAD:PhysRecorder_main.dll")
 custom_target_install(PhysRecorder)

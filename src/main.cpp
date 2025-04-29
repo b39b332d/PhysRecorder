@@ -4,8 +4,13 @@
 #include <QMessageBox>
 #include <QFile>
 #include <QDir>
+#ifdef _WIN32
+  #define DLL_IMPORT __declspec(dllimport)
+#else
+  #define DLL_IMPORT 
+#endif
 
-__declspec(dllimport) void start_mainwin(QSplashScreen& screen);
+DLL_IMPORT void start_mainwin(QSplashScreen& screen);
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);

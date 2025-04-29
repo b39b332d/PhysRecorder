@@ -1,7 +1,5 @@
 #include "custom_serial.h"
-#include <qdebug>
-#include <qtimer>
-#include "serialport.h"
+#include <serial/serial.h>
 using namespace serial;
 CustomSerialReader::CustomSerialReader()
     :SerialReader(115200,"Serial")
@@ -49,7 +47,7 @@ FALSE_RETURN:
 }
 
 void CustomSerialReader::run() {
-    string read_data;
+    std::string read_data;
     int error_num = 0;
     try {
         serial_reader->open();

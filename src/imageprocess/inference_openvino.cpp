@@ -1,5 +1,6 @@
 #include <inference_openvino.h>
 #include <opencv2/imgcodecs.hpp>
+#include <thread>
 cv::Rect2i InferenceOV::getSquareBox(cv::Rect2i& face, cv::Size frame_size, double scale) {
 	float max_size = std::max(face.width, face.height) * scale;
 	float center_x = face.x + face.width / 2;

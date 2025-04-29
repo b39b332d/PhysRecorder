@@ -1,7 +1,7 @@
 #include "ppg.h"
-#include <qdebug>
-#include <qtimer>
-#include "serialport.h"
+#include <QTimer>
+#include <serial/serial.h>
+#include<string>
 using namespace serial;
 #define ppg_fs 200
 PPGReader::PPGReader()
@@ -80,7 +80,7 @@ FALSE_RETURN:
 }
 
 void PPGReader::run() {
-    string read_data;
+    std::string read_data;
     int error_num = 0;
     try {
         serial_reader->open();

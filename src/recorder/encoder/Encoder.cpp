@@ -1,6 +1,5 @@
 #include "Encoder.h"
 
-#define UNICODE
 #include <thread>
 #include <vector>
 #include <queue>
@@ -13,6 +12,8 @@
 #include <EncoderHUFF.hpp>
 #include <EncoderRAW.hpp>
 #include <semaphore>
+#include <condition_variable>
+
 namespace encoder {
 
 	EncoderComp* get_pencoder(int width, int height, PIX_TYPE e_type, int quality, PIX_TYPE d_type) {
@@ -33,8 +34,8 @@ namespace encoder {
 		return ts;
 	}
 	class stream_encoder {
-		std::counting_semaphore<CPU_COUNT * 2> out_empty = std::counting_semaphore<CPU_COUNT * 2>(CPU_COUNT * 2);
-		std::counting_semaphore<CPU_COUNT * 2> out_valid = std::counting_semaphore<CPU_COUNT * 2>(0);
+		std::counting_semaphore<PHY_CPU_COUNT * 2> out_empty = std::counting_semaphore<PHY_CPU_COUNT * 2>(PHY_CPU_COUNT * 2);
+		std::counting_semaphore<PHY_CPU_COUNT * 2> out_valid = std::counting_semaphore<PHY_CPU_COUNT * 2>(0);
 		std::mutex out_lock;
 		std::queue<EncodedFrame*> frames_out;
 		std::mutex frame_n_lock;
@@ -104,8 +105,8 @@ namespace encoder {
 	
 
 	std::vector<std::thread> thread_pool;
-	std::counting_semaphore<CPU_COUNT * 2> in_empty = std::counting_semaphore<CPU_COUNT * 2>(CPU_COUNT * 2);
-	std::counting_semaphore<CPU_COUNT * 2> in_valid = std::counting_semaphore<CPU_COUNT * 2>(0);
+	std::counting_semaphore<PHY_CPU_COUNT * 2> in_empty = std::counting_semaphore<PHY_CPU_COUNT * 2>(PHY_CPU_COUNT * 2);
+	std::counting_semaphore<PHY_CPU_COUNT * 2> in_valid = std::counting_semaphore<PHY_CPU_COUNT * 2>(0);
 	std::mutex in_lock;
 	std::queue<frame_container*> frames_in;
 	void enc_thread() {
@@ -141,7 +142,7 @@ namespace encoder {
 	bool is_stream_encoder_init = false;
 
 	void encoder_init() {
-		for (int i = 0; i < CPU_COUNT; i++) {
+		for (int i = 0; i < PHY_CPU_COUNT; i++) {
 			thread_pool.emplace_back(enc_thread);
 		}
 		is_stream_encoder_init = true; // never parallel

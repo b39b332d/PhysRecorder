@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=PhysRecorder
+Comment=Physiological Signals Recorder for rPPG
+Exec=PhysRecorder
+Icon=PhysRecorder
+Categories=Utility;

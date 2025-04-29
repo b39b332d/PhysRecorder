@@ -2,13 +2,19 @@
 cmake_minimum_required(VERSION 3.21)
 
 set(CMAKE_CXX_STANDARD 20)
-
-
+set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/install)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  ${CMAKE_INSTALL_PREFIX}/bin)
+list(APPEND CMAKE_INSTALL_RPATH "../lib")
+if(MSVC)
 SET(CMAKE_CXX_FLAGS_RELEASE "/O2")
+else()
+SET(CMAKE_CXX_FLAGS_RELEASE "-O2")
+endif()
+
 
 set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD on)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 get_property(GENERATOR_IS_MULTI_CONFIG_VAR GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(NOT GENERATOR_IS_MULTI_CONFIG_VAR AND NOT DEFINED CMAKE_BUILD_TYPE)
     message(STATUS "CMAKE_BUILD_TYPE not defined, 'Release' will be used")
@@ -16,6 +22,10 @@ if(NOT GENERATOR_IS_MULTI_CONFIG_VAR AND NOT DEFINED CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel ...")
 endif()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+if (DEFINED ENV{CONDA_PREFIX})
+  list(APPEND CMAKE_LIBRARY_PATH $ENV{CONDA_PREFIX}/lib)
+  list(APPEND CMAKE_INCLUDE_PATH $ENV{CONDA_PREFIX}/include)
+endif()
 
 project(rPPG LANGUAGES CXX C)
 add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
@@ -30,6 +40,7 @@ endif()
 include(FetchContent )
 set (FETCHCONTENT_QUIET FALSE)
 
+include(ExternalProject)
 
 cmake_host_system_information(RESULT ProcessorCount_N QUERY NUMBER_OF_PHYSICAL_CORES)
 message(STATUS "CMake ${CMAKE_VERSION} using ${ProcessorCount_N} threads")
@@ -121,6 +132,12 @@ get_target_property(cv_core opencv_core IMPORTED_LOCATION_${Porject_BUILD_TYPE_U
 get_filename_component(INSTALL_OPENCV_BIN "${cv_core}" DIRECTORY)
 list(APPEND INSTALL_DEP_PATHS ${INSTALL_OPENCV_BIN})
 
+####### FIND OPENVINO
+find_package(OpenVINO QUIET)
+
+set(OPENVINO_PATH_EXT "openvino-${OpenVINO_VERSION}")
+string(SUBSTRING ${OpenVINO_VERSION_MAJOR} 2 -1 OpenVINO_VERSION_COMPACT)
+set(OpenVINO_VERSION_COMPACT ${OpenVINO_VERSION_COMPACT}${OpenVINO_VERSION_MINOR}${OpenVINO_VERSION_PATCH})
 ####### FIND Qt
 find_package(Qt6 COMPONENTS Widgets Gui Core)
 if(NOT Qt6_FOUND AND DOWNLOAD_URL)
@@ -141,11 +158,34 @@ endif()
 
 get_target_property(mocExe Qt6::moc IMPORTED_LOCATION)
 get_filename_component(qtBinDir "${mocExe}" DIRECTORY)
-find_program(DEPLOYQT_EXECUTABLE windeployqt PATHS "${qtBinDir}" NO_DEFAULT_PATH)
-
+if(WIN32)
+  find_program(DEPLOYQT_EXECUTABLE windeployqt PATHS "${qtBinDir}" PATH_SUFFIXES bin NO_DEFAULT_PATH)
+elseif(UNIX)
+message(${qtBinDir})
+  find_program(QMAKE_EXECUTABLE qmake PATHS "${qtBinDir}" PATH_SUFFIXES bin NO_DEFAULT_PATH REQUIRED)
+  find_program(DEPLOYQT_EXECUTABLE linuxdeployqt)
+  if(NOT ${DEPLOYQT_EXECUTABLE})
+    set(LINUXDEPLOYQT_PREFIX  ${CMAKE_CURRENT_BINARY_DIR}/linuxdeployqt)
+    ExternalProject_Add(
+        linuxdeployqt_external
+        GIT_REPOSITORY https://gitcode.com/gh_mirrors/li/linuxdeployqt.git
+        GIT_TAG origin/master
+        PREFIX  ${LINUXDEPLOYQT_PREFIX}
+        CMAKE_ARGS
+            -DCMAKE_INSTALL_PREFIX=${LINUXDEPLOYQT_PREFIX}/install # Install prefix for the external project
+            -DCMAKE_BUILD_TYPE=Release # Pass the build type (Debug, Release, etc.)
+        INSTALL_BYPRODUCTS 
+          ${LINUXDEPLOYQT_PREFIX}/install/bin/linuxdeployqt # Adjust path if needed
+        LOG_CONFIGURE TRUE # Log the configure step output
+        LOG_BUILD TRUE     # Log the build step output
+        LOG_INSTALL TRUE   # Log the install step output
+    )
+    set(DEPLOYQT_EXECUTABLE "${LINUXDEPLOYQT_PREFIX}/install/bin/linuxdeployqt") 
+  endif()
+endif()
 ####### FIND MKL
-set(MKL_LINK static)
-set(MKL_THREADING tbb_thread CACHE STRING "" FORCE)
+set(USE_STATIC_MKL FALSE)
+set(MKL_THREADING SEQ)
 find_package(MKL)
 
 ####### FIND Eigen3
@@ -153,44 +193,81 @@ FetchContent_Declare(
     Eigen3
     GIT_REPOSITORY  https://gitlab.com/libeigen/eigen.git
     GIT_TAG master
+    GIT_SHALLOW TRUE
     EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(Eigen3)
 
-######### FIND PACKEXE
-if(Porject_BUILD_TYPE STREQUAL "release" AND WIN32)
-    if(NOT ENIGMAVBCONXOLE_EXE OR NOT UPX_EXE)
-        if(${DOWNLOAD_URL})
-            FetchContent_Declare(
-                BOX_TOOLS
-                URL  "${DOWNLOAD_URL}/box_tools.zip"
-                DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-                OVERRIDE_FIND_PACKAGE
-                EXCLUDE_FROM_ALL
-            )
-            FetchContent_MakeAvailable(BOX_TOOLS)
-    
-            set(ENIGMAVBCONXOLE_EXE "${box_tools_SOURCE_DIR}/enigmavbconsole.exe")
-            set(UPX_EXE "${box_tools_SOURCE_DIR}/upx.exe")
-        endif()
-    endif()
-    if(ENIGMAVBCONXOLE_EXE AND UPX_EXE)
-        add_custom_target(generate_boxed_exe
-            COMMAND ${CMAKE_COMMAND} -DEXEC_NAME=PhysRecorder -DUPX_EXE=${UPX_EXE} -DEVB_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}/bin -P ${CMAKE_HOME_DIRECTORY}/cmake/configure_evb_file.cmake 
-            COMMAND ${ENIGMAVBCONXOLE_EXE} ${CMAKE_INSTALL_PREFIX}/bin/PhysRecorder.evb
-            DEPENDS install
-            USES_TERMINAL
-        )
-    endif()
-endif()
 
+######### FIND PACKEXE
+if(Porject_BUILD_TYPE STREQUAL "release")
+  if(WIN32)
+        if(NOT ENIGMAVBCONXOLE_EXE OR NOT UPX_EXE)
+            if(${DOWNLOAD_URL})
+                FetchContent_Declare(
+                    BOX_TOOLS
+                    URL  "${DOWNLOAD_URL}/box_tools.zip"
+                    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+                    OVERRIDE_FIND_PACKAGE
+                    EXCLUDE_FROM_ALL
+                )
+                FetchContent_MakeAvailable(BOX_TOOLS)
+        
+                set(ENIGMAVBCONXOLE_EXE "${box_tools_SOURCE_DIR}/enigmavbconsole.exe")
+                set(UPX_EXE "${box_tools_SOURCE_DIR}/upx.exe")
+            endif()
+        endif()
+        if(ENIGMAVBCONXOLE_EXE AND UPX_EXE)
+            add_custom_target(generate_boxed_exe
+                COMMAND ${CMAKE_COMMAND} -DEXEC_NAME=PhysRecorder -DUPX_EXE=${UPX_EXE} -DEVB_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}/bin -P ${CMAKE_HOME_DIRECTORY}/cmake/configure_evb_file.cmake 
+                COMMAND ${ENIGMAVBCONXOLE_EXE} ${CMAKE_INSTALL_PREFIX}/bin/PhysRecorder.evb
+                DEPENDS install
+                USES_TERMINAL
+            )
+            set_target_properties(generate_boxed_exe PROPERTIES EXCLUDE_FROM_ALL TRUE)
+    endif()
+  elseif(UNIX)
+    find_program(APPIMAGE_PACK_EXE appimagetool)
+    if(NOT ${APPIMAGE_PACK_EXE})
+      set(APPIMAGE_PREFIX  ${CMAKE_CURRENT_BINARY_DIR}/appimage)
+      ExternalProject_Add(
+        appimage_external
+          GIT_REPOSITORY https://gitcode.com/gh_mirrors/ap/appimagetool.git
+          GIT_TAG origin/main
+          PREFIX  ${APPIMAGE_PREFIX}
+          CMAKE_ARGS
+              -DCMAKE_INSTALL_PREFIX=${APPIMAGE_PREFIX}/install # Install prefix for the external project
+              -DCMAKE_BUILD_TYPE=Release # Pass the build type (Debug, Release, etc.)
+              -DCMAKE_INCLUDE_PATH=${CMAKE_INCLUDE_PATH}
+          BUILD_BYPRODUCTS
+            ${APPIMAGE_PREFIX}/bin/appimagetool # Adjust path if needed
+          LOG_CONFIGURE TRUE # Log the configure step output
+          LOG_BUILD TRUE     # Log the build step output
+          LOG_INSTALL TRUE   # Log the install step output
+          EXCLUDE_FROM_ALL TRUE
+      )
+      get_property(APPIMAGE_EXE_PATH TARGET appimage_external PROPERTY BINARY_DIR)
+      set(APPIMAGE_EXECUTABLE "${APPIMAGE_EXE_PATH}/bin/appimagetool") 
+      set(ENV{PATH} "$ENV{PATH}:${APPIMAGE_EXE_PATH}/bin")
+    endif()
+    
+    add_custom_target(generate_boxed_exe
+        COMMAND ${CMAKE_COMMAND} -DEXEC_NAME=PhysRecorder -DUPX_EXE=${UPX_EXE} -DEVB_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}/bin -P ${CMAKE_HOME_DIRECTORY}/cmake/configure_evb_file.cmake 
+        COMMAND ${ENIGMAVBCONXOLE_EXE} ${CMAKE_INSTALL_PREFIX}/bin/PhysRecorder.evb
+        DEPENDS install
+        USES_TERMINAL
+    )
+    set_target_properties(generate_boxed_exe PROPERTIES EXCLUDE_FROM_ALL TRUE)
+    add_dependencies(generate_boxed_exe appimage_external)
+
+  endif()
+endif()
 ####### FIND MSMF
 find_package(MSMF)
 ####### FIND MVis
 find_package(MVis)
 ####### FIND Realsense
 find_package(Realsense)
-list(APPEND INSTALL_DEP_PATHS "${Realsense_ROOT}/bin/x64/")
 
 ####### FIND libyuv
 if(MSVC)
@@ -230,74 +307,53 @@ if(NOT TARGET yuv)
         libyuv
         GIT_REPOSITORY  https://gitcode.com/gh_mirrors/li/libyuv.git
         GIT_TAG main
+        GIT_SHALLOW TRUE
         EXCLUDE_FROM_ALL
     )
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
     FetchContent_MakeAvailable(libyuv)
     target_include_directories(yuv INTERFACE "${libyuv_SOURCE_DIR}/include/")
     set(libyuv_status ${CMAKE_CXX_COMPILER_ID})
 endif()
 
+
+####### Find serial
+FetchContent_Declare(
+  libserial
+  GIT_REPOSITORY  https://gitcode.com/gh_mirrors/se/serial.git
+  GIT_SHALLOW TRUE
+  GIT_TAG main
+  EXCLUDE_FROM_ALL
+)
+FetchContent_GetProperties(libserial)
+if(NOT libserial_POPULATED)
+  FetchContent_Populate(libserial)
+  add_subdirectory(${libserial_SOURCE_DIR} ${libserial_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+target_include_directories(serial PUBLIC "${libserial_SOURCE_DIR}/include/")
 ####### Find dlib
 FetchContent_Declare(
     dlib
     URL https://pypi.tuna.tsinghua.edu.cn/packages/14/4c/8444567b0b82b0c146fd746f96751ffc7feb25e5ed628c35b88b9673c2ff/dlib-19.24.8.tar.gz
     URL_HASH SHA256=9135900983e279b5e5d0b1bb31b684a3054ea4f3ea1b1c69e8a675659271003d
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     SOURCE_SUBDIR  dlib
     EXCLUDE_FROM_ALL
 )
-if(NOT CMAKE_PROPERTY_LIST)
-    execute_process(COMMAND cmake --help-property-list OUTPUT_VARIABLE CMAKE_PROPERTY_LIST)
-    
-    # Convert command output into a CMake list
-    string(REGEX REPLACE ";" "\\\\;" CMAKE_PROPERTY_LIST "${CMAKE_PROPERTY_LIST}")
-    string(REGEX REPLACE "\n" ";" CMAKE_PROPERTY_LIST "${CMAKE_PROPERTY_LIST}")
-    list(REMOVE_DUPLICATES CMAKE_PROPERTY_LIST)
-endif()
-function(print_properties)
-    message("CMAKE_PROPERTY_LIST = ${CMAKE_PROPERTY_LIST}")
-endfunction()
-    
-function(print_target_properties target)
-    if(NOT TARGET ${target})
-      message(STATUS "There is no target named '${target}'")
-      return()
-    endif()
 
-    foreach(property ${CMAKE_PROPERTY_LIST})
-        string(REPLACE "<CONFIG>" "${CMAKE_BUILD_TYPE}" property ${property})
-
-        # Fix https://stackoverflow.com/questions/32197663/how-can-i-remove-the-the-location-property-may-not-be-read-from-target-error-i
-        if(property STREQUAL "LOCATION" OR property MATCHES "^LOCATION_" OR property MATCHES "_LOCATION$")
-            continue()
-        endif()
-
-        get_property(was_set TARGET ${target} PROPERTY ${property} SET)
-        if(was_set)
-            get_target_property(value ${target} ${property})
-            message("${target} ${property} = ${value}")
-        endif()
-    endforeach()
-endfunction()
-
-set(DLIB_NO_GUI_SUPPORT TRUE CACHE BOOL "" FORCE)
-set(DLIB_PNG_SUPPORT FALSE CACHE BOOL "" FORCE)
-set(DLIB_GIF_SUPPORT FALSE CACHE BOOL "" FORCE)
-set(DLIB_JPEG_SUPPORT FALSE CACHE BOOL "" FORCE)
-set(DLIB_USE_MKL_FFT FALSE CACHE BOOL "" FORCE)
-set(DLIB_USE_FFMPEG FALSE CACHE BOOL "" FORCE)
+set(DLIB_NO_GUI_SUPPORT TRUE)
+set(DLIB_PNG_SUPPORT FALSE)
+set(DLIB_GIF_SUPPORT FALSE)
+set(DLIB_JPEG_SUPPORT FALSE)
+set(DLIB_USE_MKL_FFT FALSE)
+set(DLIB_USE_FFMPEG FALSE)
 if(MKL_FOUND)
-    set(DLIB_USE_LAPACK TRUE CACHE BOOL "" FORCE)
-    set(DLIB_USE_BLAS TRUE CACHE BOOL "" FORCE)
-    set(DLIB_USE_MKL_WITH_TBB TRUE TRUE CACHE BOOL "" FORCE)
-    set(mkl_tbb ${_tbb_release_lib} CACHE FILEPATH "" FORCE)
-    if(Porject_BUILD_TYPE STREQUAL "debug")
-        set(mkl_tbb_thread ${mkl_tbb_threadd_file} CACHE FILEPATH "" FORCE)
-    endif()
+    set(DLIB_USE_LAPACK TRUE)
+    set(DLIB_USE_BLAS TRUE)
+    set(DLIB_USE_MKL_SEQUENTIAL TRUE)
 else()
-    set(DLIB_USE_LAPACK FALSE CACHE BOOL "" FORCE)
-    set(DLIB_USE_BLAS FALSE CACHE BOOL "" FORCE)
-    set(DLIB_USE_MKL_WITH_TBB FALSE TRUE CACHE BOOL "" FORCE)
+    set(DLIB_USE_LAPACK FALSE)
+    set(DLIB_USE_BLAS FALSE)
+    set(DLIB_USE_MKL_SEQUENTIAL)
 endif()
 
 FetchContent_MakeAvailable(dlib)
@@ -326,7 +382,6 @@ message(STATUS "dlib library status:")
 message(STATUS "    version: ${DLIB_VERSION}")
 message(STATUS "    lapack: ${DLIB_USE_LAPACK}")
 if(MKL_FOUND)
-    get_target_property(mkl_type MKL::MKL TYPE)
     message(STATUS "MKL library status:")
     message(STATUS "    config: ${MKL_ROOT}")
     message(STATUS "    version: ${MKL_VERSION}")

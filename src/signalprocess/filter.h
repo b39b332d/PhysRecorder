@@ -1,3 +1,4 @@
+#include <cstdint>
 class BiquadFilter {
 	const double& a1, & a2;
 	const double& b0, & b1, & b2;
@@ -17,7 +18,7 @@ class FilterIIR {
 	bool first_input,is_highpass;
 	double first_val;
 public:
-	FilterIIR(const unsigned long long[][6], int, bool is_highpass=true);
+	FilterIIR(const uint64_t[][6], int, bool is_highpass=true);
 	double filter(double x);
 	void reset();
 };

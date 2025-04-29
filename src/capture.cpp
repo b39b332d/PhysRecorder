@@ -2,11 +2,9 @@
 #include <iostream>
 #include <vector>
 #include <deque>
-#include <qdebug>
 #include "cnpy.h"
 #include <QSharedPointer>
 #include <algorithm>
-#include <windows.h>
 #include <inference_openvino.h>
 #include <ImageDecoder.h>
 

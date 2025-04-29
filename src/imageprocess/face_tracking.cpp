@@ -16,10 +16,10 @@ cv::Rect2i FaceTracking::rectify(const cv::Rect2i& dst, const cv::Size2i& size) 
 }
 
 FaceTracking::FaceTracking(Inference* inf_backend) :inf_backend(inf_backend) {
+	buffer = new Buffer;
 	for (int i = 0; i < inf_backend->threads_n; i++) {
 		tracking_threads.push_back(new std::thread(&FaceTracking::tracking_loop, this, i));
 	}
-	buffer = new Buffer;
 };
 FaceTracking::~FaceTracking() {
 	for (auto thread : tracking_threads) {

@@ -7,7 +7,7 @@
 #include <inference.h>
 #include <frame_types.h>
 #include <kalman.h>
-
+#include <condition_variable>
 #define DEBUG_LEVEL 0
 
 #if DEBUG_LEVEL >0

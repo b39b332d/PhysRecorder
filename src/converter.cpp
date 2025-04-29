@@ -1,6 +1,5 @@
 #include "converter.h"
 #include<iostream>
-#include<qdebug>
 #include <qcursor.h>
 
 #include <opencv2/highgui.hpp>
@@ -20,8 +19,15 @@ inline void cvt_puttext(capture::CameraStream*stream, cv::Mat& m_frame, std::chr
         stream->previous_fps_time = current_time;
         stream->count = 0;
     }
-    cv::putText(m_frame, std::format("{:.2f}fps",
-        stream->previous_fps),
+    std::string buffer("",10);
+    // Use snprintf to write to the buffer
+    snprintf(
+        buffer.data(),      // Pointer to the buffer
+        buffer.size(),      // Maximum number of bytes to write (including null terminator)
+        "%.2f",       // The format string
+        stream->previous_fps       // Corresponds to the %.2f
+    );
+    cv::putText(m_frame, buffer,
         { 30, 30 }, cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1);
 
 }

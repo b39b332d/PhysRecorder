@@ -2,15 +2,14 @@
 #define RESPIREADER_H
 
 #include <qthread.h>
-#include "serialport.h"
 #include "SerialReader.h"
 class RESPIReader :public SerialReader {
-	Q_OBJECT
 public:
 	RESPIReader();
-	bool setPortName(const std::string& portNames);
+	bool setPortName(const std::string& portNames) override;
+
 private:
-	void run();
+	void run() override;
 	friend SerialReader;
 };
 #endif

@@ -111,22 +111,22 @@ void VideoUI::init(Ui::MainWindow* main_ui, SignalProcess* signalProcess)
 #define match_array_qobj_camopts(obj,dev,name) camopt_##obj[capture::DEVICE_##dev] = ui->obj##_##name
 
 #define  match_array_camopts(obj) \
-    match_array_qobj_camopts(##obj, EXPOSURE, exposure);\
-    match_array_qobj_camopts(##obj, GAIN, gain);\
-    match_array_qobj_camopts(##obj, WHITE_BALANCE, whiteBalance);\
-    match_array_qobj_camopts(##obj, GAMMA, gamma);\
-    match_array_qobj_camopts(##obj, LIGHT, light);\
-    match_array_qobj_camopts(##obj, ZOOM, zoom);\
-    match_array_qobj_camopts(##obj, PAN, pan);\
-    match_array_qobj_camopts(##obj, TILT, tilt);\
-    match_array_qobj_camopts(##obj, ROLL, roll);\
-    match_array_qobj_camopts(##obj, IRIS, iris);\
-    match_array_qobj_camopts(##obj, FOCUS, focus);\
-    match_array_qobj_camopts(##obj, CONTRAST, contrast);\
-    match_array_qobj_camopts(##obj, HUE, hue);\
-    match_array_qobj_camopts(##obj, SATURATION, saturation);\
-    match_array_qobj_camopts(##obj, SHARPNESS, sharpness);\
-    match_array_qobj_camopts(##obj, BRIGHTNESS, brightness);
+    match_array_qobj_camopts(obj, EXPOSURE, exposure);\
+    match_array_qobj_camopts(obj, GAIN, gain);\
+    match_array_qobj_camopts(obj, WHITE_BALANCE, whiteBalance);\
+    match_array_qobj_camopts(obj, GAMMA, gamma);\
+    match_array_qobj_camopts(obj, LIGHT, light);\
+    match_array_qobj_camopts(obj, ZOOM, zoom);\
+    match_array_qobj_camopts(obj, PAN, pan);\
+    match_array_qobj_camopts(obj, TILT, tilt);\
+    match_array_qobj_camopts(obj, ROLL, roll);\
+    match_array_qobj_camopts(obj, IRIS, iris);\
+    match_array_qobj_camopts(obj, FOCUS, focus);\
+    match_array_qobj_camopts(obj, CONTRAST, contrast);\
+    match_array_qobj_camopts(obj, HUE, hue);\
+    match_array_qobj_camopts(obj, SATURATION, saturation);\
+    match_array_qobj_camopts(obj, SHARPNESS, sharpness);\
+    match_array_qobj_camopts(obj, BRIGHTNESS, brightness);
 
     match_array_camopts(checkBox);
     match_array_camopts(pushButton);
@@ -140,16 +140,16 @@ void VideoUI::init(Ui::MainWindow* main_ui, SignalProcess* signalProcess)
 
 
 #define match_qobj_streamopts(n,name) \
-    streamopt_checkBox[capture::##n] = ui->checkBox_p##name; \
-    streamopt_slider[capture::##n] = ui->slider_p##name; \
-    streamopt_pushButton[capture::##n] = ui->pushButton_p##name
+    streamopt_checkBox[n] = ui->checkBox_p##name; \
+    streamopt_slider[n] = ui->slider_p##name; \
+    streamopt_pushButton[n] = ui->pushButton_p##name
 
-    match_qobj_streamopts(STREAM_CONTRAST, contrast);
-    match_qobj_streamopts(STREAM_BRIGHTNESS, brightness);
-    match_qobj_streamopts(STREAM_SHARPNESS, sharpness);
-    match_qobj_streamopts(STREAM_GAMMA, gamma);
-    match_qobj_streamopts(STREAM_SATURATION, saturation);
-    match_qobj_streamopts(STREAM_VALUE, value);
+    match_qobj_streamopts(capture::STREAM_CONTRAST, contrast);
+    match_qobj_streamopts(capture::STREAM_BRIGHTNESS, brightness);
+    match_qobj_streamopts(capture::STREAM_SHARPNESS, sharpness);
+    match_qobj_streamopts(capture::STREAM_GAMMA, gamma);
+    match_qobj_streamopts(capture::STREAM_SATURATION, saturation);
+    match_qobj_streamopts(capture::STREAM_VALUE, value);
 
 
     connect(ui->pushButton_resetVideo, &QPushButton::clicked, this, [this]() {
@@ -960,7 +960,7 @@ std::set<T> intersectSets(const std::vector<std::set<T>>& sets) {
 }
 void VideoUI::encoder_changed() {
     capture::CameraStream* stream = comboBox_stream->getHighLightData().value<capture::CameraStream*>();
-    if (GET_PIX_TYPE_NAME(stream->encoder_method) != ui->comboBox_codec->currentText()) {
+    if (ui->comboBox_codec->currentText().toStdString() !=  GET_PIX_TYPE_NAME(stream->encoder_method)) {
         std::vector<std::set<PIX_TYPE>> support_pixs;
         support_pixs.push_back(MediaWriter::get_supported_encoders(stream->get_current_profile()->format));
 

@@ -1,10 +1,8 @@
 #include "SerialReader.h"
-#include <qdebug>
-#include <qtimer>
 #include <qcustomplot.h>
 #include <cnpy.h>
 
-#include <serialport.h>
+#include <serial/serial.h>
 using namespace serial;
 #define UPDATE_RESOLUTION 0.03
 extern double win_length;

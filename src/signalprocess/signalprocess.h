@@ -4,7 +4,7 @@
 #include <opencv2/imgproc.hpp>
 #include <qimage.h>
 #include <queue>
-#include <qlabel>
+#include <QLabel>
 #include <atomic>
 
 #include<qcustomplot.h>

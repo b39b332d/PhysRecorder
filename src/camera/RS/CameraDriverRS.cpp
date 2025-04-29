@@ -30,7 +30,6 @@ namespace capture {
     CameraDeviceRS::CameraDeviceRS(rs2::device& rs_device, rs2::sensor& rs_sensor) :
         rs_device(rs_device), rs_sensor(rs_sensor)
     {
-        auto converter = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>();
         device_name = "Unknown Device";
         if (rs_device.supports(RS2_CAMERA_INFO_NAME))
             device_name = rs_device.get_info(RS2_CAMERA_INFO_NAME);

@@ -1,10 +1,13 @@
 #pragma once
+#include <iostream>
+#include <thread>
+#include <chrono>
 
-#include <Qthread>
 #include <vector>
 #include <string>
 #include <mutex>
 #include <thread>
+#include <QObject>
 namespace serial {
 	class PortInfo;
 	class Serial;
@@ -17,7 +20,7 @@ public:
 	SerialReader(unsigned int baudrate = 9600,const std::string& n="");
 	virtual ~SerialReader();
 	bool setPort(const serial::PortInfo&);
-	virtual bool setPortName(const std::string& portNames)=0;
+	virtual bool setPortName(const std::string& portNames) = 0;
 	bool start_reading();
 	bool stop_reading();
 	void serial_add_signal(double , double);
@@ -49,6 +52,9 @@ protected:
 	serial::Serial* serial_reader;
 	std::atomic_bool stop_read_sig = false;;
 	void onSerialStop();
+	void Sleep(int ms){
+		std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+	}
 
 private:
 	double last_ts = 0;

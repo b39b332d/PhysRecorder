@@ -1,16 +1,13 @@
 #ifndef PPGREADER_H
 #define PPGREADER_H
-#include <Qthread>
-#include "serialport.h"
 #include "SerialReader.h"
 class PPGReader :public SerialReader {
-	Q_OBJECT
 public:
 	PPGReader();
-	bool setPortName(const std::string& portNames);
+	bool setPortName(const std::string& portNames) override;
 	char device_c;
 private:
-	void run();
+	void run() override;
 	friend SerialReader;
 };
 #endif

@@ -13,7 +13,7 @@ void BiquadFilter::reset() {
 }
 
 
-FilterIIR::FilterIIR(const unsigned long long w[][6], int order,bool is_highpass)
+FilterIIR::FilterIIR(const uint64_t w[][6], int order,bool is_highpass)
 	: order(order)
 	, cascade(order / 2)
 	, is_highpass(is_highpass)

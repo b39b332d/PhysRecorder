@@ -7,6 +7,7 @@
 #include <gwavi.h>
 #include <Encoder.h>
 #include <set>
+#include <thread>
 
 class MediaWriter {
 	gwavi_t* container_writer = nullptr;

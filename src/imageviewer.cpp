@@ -1,7 +1,6 @@
 #include "imageviewer.h"
 #include<iostream>
 #include <QMouseEvent>
-#include <qdebug>
 #include <QGridLayout>
 ImageViewer::ImageViewer(QWidget* parent) : QWidget(parent)
 {

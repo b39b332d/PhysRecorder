@@ -7,7 +7,6 @@
 #include <frame_types.h>
 #include <thread>
 #include <mutex>
-#include <format>
 #include <unordered_map>
 #include <set>
 #include <type_traits>
@@ -15,7 +14,7 @@
 #include <ImageDecoder.h>
 #define cam_frame_buf_len 16
 #include <Option.hpp>
-
+#include <condition_variable>
 
 namespace capture {
 
@@ -40,7 +39,17 @@ namespace capture {
         }
         bool is_valid() { return format != PIX_TYPE_ERR; }
         std::string get_profile_str() {
-            return std::format("{}x{}@{:.2f}", resolution.width, resolution.height, ratio.get());
+            std::string buffer("",50);
+            // Use snprintf to write to the buffer
+            snprintf(
+                buffer.data(),      // Pointer to the buffer
+                buffer.size(),      // Maximum number of bytes to write (including null terminator)
+                "%dx%d@%.2f",       // The format string
+                resolution.width,   // Corresponds to the first %d
+                resolution.height,  // Corresponds to the second %d
+                ratio.get()         // Corresponds to the %.2f
+            );
+            return buffer;
         }
         std::string get_profile_codec() {
             return GET_PIX_TYPE_NAME(format);

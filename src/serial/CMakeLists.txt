@@ -1,12 +1,11 @@
 
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-
-add_library(serial OBJECT ppg.h ppg.cpp serialport.cpp serialport.h respi.cpp respi.h custom_serial.cpp custom_serial.cpp SerialReader.cpp)
-target_link_libraries(serial PUBLIC Qt6::Core)
-target_include_directories(serial PUBLIC ./ ${utils_dir})
+add_library(phy_serial STATIC ppg.h ppg.cpp respi.cpp respi.h custom_serial.cpp custom_serial.cpp SerialReader.cpp)
+target_link_libraries(phy_serial PUBLIC Qt6::Widgets serial )
+target_include_directories(phy_serial PUBLIC ./ ${utils_dir})
+set_target_properties(phy_serial PROPERTIES 
+    AUTOMOC ON
+)
 
 if(MSVC)
-	target_link_libraries(serial PUBLIC "Setupapi.lib") # Serial
+	target_link_libraries(phy_serial PUBLIC "Setupapi.lib") # Serial
 endif()

@@ -129,7 +129,7 @@ int main() {
 		std::cout << "WIC multithread test\n";
 		// Initialize COM
 		CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pFactory));
-		static const int threads = CPU_COUNT;
+		static const int threads = PHY_CPU_COUNT;
 		std::barrier bar(threads+1);
 		std::vector<std::thread> th_pool;
 		for (int i = 0; i < threads; i++)
@@ -176,7 +176,7 @@ int main() {
 
 	{
 		std::cout << "opencv multithread test\n";
-		static const int threads = CPU_COUNT;
+		static const int threads = PHY_CPU_COUNT;
 		std::barrier bar(threads+1);
 		std::vector<std::thread> th_pool;
 		for (int i = 0; i < threads; i++)
