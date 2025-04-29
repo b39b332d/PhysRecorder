@@ -28,9 +28,11 @@ if (DEFINED ENV{CONDA_PREFIX})
 endif()
 
 project(rPPG LANGUAGES CXX C)
-add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
-add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
-
+if(WIN32)
+    set(CMAKE_INSTALL_LIBDIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+    add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
+endif()
 if ("${CMAKE_CONFIGURATION_TYPES}" STREQUAL Debug OR "${CMAKE_BUILD_TYPE}" STREQUAL Debug)
     set(Porject_BUILD_TYPE debug)
 else()
@@ -55,7 +57,7 @@ set(OpenCV_ROOT CACHE PATH "OpenCV directory which contain release and debug bui
 set(Qt6_ROOT  CACHE PATH "Qt root directory")
 set(Realsense_ROOT CACHE PATH "RealSense root directory")
 set(MVis_ROOT  CACHE PATH "MindVision SDK Root directory")
-set(MKL_DIR  CACHE PATH "MKL cmake directory")
+set(MKL_ROOT  CACHE PATH "MKL cmake directory")
 set(LIBYUV_PATH  CACHE PATH "libyuv.dll path")
 
 set(ENIGMAVBCONXOLE_EXE CACHE PATH "ENIGMA_BOX executable path")
@@ -134,6 +136,22 @@ list(APPEND INSTALL_DEP_PATHS ${INSTALL_OPENCV_BIN})
 
 ####### FIND OPENVINO
 find_package(OpenVINO QUIET)
+if(NOT OpenVINO_FOUND AND DOWNLOAD_URL)
+    FetchContent_Declare(
+        OpenVINO_Build
+        URL "${DOWNLOAD_URL}/openvino2450/${PHY_RUNTIME}/${PHY_ARCH}.tar.gz"
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+        OVERRIDE_FIND_PACKAGE
+    )
+    FetchContent_MakeAvailable(OpenVINO_Build)
+    find_package(OpenVINO REQUIRED NO_SYSTEM_ENVIRONMENT_PATH HINTS ${openvino_build_SOURCE_DIR}/runtime )
+endif()
+if(NOT OpenVINO_FOUND)
+    message( FATAL_ERROR "OpenVINO does not exist! CMake will exit." )
+endif()
+get_target_property(ov_core openvino::runtime IMPORTED_LOCATION_${Porject_BUILD_TYPE_UPPER})
+get_filename_component(INSTALL_OPENVINO_BIN "${ov_core}" DIRECTORY)
+list(APPEND INSTALL_DEP_PATHS ${INSTALL_OPENVINO_BIN})
 
 set(OPENVINO_PATH_EXT "openvino-${OpenVINO_VERSION}")
 string(SUBSTRING ${OpenVINO_VERSION_MAJOR} 2 -1 OpenVINO_VERSION_COMPACT)
@@ -161,7 +179,6 @@ get_filename_component(qtBinDir "${mocExe}" DIRECTORY)
 if(WIN32)
   find_program(DEPLOYQT_EXECUTABLE windeployqt PATHS "${qtBinDir}" PATH_SUFFIXES bin NO_DEFAULT_PATH)
 elseif(UNIX)
-message(${qtBinDir})
   find_program(QMAKE_EXECUTABLE qmake PATHS "${qtBinDir}" PATH_SUFFIXES bin NO_DEFAULT_PATH REQUIRED)
   find_program(DEPLOYQT_EXECUTABLE linuxdeployqt)
   if(NOT ${DEPLOYQT_EXECUTABLE})
@@ -187,6 +204,11 @@ endif()
 set(USE_STATIC_MKL FALSE)
 set(MKL_THREADING SEQ)
 find_package(MKL)
+if(MKL_FOUND)
+    get_filename_component(MKL_BIN "${MKL_LIBRARIES_mkl_core_LIBRARY}" DIRECTORY)
+    get_filename_component(MKL_BIN "${MKL_BIN}" DIRECTORY)
+    list(APPEND INSTALL_DEP_PATHS ${MKL_BIN}/bin)
+endif()
 
 ####### FIND Eigen3
 FetchContent_Declare(
