@@ -125,14 +125,14 @@ function(custom_target_install tgt)
                     install(CODE "list(APPEND _CMAKE_DEPS ${dnn_dep})")
                 else()
                     find_all_library(openvino_intel_cpu_plugin_lib PATH_SUFFIXES ${OPENVINO_PATH_EXT} 
-                        openvino_intel_cpu_plugin${shared_ext}
+                        ${shared_prefix}openvino_intel_cpu_plugin${shared_ext}
                         ${shared_prefix}openvino_intel_cpu_plugin${shared_ext}.${OpenVINO_VERSION_COMPACT}
                         ${shared_prefix}openvino_intel_cpu_plugin${shared_ext}.${OpenVINO_VERSION})
                     list(APPEND dnn_dep_dst ${openvino_intel_cpu_plugin_lib})
                     find_all_library(openvino_ir_frontend_lib PATH_SUFFIXES ${OPENVINO_PATH_EXT}
-                         ${shared_prefix}openvino_ir_frontend${shared_ext}.${OpenVINO_VERSION_COMPACT}
+                        ${shared_prefix}openvino_ir_frontend${shared_ext}.${OpenVINO_VERSION_COMPACT}
                         ${shared_prefix}openvino_ir_frontend${shared_ext}.${OpenVINO_VERSION}
-                        openvino_ir_frontend${shared_ext})
+                        ${shared_prefix}openvino_ir_frontend${shared_ext})
                     list(APPEND dnn_dep_dst ${openvino_ir_frontend_lib})
                     install(FILES ${dnn_dep_dst} TYPE LIB)
                 endif()

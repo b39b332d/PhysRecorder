@@ -586,7 +586,9 @@ bool MainWindow::emitFileSignal(bool is_start,QString msg) {
 }
 
 
-EXPORT void start_mainwin(QSplashScreen& screen) {
+std::string std_program_path;
+EXPORT void start_mainwin(QSplashScreen& screen,QString& program_path) {
+    std_program_path = program_path.toStdString();
     MainWindow *w = new MainWindow(screen);
     w->show();
     screen.finish(w);

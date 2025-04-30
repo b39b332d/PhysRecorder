@@ -10,7 +10,7 @@
 #include <opencv2/core.hpp> 
 cv::Mat gamma_map;
 void capture::init_postprocess() {
-    gamma_map = cv::imread("data/resources/gamma_precalc.png", cv::IMREAD_GRAYSCALE);
+    gamma_map = cv::imread(std_program_path+"data/resources/gamma_precalc.png", cv::IMREAD_GRAYSCALE);
 }
 
 void capture::postprocess(RawFrame* frame,Options *transform)

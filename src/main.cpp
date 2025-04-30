@@ -10,11 +10,12 @@
   #define DLL_IMPORT 
 #endif
 
-DLL_IMPORT void start_mainwin(QSplashScreen& screen);
+DLL_IMPORT void start_mainwin(QSplashScreen& screen,QString& program_path);
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    QPixmap pixmap(PROJECT_ROOT_PATH"resources/ECG.bmp");
+    QString program_path = QCoreApplication::applicationDirPath()+"/";
+    QPixmap pixmap(program_path+"data/resources/ECG.bmp");
     QSplashScreen splash(pixmap);
     splash.show();
     if (!QDir("./rec").exists()) {
@@ -39,8 +40,8 @@ int main(int argc, char *argv[])
         app.setStyleSheet(ts.readAll());
     }
 
-    app.setWindowIcon(QIcon(QPixmap(PROJECT_ROOT_PATH"resources/icon.ico")));
+    app.setWindowIcon(QIcon(QPixmap(program_path+"data/resources/icon.ico")));
 
-    start_mainwin(splash);
+    start_mainwin(splash,program_path);
     exit(app.exec());
 }

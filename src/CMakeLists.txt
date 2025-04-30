@@ -35,10 +35,6 @@ set_target_properties(PhysRecorder_main PROPERTIES
 
 target_include_directories(PhysRecorder_main PRIVATE ./ ${utils_dir} )
 
-target_compile_definitions(PhysRecorder_main
-    PRIVATE
-    PROJECT_ROOT_PATH="./data/")
-
 add_subdirectory(camera)
 add_subdirectory(signalprocess)
 add_subdirectory(imageprocess)
@@ -68,7 +64,5 @@ set_target_properties(PhysRecorder PROPERTIES
     AUTORCC ON
 )
 target_link_libraries(PhysRecorder PRIVATE PhysRecorder_main Qt6::Widgets ${MKL_LIBRARIES} ${delayimp_LIB})
-target_compile_definitions( PhysRecorder
-    PRIVATE
-    PROJECT_ROOT_PATH="./data/")
+
 custom_target_install(PhysRecorder)

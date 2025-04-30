@@ -3,6 +3,8 @@
 #include <queue>
 #include <atomic>
 #include <cstdlib>
+#include <string>
+extern std::string std_program_path;
 #define PIX_FOURCC_TO_UINT32(str) \
     ((static_cast<uint32_t>(str[0])) | \
      (static_cast<uint32_t>(sizeof(str)>2?str[1]:0x20) << 8) | \

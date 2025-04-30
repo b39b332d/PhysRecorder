@@ -73,7 +73,7 @@ float InferenceOV::get_roi(FaceRoi* face, std::vector < std::vector<cv::Point2i>
 
 
 InferenceOV::InferenceOV() {
-	std::string root_path = "./data/";
+	std::string root_path = std_program_path+"data/";
 	std::string path_net_facedetect = root_path + "models/intel/face-detection-retail-0005/FP16/face-detection-retail-0005";
 	std::string path_net_landmarks = root_path + "models/intel/facial-landmarks-35-adas-0002/FP16/facial-landmarks-35-adas-0002";
 	std::string resource_path = root_path + "resources/";

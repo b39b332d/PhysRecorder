@@ -48,7 +48,7 @@ InferenceDLIB::InferenceDLIB()
 	shape_predictors = new dlib::shape_predictor[4];
 	auto init_func = [&](int i) {
 		detectors[i] = dlib::get_frontal_face_detector();
-		dlib::deserialize("data/models/dlib/shape_predictor_68_face_landmarks_GTX.dat") >> shape_predictors[i];
+		dlib::deserialize(std_program_path+"data/models/dlib/shape_predictor_68_face_landmarks_GTX.dat") >> shape_predictors[i];
 		};
 	std::vector<std::thread> ths;
 	ths.emplace_back(init_func, 0);
