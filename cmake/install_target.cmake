@@ -51,9 +51,9 @@ function(find_all_library)
     foreach(i RANGE ${arg_index} ${ARGC})
         unset(lib_file CACHE)
         if(arg_index EQUAL 3)
-            find_library(lib_file NAMES ${ARGV${i}} PATH_SUFFIXES ${ARGV2} HINTS ${INSTALL_DEP_PATHS})
+            find_file(lib_file NAMES ${ARGV${i}} PATH_SUFFIXES ${ARGV2} HINTS ${INSTALL_DEP_PATHS})
         else()
-            find_library(lib_file NAMES ${ARGV${i}} HINTS ${INSTALL_DEP_PATHS})
+            find_file(lib_file NAMES ${ARGV${i}} HINTS ${INSTALL_DEP_PATHS})
         endif()
         if(lib_file)
             list(APPEND __deps_find_all_library ${lib_file})
@@ -124,14 +124,15 @@ function(custom_target_install tgt)
                     install(FILES ${dnn_dep} TYPE BIN)
                     install(CODE "list(APPEND _CMAKE_DEPS ${dnn_dep})")
                 else()
-                    find_all_library(openvino_intel_cpu_plugin_lib PATH_SUFFIXES ${OPENVINO_PATH_EXT} openvino_intel_cpu_plugin
+                    find_all_library(openvino_intel_cpu_plugin_lib PATH_SUFFIXES ${OPENVINO_PATH_EXT} 
+                        openvino_intel_cpu_plugin${shared_ext}
                         ${shared_prefix}openvino_intel_cpu_plugin${shared_ext}.${OpenVINO_VERSION_COMPACT}
                         ${shared_prefix}openvino_intel_cpu_plugin${shared_ext}.${OpenVINO_VERSION})
                     list(APPEND dnn_dep_dst ${openvino_intel_cpu_plugin_lib})
                     find_all_library(openvino_ir_frontend_lib PATH_SUFFIXES ${OPENVINO_PATH_EXT}
                          ${shared_prefix}openvino_ir_frontend${shared_ext}.${OpenVINO_VERSION_COMPACT}
                         ${shared_prefix}openvino_ir_frontend${shared_ext}.${OpenVINO_VERSION}
-                        openvino_ir_frontend)
+                        openvino_ir_frontend${shared_ext})
                     list(APPEND dnn_dep_dst ${openvino_ir_frontend_lib})
                     install(FILES ${dnn_dep_dst} TYPE LIB)
                 endif()
