@@ -1,7 +1,10 @@
 # get all dependent targets
 MACRO(get_all_dep tgt var)
-    list(APPEND ${var} ${tgt})
     if(TARGET ${tgt})
+        get_target_property(target_type ${tgt} TYPE)
+        if (NOT target_type STREQUAL "EXECUTABLE")
+            list(APPEND ${var} ${tgt})
+        endif ()
         get_target_property(tgt_imported ${tgt} IMPORTED)
         get_target_property(tgt_type ${tgt} TYPE)
         if(NOT tgt_imported AND NOT tgt_type STREQUAL "INTERFACE_LIBRARY")
@@ -16,13 +19,13 @@ MACRO(get_all_dep tgt var)
     endif()
 endMACRO()
 
-function(get_all_dep_recursive tgt)
+function(get_all_dep_recursive tgt var)
     set(__${tgt}_deps "")
     if(TARGET ${tgt})
         install(TARGETS ${tgt} RUNTIME_DEPENDENCY_SET TGT_INSTALL_SET RESOURCE DESTINATION bin)
         get_all_dep(${tgt} __${tgt}_deps)
     endif()
-    set(__${tgt}_deps "${__${tgt}_deps}" PARENT_SCOPE)
+    set(${var} "${__${tgt}_deps}" PARENT_SCOPE)
 
 endfunction()
 
@@ -48,9 +51,9 @@ function(find_all_library)
     foreach(i RANGE ${arg_index} ${ARGC})
         unset(lib_file CACHE)
         if(arg_index EQUAL 3)
-            find_file(lib_file NAMES ${ARGV${i}} PATH_SUFFIXES ${ARGV2} HINTS ${INSTALL_DEP_PATHS})
+            find_library(lib_file NAMES ${ARGV${i}} PATH_SUFFIXES ${ARGV2} HINTS ${INSTALL_DEP_PATHS})
         else()
-            find_file(lib_file NAMES ${ARGV${i}} HINTS ${INSTALL_DEP_PATHS})
+            find_library(lib_file NAMES ${ARGV${i}} HINTS ${INSTALL_DEP_PATHS})
         endif()
         if(lib_file)
             list(APPEND __deps_find_all_library ${lib_file})
@@ -62,9 +65,8 @@ endfunction()
 
 function(custom_target_install tgt)
     if(TARGET ${tgt})
-        get_all_dep_recursive(${tgt})
-        set(tgt_dep_lib "${__${tgt}_deps}")
-        #get_target_property(tgt_dep_lib ${tgt} LINK_LIBRARIES)
+        get_all_dep_recursive( ${tgt} tgt_dep_lib)
+        
         if(Qt6::Widgets IN_LIST tgt_dep_lib)
             if(WIN32)
                 file(GENERATE
@@ -122,14 +124,14 @@ function(custom_target_install tgt)
                     install(FILES ${dnn_dep} TYPE BIN)
                     install(CODE "list(APPEND _CMAKE_DEPS ${dnn_dep})")
                 else()
-                    find_all_library(openvino_intel_cpu_plugin_lib PATH_SUFFIXES ${OPENVINO_PATH_EXT} openvino_intel_cpu_plugin${shared_ext}
+                    find_all_library(openvino_intel_cpu_plugin_lib PATH_SUFFIXES ${OPENVINO_PATH_EXT} openvino_intel_cpu_plugin
                         ${shared_prefix}openvino_intel_cpu_plugin${shared_ext}.${OpenVINO_VERSION_COMPACT}
                         ${shared_prefix}openvino_intel_cpu_plugin${shared_ext}.${OpenVINO_VERSION})
                     list(APPEND dnn_dep_dst ${openvino_intel_cpu_plugin_lib})
                     find_all_library(openvino_ir_frontend_lib PATH_SUFFIXES ${OPENVINO_PATH_EXT}
                          ${shared_prefix}openvino_ir_frontend${shared_ext}.${OpenVINO_VERSION_COMPACT}
                         ${shared_prefix}openvino_ir_frontend${shared_ext}.${OpenVINO_VERSION}
-                        openvino_ir_frontend${shared_ext})
+                        openvino_ir_frontend)
                     list(APPEND dnn_dep_dst ${openvino_ir_frontend_lib})
                     install(FILES ${dnn_dep_dst} TYPE LIB)
                 endif()
