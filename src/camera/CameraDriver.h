@@ -40,15 +40,14 @@ namespace capture {
         bool is_valid() { return format != PIX_TYPE_ERR; }
         std::string get_profile_str() {
             std::string buffer("",50);
-            // Use snprintf to write to the buffer
-            snprintf(
-                buffer.data(),      // Pointer to the buffer
-                buffer.size(),      // Maximum number of bytes to write (including null terminator)
-                "%dx%d@%.2f",       // The format string
-                resolution.width,   // Corresponds to the first %d
-                resolution.height,  // Corresponds to the second %d
-                ratio.get()         // Corresponds to the %.2f
-            );
+            buffer.resize(snprintf(
+                buffer.data(),
+                buffer.size(),
+                "%dx%d@%.2f",
+                resolution.width,
+                resolution.height,
+                ratio.get()
+            ));
             return buffer;
         }
         std::string get_profile_codec() {

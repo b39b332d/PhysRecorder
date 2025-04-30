@@ -20,13 +20,12 @@ inline void cvt_puttext(capture::CameraStream*stream, cv::Mat& m_frame, std::chr
         stream->count = 0;
     }
     std::string buffer("",10);
-    // Use snprintf to write to the buffer
-    snprintf(
-        buffer.data(),      // Pointer to the buffer
-        buffer.size(),      // Maximum number of bytes to write (including null terminator)
-        "%.2f",       // The format string
-        stream->previous_fps       // Corresponds to the %.2f
-    );
+    buffer.resize(snprintf(
+        buffer.data(),
+        buffer.size(),
+        "%.2f",
+        stream->previous_fps
+    ));
     cv::putText(m_frame, buffer,
         { 30, 30 }, cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1);
 

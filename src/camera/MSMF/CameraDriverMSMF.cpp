@@ -400,11 +400,11 @@ namespace capture {
             THROW_HR(hr, "GetGUID Error");
             if (majorType == MFMediaType_Video) {
                 std::string stream_name("",20);
-                snprintf(
+                stream_name.resize(snprintf(
                     stream_name.data(),      // Pointer to the buffer
                     stream_name.size(),      // Maximum number of bytes to write (including null terminator)
                     "Video:%d",dwStreamIndex
-                );
+                ));
 
                 auto s = new CameraStreamMSMF(stream_name, this, pReader, dwStreamIndex, pType);
                 if (!s->is_valid()) delete s;

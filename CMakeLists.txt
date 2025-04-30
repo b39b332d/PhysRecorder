@@ -1,5 +1,8 @@
 # new features
 cmake_minimum_required(VERSION 3.21)
+cmake_policy(SET CMP0169 OLD)
+cmake_policy(SET CMP0135 NEW)
+
 
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 set(CMAKE_CXX_STANDARD 20)
@@ -43,7 +46,7 @@ else()
 endif()
 
 include(FetchContent)
-set(FETCHCONTENT_QUIET FALSE)
+set(FETCHCONTENT_QUIET OFF)
 
 include(ExternalProject)
 
@@ -123,7 +126,7 @@ if(NOT OpenCV_FOUND AND DOWNLOAD_URL)
   FetchContent_Declare(
     OpenCV_Build
     URL "${DOWNLOAD_URL}/opencv4/${PHY_RUNTIME}/${Porject_BUILD_TYPE}_${PHY_ARCH}.tar.gz"
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    DOWNLOAD_EXTRACT_TIMESTAMP ON
     OVERRIDE_FIND_PACKAGE
   )
   FetchContent_MakeAvailable(OpenCV_Build)
@@ -144,7 +147,7 @@ if(NOT OpenVINO_FOUND AND DOWNLOAD_URL)
   FetchContent_Declare(
     OpenVINO_Build
     URL "${DOWNLOAD_URL}/openvino2450/${PHY_RUNTIME}/${PHY_ARCH}.tar.gz"
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    DOWNLOAD_EXTRACT_TIMESTAMP ON
     OVERRIDE_FIND_PACKAGE
   )
   FetchContent_MakeAvailable(OpenVINO_Build)
@@ -166,7 +169,7 @@ if(NOT Qt6_FOUND AND DOWNLOAD_URL)
   FetchContent_Declare(
     Qt6_BUILD
     URL "${DOWNLOAD_URL}/qt6/${PHY_RUNTIME}/${PHY_ARCH}.tar.gz"
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    DOWNLOAD_EXTRACT_TIMESTAMP ON
     OVERRIDE_FIND_PACKAGE
     EXCLUDE_FROM_ALL
   )
@@ -197,16 +200,16 @@ elseif(UNIX)
       -DCMAKE_BUILD_TYPE=Release # Pass the build type (Debug, Release, etc.)
       INSTALL_BYPRODUCTS
       ${LINUXDEPLOYQT_PREFIX}/install/bin/linuxdeployqt # Adjust path if needed
-      LOG_CONFIGURE TRUE # Log the configure step output
-      LOG_BUILD TRUE # Log the build step output
-      LOG_INSTALL TRUE # Log the install step output
+      LOG_CONFIGURE ON # Log the configure step output
+      LOG_BUILD ON # Log the build step output
+      LOG_INSTALL ON # Log the install step output
     )
     set(DEPLOYQT_EXECUTABLE "${LINUXDEPLOYQT_PREFIX}/install/bin/linuxdeployqt")
   endif()
 endif()
 ####### FIND MKL
-set(USE_STATIC_MKL FALSE)
-set(MKL_THREADING SEQ)
+set(USE_STATIC_MKL ON CACHE INTERNAL "")
+set(MKL_THREADING SEQ CACHE INTERNAL "")
 find_package(MKL)
 if(MKL_FOUND)
   get_filename_component(MKL_BIN "${MKL_LIBRARIES_mkl_core_LIBRARY}" DIRECTORY)
@@ -219,13 +222,13 @@ FetchContent_Declare(
   Eigen3
   GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
   GIT_TAG master
-  GIT_SHALLOW TRUE
+  GIT_SHALLOW ON
   EXCLUDE_FROM_ALL
 )
 if(MKL_FOUND)
-  set(EIGEN_BUILD_LAPACK TRUE)
-  set(EIGEN_BUILD_BLAS TRUE)
-  set(EIGEN_USE_MKL_ALL TRUE)
+  set(EIGEN_BUILD_LAPACK ON CACHE INTERNAL "")
+  set(EIGEN_BUILD_BLAS ON CACHE INTERNAL "")
+  set(EIGEN_USE_MKL_ALL ON CACHE INTERNAL "")
 endif()
 if(NOT Eigen3_POPULATED)
   FetchContent_Populate(Eigen3)
@@ -241,7 +244,7 @@ if(Porject_BUILD_TYPE STREQUAL "release")
         FetchContent_Declare(
           BOX_TOOLS
           URL "${DOWNLOAD_URL}/box_tools.zip"
-          DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+          DOWNLOAD_EXTRACT_TIMESTAMP ON
           OVERRIDE_FIND_PACKAGE
           EXCLUDE_FROM_ALL
         )
@@ -258,7 +261,7 @@ if(Porject_BUILD_TYPE STREQUAL "release")
         DEPENDS install
         USES_TERMINAL
       )
-      set_target_properties(generate_boxed_exe PROPERTIES EXCLUDE_FROM_ALL TRUE)
+      set_target_properties(generate_boxed_exe PROPERTIES EXCLUDE_FROM_ALL ON)
     endif()
   elseif(UNIX)
     find_program(APPIMAGE_PACK_EXE appimagetool)
@@ -275,10 +278,10 @@ if(Porject_BUILD_TYPE STREQUAL "release")
         -DCMAKE_INCLUDE_PATH=${CMAKE_INCLUDE_PATH}
         BUILD_BYPRODUCTS
         ${APPIMAGE_PREFIX}/bin/appimagetool # Adjust path if needed
-        LOG_CONFIGURE TRUE # Log the configure step output
-        LOG_BUILD TRUE # Log the build step output
-        LOG_INSTALL TRUE # Log the install step output
-        EXCLUDE_FROM_ALL TRUE
+        LOG_CONFIGURE ON # Log the configure step output
+        LOG_BUILD ON # Log the build step output
+        LOG_INSTALL ON # Log the install step output
+        EXCLUDE_FROM_ALL ON
       )
       get_property(APPIMAGE_EXE_PATH TARGET appimage_external PROPERTY BINARY_DIR)
       set(APPIMAGE_EXECUTABLE "${APPIMAGE_EXE_PATH}/bin/appimagetool")
@@ -291,7 +294,7 @@ if(Porject_BUILD_TYPE STREQUAL "release")
       DEPENDS install
       USES_TERMINAL
     )
-    set_target_properties(generate_boxed_exe PROPERTIES EXCLUDE_FROM_ALL TRUE)
+    set_target_properties(generate_boxed_exe PROPERTIES EXCLUDE_FROM_ALL ON)
     add_dependencies(generate_boxed_exe appimage_external)
 
   endif()
@@ -303,8 +306,9 @@ find_package(MVis)
 ####### FIND Realsense
 find_package(Realsense)
 ####### Find V4L2
-find_package(V4L2 REQUIRED)
-
+if(UNIX)
+    find_package(V4L2 REQUIRED)
+endif()
 
 ####### FIND libyuv
 if(MSVC)
@@ -324,7 +328,7 @@ if(MSVC)
     FetchContent_Declare(
       libyuv_build
       URL "${DOWNLOAD_URL}/libyuv.zip"
-      DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+      DOWNLOAD_EXTRACT_TIMESTAMP ON
       OVERRIDE_FIND_PACKAGE
     )
     FetchContent_MakeAvailable(libyuv_build)
@@ -344,7 +348,7 @@ if(NOT TARGET yuv)
     libyuv
     GIT_REPOSITORY https://gitcode.com/gh_mirrors/li/libyuv.git
     GIT_TAG main
-    GIT_SHALLOW TRUE
+    GIT_SHALLOW ON
     EXCLUDE_FROM_ALL
   )
   if(NOT libyuv_POPULATED)
@@ -360,7 +364,7 @@ endif()
 FetchContent_Declare(
   libserial
   GIT_REPOSITORY https://gitcode.com/gh_mirrors/se/serial.git
-  GIT_SHALLOW TRUE
+  GIT_SHALLOW ON
   GIT_TAG main
   EXCLUDE_FROM_ALL
 )
@@ -379,20 +383,20 @@ FetchContent_Declare(
   EXCLUDE_FROM_ALL
 )
 
-set(DLIB_NO_GUI_SUPPORT TRUE)
-set(DLIB_PNG_SUPPORT FALSE)
-set(DLIB_GIF_SUPPORT FALSE)
-set(DLIB_JPEG_SUPPORT FALSE)
-set(DLIB_USE_MKL_FFT FALSE)
-set(DLIB_USE_FFMPEG FALSE)
+set(DLIB_NO_GUI_SUPPORT ON CACHE INTERNAL "")
+set(DLIB_PNG_SUPPORT OFF CACHE INTERNAL "")
+set(DLIB_GIF_SUPPORT OFF CACHE INTERNAL "")
+set(DLIB_JPEG_SUPPORT OFF CACHE INTERNAL "")
+set(DLIB_USE_MKL_FFT OFF CACHE INTERNAL "")
+set(DLIB_USE_FFMPEG OFF CACHE INTERNAL "")
 if(MKL_FOUND)
-  set(DLIB_USE_LAPACK TRUE)
-  set(DLIB_USE_BLAS TRUE)
-  set(DLIB_USE_MKL_SEQUENTIAL TRUE)
+  set(DLIB_USE_LAPACK ON CACHE INTERNAL "")
+  set(DLIB_USE_BLAS ON CACHE INTERNAL "")
+  set(DLIB_USE_MKL_SEQUENTIAL ON CACHE INTERNAL "")
 else()
-  set(DLIB_USE_LAPACK FALSE)
-  set(DLIB_USE_BLAS FALSE)
-  set(DLIB_USE_MKL_SEQUENTIAL)
+  set(DLIB_USE_LAPACK OFF CACHE INTERNAL "")
+  set(DLIB_USE_BLAS OFF CACHE INTERNAL "")
+  set(DLIB_USE_MKL_SEQUENTIAL CACHE INTERNAL "")
 endif()
 
 FetchContent_MakeAvailable(dlib)
