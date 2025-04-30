@@ -1,7 +1,11 @@
 # new features
 cmake_minimum_required(VERSION 3.21)
-cmake_policy(SET CMP0169 OLD)
-cmake_policy(SET CMP0135 NEW)
+if(POLICY CMP0169)
+  cmake_policy(SET CMP0169 OLD)
+endif()
+if(POLICY CMP0135)
+  cmake_policy(SET CMP0135 NEW)
+endif()
 
 
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
