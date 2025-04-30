@@ -302,6 +302,9 @@ find_package(MSMF)
 find_package(MVis)
 ####### FIND Realsense
 find_package(Realsense)
+####### Find V4L2
+find_package(V4L2 REQUIRED)
+
 
 ####### FIND libyuv
 if(MSVC)
@@ -432,4 +435,9 @@ if(Realsense_FOUND)
   message(STATUS "    library: ${realsense2_LIBRARY}")
   message(STATUS "    version: ${realsense2_VERSION}")
   message(STATUS "    include path: ${realsense2_INCLUDE_DIR}")
+endif()
+if(V4L2_FOUND)
+  message(STATUS "V4L2 library status:")
+  message(STATUS "    library: ${V4L2_LIBRARIES}")
+  message(STATUS "    include path: ${V4L2_INCLUDE_DIRS}")
 endif()
