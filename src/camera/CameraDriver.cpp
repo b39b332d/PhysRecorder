@@ -68,7 +68,14 @@ namespace capture {
             }
         }
     }
-    bool CameraDevice::start() {
+    CameraDevice::~CameraDevice()
+    {
+        if(status != CS_UNINIT){
+            release();
+        }
+    }
+    bool CameraDevice::start()
+    {
         std::unique_lock l(device_lock);
         if (enabled_streams.size() == 0)
             return false;

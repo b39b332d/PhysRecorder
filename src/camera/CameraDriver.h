@@ -95,6 +95,7 @@ namespace capture {
         std::condition_variable device_cond;
 
         CameraDevice() :Options(DEVICE_OPTION_CNT) {};
+        virtual ~CameraDevice();
         typedef enum {
             CS_STANDBY = -1,
             CS_UNINIT = -2,
@@ -184,6 +185,8 @@ namespace capture {
 		}
         using Cmp = std::integral_constant<decltype(&CameraProfile::cmp_profile), &CameraProfile::cmp_profile>;
 
+        using ProfileSet = std::set<CameraProfile*,Cmp> ;
+
         std::string stream_name;
         CameraDevice* device;
         CameraProfile* default_profile = NULL;
@@ -196,8 +199,7 @@ namespace capture {
         };
 
         bool is_valid() { return default_profile != NULL; }
-        std::unordered_map<std::string, std::set<CameraProfile*,
-            Cmp>> profiles_map;
+        std::unordered_map<std::string, ProfileSet> profiles_map;
 
         void set_current_profile(CameraProfile* profile);
         CameraStream(const std::string& stream_name, CameraDevice* device);

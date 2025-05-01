@@ -35,8 +35,6 @@ namespace capture {
         void native_stop();
         void native_release();
 
-        ~CameraDeviceRS();
-
          void get_all_option_range_native();
          void set_option_native(int option, const option_status& value) override;
 
