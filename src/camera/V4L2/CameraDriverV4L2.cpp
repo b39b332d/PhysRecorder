@@ -44,7 +44,7 @@ namespace capture {
     CameraStreamV4L2::CameraStreamV4L2(const std::string& stream_name, CameraDevice* device)
         : CameraStream(stream_name, device)
     {
-        const int fd = open(stream_name.c_str(), O_RDWR);
+        fd = open(stream_name.c_str(), O_RDWR);
         if (fd <0) return;
         struct v4l2_fmtdesc fmt;
         struct v4l2_frmsizeenum frmsize;
@@ -76,11 +76,11 @@ namespace capture {
             fmt.index++;
             profiles_map[format_name] = std::move(prof_set);
         }
-        close(fd);
     }
 
     CameraStreamV4L2::~CameraStreamV4L2()
     {
+        close(fd);
     }
 
 
@@ -153,10 +153,16 @@ namespace capture {
                 stream = new CameraStreamV4L2(it->first,this);
                 if(!stream->is_valid()){
                     it = streams_map.erase(it);
-                }else
-                ++it;
+                    delete stream;
+                    stream = nullptr;
+                }else{
+                    if(control_stream ==nullptr)
+                        control_stream = (CameraStreamV4L2*)stream;
+                    ++it;
+                }
             }
         }
+        get_all_option_range_native();
         return true;
     }
     
@@ -248,8 +254,6 @@ namespace capture {
     }
 
     bool CameraStreamV4L2::start(){
-        fd = open(stream_name.c_str(), O_RDWR);
-        
         CameraProfileV4L2* profile = static_cast<CameraProfileV4L2*>(get_current_profile());
         
         // Set the format
@@ -316,7 +320,6 @@ namespace capture {
         }
         // Uninitialize memory mapping
         uninit_mmap();
-        close(fd);
     }
     void CameraStreamV4L2::force_stop(){
         if(!is_running) return;
@@ -397,5 +400,100 @@ namespace capture {
     };
     void CameraDeviceV4L2::native_release() {};
     
-    void CameraDeviceV4L2::set_option_native(int option, const option_status& value) {};
+    static std::map<int, std::pair<unsigned int,unsigned int>> option_to_v4l2_map = {
+        {DEVICE_PAN, std::make_pair(V4L2_CID_PAN_ABSOLUTE,0)},
+        {DEVICE_TILT, std::make_pair(V4L2_CID_TILT_ABSOLUTE,0)},
+        {DEVICE_ROLL, std::make_pair(V4L2_CID_ROTATE,0)},
+        {DEVICE_ZOOM, std::make_pair(V4L2_CID_ZOOM_ABSOLUTE,0)},
+        {DEVICE_EXPOSURE, std::make_pair(V4L2_CID_EXPOSURE,V4L2_CID_EXPOSURE_AUTO)},//
+        {DEVICE_IRIS, std::make_pair(V4L2_CID_IRIS_ABSOLUTE,V4L2_CID_EXPOSURE_AUTO)},//
+        {DEVICE_FOCUS, std::make_pair(V4L2_CID_FOCUS_ABSOLUTE,V4L2_CID_FOCUS_AUTO)},// 
+        {DEVICE_CONTRAST, std::make_pair(V4L2_CID_CONTRAST,0)},
+        {DEVICE_HUE, std::make_pair(V4L2_CID_HUE,V4L2_CID_HUE_AUTO)},// 
+        {DEVICE_SATURATION, std::make_pair(V4L2_CID_SATURATION,0)},
+        {DEVICE_SHARPNESS, std::make_pair(V4L2_CID_SHARPNESS,0)},
+        {DEVICE_GAMMA, std::make_pair(V4L2_CID_GAMMA,0)},
+        {DEVICE_WHITE_BALANCE, std::make_pair(V4L2_CID_WHITE_BALANCE_TEMPERATURE,V4L2_CID_AUTO_WHITE_BALANCE)}, // 
+        {DEVICE_GAIN, std::make_pair(V4L2_CID_GAIN,V4L2_CID_AUTOGAIN)},// 
+        {DEVICE_BRIGHTNESS, std::make_pair(V4L2_CID_BRIGHTNESS,V4L2_CID_AUTOBRIGHTNESS)},//
+        {DEVICE_BACKLIGHT, std::make_pair(0,V4L2_CID_BACKLIGHT_COMPENSATION)},
+        {DEVICE_COLOR_ENABLED, std::make_pair(V4L2_CID_COLOR_KILLER,0)}
+    };
+
+
+    
+    void CameraDeviceV4L2::get_all_option_range_native()
+    {
+        // Find a stream that's capable of handling camera controls
+        bool need_stop = false;
+        int fd = control_stream->fd;
+        
+        // Mapping from our DEVICE_OPTION to V4L2 control IDs
+
+        
+        // For each option, query the corresponding V4L2 control
+        for (const auto& [option, v4l2_crtl] : option_to_v4l2_map) {
+            unsigned int v4l2_manual = v4l2_crtl.first;
+            unsigned int v4l2_auto = v4l2_crtl.second;
+            struct v4l2_queryctrl queryctrl_manual={0,};
+            queryctrl_manual.id = v4l2_manual;
+            struct v4l2_queryctrl queryctrl_auto={0,};
+            queryctrl_auto.id = v4l2_auto;
+
+            bool manual_support = (v4l2_manual!=0 && ioctl(fd, VIDIOC_QUERYCTRL, &queryctrl_manual) >= 0);
+            if(manual_support)manual_support = !(queryctrl_manual.flags & V4L2_CTRL_FLAG_DISABLED);
+            bool auto_support = (v4l2_auto!=0 && ioctl(fd, VIDIOC_QUERYCTRL, &queryctrl_auto) >= 0);
+            if(auto_support)auto_support = !(queryctrl_auto.flags & V4L2_CTRL_FLAG_DISABLED);
+            if (manual_support|| auto_support) {
+                // Control is supported
+                option_range opt_range;
+                opt_range.is_supported = true;
+                opt_range.min = queryctrl_manual.minimum;
+                opt_range.max = queryctrl_manual.maximum;
+                opt_range.step = queryctrl_manual.step;
+                opt_range.scaled_factor = 1;  // No scaling for V4L2
+                opt_range.def.value = queryctrl_manual.default_value;
+                opt_range.current.status_type = OPTION_MANUAL;
+
+                struct v4l2_control control = {v4l2_manual,0};
+                if (manual_support&&ioctl(fd, VIDIOC_G_CTRL, &control) >= 0){
+                    opt_range.current.value = control.value;
+                }else{
+                    opt_range.current.value = opt_range.def.value;
+                }
+
+                if(auto_support &&queryctrl_auto.maximum>=1){
+                    opt_range.support_type = OPTION_AUTO;
+                    opt_range.def.status_type = queryctrl_auto.default_value==0?OPTION_MANUAL:OPTION_AUTO;
+                }
+                opt_range.current.status_type = OPTION_MANUAL;
+
+                control.id = v4l2_auto;
+                if (auto_support&&ioctl(fd, VIDIOC_G_CTRL, &control) >= 0){
+                    opt_range.current.status_type = (control.value==0?OPTION_MANUAL:OPTION_AUTO);
+                }
+                
+                
+                set_option_range(option, opt_range);
+            }
+        }
+    }
+    
+    void CameraDeviceV4L2::set_option_native(int option, const option_status& value) {
+        int fd = control_stream->fd;
+        auto [v4l2_manual,v4l2_auto]=option_to_v4l2_map[option];
+        if(configurations[option].is_supported){
+            if(v4l2_auto !=0 && configurations[option].support_type == OPTION_AUTO){
+                struct v4l2_control control = {v4l2_auto,value.status_type == OPTION_AUTO?1:0};
+                if(ioctl(fd, VIDIOC_S_CTRL, &control)>=0)
+                configurations[option].current.status_type = value.status_type;
+            }
+            if(v4l2_manual !=0 && value.status_type!=OPTION_AUTO){
+                struct v4l2_control control = {v4l2_manual,value.value};
+                if(ioctl(fd, VIDIOC_S_CTRL, &control)>=0)
+                configurations[option].current.value = value.value;
+            } 
+        }
+        
+    };
 }

@@ -8,6 +8,7 @@
 #include <thread>
 #include <mutex>
 #include <unordered_map>
+#include <map>
 #include <set>
 #include <type_traits>
 #include <algorithm>
@@ -90,7 +91,7 @@ namespace capture {
     public:
         std::mutex device_lock;
         std::string device_name; // display name
-        std::unordered_map<std::string, CameraStream*> streams_map;
+        std::map<std::string, CameraStream*> streams_map;
         std::set<CameraStream*> enabled_streams;
         std::condition_variable device_cond;
 

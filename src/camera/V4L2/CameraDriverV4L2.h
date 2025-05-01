@@ -44,8 +44,9 @@ namespace capture {
     class CameraDeviceV4L2 : public CameraDevice {
         std::mutex r_lock;
         int running_streams=0;
+        CameraStreamV4L2* control_stream=nullptr; 
     public:
-
+        
         void on_stream_stop();
         CameraDeviceV4L2(const std::string& device_id);
         
@@ -55,6 +56,7 @@ namespace capture {
         void native_release() override;
         
         void set_option_native(int option, const option_status& value) override;
+        void get_all_option_range_native();
         
     };
     
