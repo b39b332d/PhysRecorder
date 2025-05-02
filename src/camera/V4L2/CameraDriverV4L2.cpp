@@ -356,10 +356,20 @@ namespace capture {
                 
                 break;
             }
-            
-            // Get the timestamp
-            long long timestamp = std::chrono::duration_cast<std::chrono::microseconds>(
-                std::chrono::system_clock::now().time_since_epoch()).count();
+            long long timestamp;
+            long long buf_ts = (long long)buf.timestamp.tv_sec*1e6+buf.timestamp.tv_usec;
+            if((buf.flags&V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC) != 0){
+                if(ts_ofs== -1){
+                    timestamp = std::chrono::duration_cast<std::chrono::microseconds>(
+                        std::chrono::system_clock::now().time_since_epoch()).count();
+                    ts_ofs = timestamp - buf_ts;
+                }else{
+                    timestamp = buf_ts+ts_ofs;
+                }
+            }else{
+                timestamp = std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::system_clock::now().time_since_epoch()).count();
+            }
             
             // Make a copy of the frame data to avoid issues when the buffer is reused
             unsigned char* data = static_cast<unsigned char*>(buffers[buf.index].start);
@@ -525,23 +535,23 @@ namespace capture {
                 switch (option) {
                 case DEVICE_EXPOSURE:
                     if (value.status_type == OPTION_MANUAL && configurations[DEVICE_IRIS].current.status_type == OPTION_MANUAL)
-                        opt_range.current.status_type = V4L2_EXPOSURE_MANUAL;
+                        control.value = V4L2_EXPOSURE_MANUAL;
                     else  if (value.status_type == OPTION_MANUAL && configurations[DEVICE_IRIS].current.status_type == OPTION_AUTO)
-                        opt_range.current.status_type = V4L2_EXPOSURE_SHUTTER_PRIORITY;
+                        control.value = V4L2_EXPOSURE_SHUTTER_PRIORITY;
                     else  if (value.status_type == OPTION_AUTO && configurations[DEVICE_IRIS].current.status_type == OPTION_MANUAL)
-                        opt_range.current.status_type = V4L2_EXPOSURE_APERTURE_PRIORITY;
+                        control.value = V4L2_EXPOSURE_APERTURE_PRIORITY;
                     else  if (value.status_type == OPTION_AUTO && configurations[DEVICE_IRIS].current.status_type == OPTION_AUTO)
-                        opt_range.current.status_type = V4L2_EXPOSURE_AUTO;
+                        control.value = V4L2_EXPOSURE_AUTO;
                     break;
                 case DEVICE_IRIS:
                     if (value.status_type == OPTION_MANUAL && configurations[DEVICE_EXPOSURE].current.status_type == OPTION_MANUAL)
-                        opt_range.current.status_type = V4L2_EXPOSURE_MANUAL;
+                        control.value = V4L2_EXPOSURE_MANUAL;
                     else  if (value.status_type == OPTION_MANUAL && configurations[DEVICE_EXPOSURE].current.status_type == OPTION_AUTO)
-                        opt_range.current.status_type = V4L2_EXPOSURE_APERTURE_PRIORITY;
+                        control.value = V4L2_EXPOSURE_APERTURE_PRIORITY;
                     else  if (value.status_type == OPTION_AUTO && configurations[DEVICE_EXPOSURE].current.status_type == OPTION_MANUAL)
-                        opt_range.current.status_type = V4L2_EXPOSURE_SHUTTER_PRIORITY;
+                        control.value = V4L2_EXPOSURE_SHUTTER_PRIORITY;
                     else  if (value.status_type == OPTION_AUTO && configurations[DEVICE_EXPOSURE].current.status_type == OPTION_AUTO)
-                        opt_range.current.status_type = V4L2_EXPOSURE_AUTO;
+                        control.value = V4L2_EXPOSURE_AUTO;
                     break;
                 default:
                     control.value = value.status_type == OPTION_AUTO ? 1 : 0;
