@@ -65,4 +65,7 @@ set_target_properties(PhysRecorder PROPERTIES
 )
 target_link_libraries(PhysRecorder PRIVATE PhysRecorder_main Qt6::Widgets ${MKL_LIBRARIES} ${delayimp_LIB})
 
+if (MSVC)
+    target_link_options(PhysRecorder PRIVATE "/DELAYLOAD:PhysRecorder_main.dll")
+endif()
 custom_target_install(PhysRecorder)

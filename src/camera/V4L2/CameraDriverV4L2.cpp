@@ -142,7 +142,7 @@ namespace capture {
 
     CameraDeviceV4L2::CameraDeviceV4L2(const std::string &device_id)
     {
-        device_name =device_id;
+        device_name = "V4L: "+device_id;
     }
     bool CameraDeviceV4L2::native_init()
     {

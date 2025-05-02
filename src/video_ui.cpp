@@ -312,6 +312,9 @@ void VideoUI::lock_camera_info_play(bool lock) {
         actionStartCamera->setToolTip("Stop");
         actionStartCamera->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
 
+        capture::CameraStream* stream = comboBox_profile->currentData().value<capture::CameraProfile*>()->stream;
+        loadCameraOptions(stream);
+
         ui->VideoBox->show();
         textedit_streamname->disconnect(this);
         textedit_streamname->setDisabled(false);
@@ -321,6 +324,7 @@ void VideoUI::lock_camera_info_play(bool lock) {
             capture->selected_stream->stream_friendly_name = text.toStdString();
             textedit_streamname->setText(text);
             });
+
     }
     else {
         ui->VideoBox->setDisabled(true);
@@ -521,7 +525,6 @@ void VideoUI::onStreamHighLighted(int idx, bool is_highlight) {
             lock_camera_info_play(true);
         }
         actionStartCamera->setDisabled(false);
-        loadCameraOptions(stream);
     }
     else {
         comboBox_profile_type->clear();
@@ -549,13 +552,13 @@ void VideoUI::onProfileTypeSelected(int idx) {
         item_idx++;
     }
     comboBox_profile->setCurrentIndex(select_idx);
+    onProfileSelected(select_idx);
     setCursorBusy(false);
 }
 
 void VideoUI::onProfileSelected(int idx) {
     //setCursorBusy(true);
     //ui->toolBarCamera->setDisabled(true);
-
     actionStartCamera->setDisabled(false);
     toolBarCamera->setDisabled(false);
     //setCursorBusy(false);
