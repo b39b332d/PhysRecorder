@@ -113,34 +113,44 @@ namespace capture {
                 first_profile = p;
         }
         only_stream->default_profile = first_profile;
-
+        int err;
         for (int i = 0; i < DEVICE_OPTION_CNT; i++) {
+            option_range opt_range = { 0, };
             switch ((DEVICE_OPTION)i) {
             case DEVICE_EXPOSURE:
             {
                 double line_time, exp_time;
-                CameraGetExposureLineTime(cam_device, &line_time);
-                CameraGetExposureTime(cam_device, &exp_time);
+                err = CameraGetExposureLineTime(cam_device, &line_time);
+                if (err != CAMERA_STATUS_SUCCESS)line_time = 1;
+                err = CameraGetExposureTime(cam_device, &exp_time);
+                if (err != CAMERA_STATUS_SUCCESS)break;
                 int num_line = exp_time / line_time;
-
-                option_range opt_range = { 0, };
                 opt_range.min = m_sCameraInfo.sExposeDesc.uiExposeTimeMin;
                 opt_range.max = m_sCameraInfo.sExposeDesc.uiExposeTimeMax;
                 opt_range.is_supported = true;
                 opt_range.step = 1;
+                opt_range.scaled_factor = 1000.0/line_time;
                 opt_range.def.value = num_line;
                 if (m_sCameraInfo.sIspCapacity.bAutoExposure) {
-                    int is_auto_exp;
-                    CameraGetAeState(cam_device, &is_auto_exp);
-                    if (is_auto_exp) {
-                        opt_range.def.status_type = OPTION_AUTO;
-                        opt_range.current.status_type = OPTION_AUTO;
-                    }
-                    else {
+                    int is_auto_exp = 0;
+                    err = CameraGetAeState(cam_device, &is_auto_exp);
+                    if (err != CAMERA_STATUS_SUCCESS) {
                         opt_range.def.status_type = OPTION_MANUAL;
                         opt_range.current.status_type = OPTION_MANUAL;
+                        opt_range.support_type = OPTION_MANUAL;
+
                     }
-                    opt_range.support_type = OPTION_AUTO;
+                    else {
+                        if (is_auto_exp) {
+                            opt_range.def.status_type = OPTION_AUTO;
+                            opt_range.current.status_type = OPTION_AUTO;
+                        }
+                        else {
+                            opt_range.def.status_type = OPTION_MANUAL;
+                            opt_range.current.status_type = OPTION_MANUAL;
+                        }
+                        opt_range.support_type = OPTION_AUTO;
+                    }
                 }
                 else {
                     opt_range.def.status_type = OPTION_MANUAL;
@@ -148,47 +158,203 @@ namespace capture {
                     opt_range.support_type = OPTION_MANUAL;
                 }
                 opt_range.current.value = num_line;
-                set_option_range(i, opt_range);
             }
                 break;;
             case DEVICE_WHITE_BALANCE:
-
+                if (m_sCameraInfo.iClrTempDesc <= 0)break;
+                opt_range.min = 0;
+                opt_range.max = m_sCameraInfo.iClrTempDesc;
+                opt_range.step = 1;
+                opt_range.scaled_factor = 1;
+                err = CameraGetPresetClrTemp(cam_device, &opt_range.def.value);
+                if (err != CAMERA_STATUS_SUCCESS) break;
+                err = CameraGetClrTempMode(cam_device, &opt_range.current.value);
+                if (err != CAMERA_STATUS_SUCCESS) break;
+                opt_range.def.status_type = OPTION_MANUAL;
+                opt_range.current.status_type = OPTION_MANUAL;
+                opt_range.support_type = OPTION_MANUAL;
+                opt_range.is_supported = true;
                 break;
             case DEVICE_GAIN:
+                opt_range.min = m_sCameraInfo.sExposeDesc.uiAnalogGainMin;
+                opt_range.max = m_sCameraInfo.sExposeDesc.uiAnalogGainMax;
+                if(opt_range.max - opt_range.min <= 0)break;
+                opt_range.scaled_factor = 1.0 / m_sCameraInfo.sExposeDesc.fAnalogGainStep;
+                opt_range.step = 1;
+                err = CameraGetAnalogGain(cam_device, &opt_range.current.value);
+                if (err != CAMERA_STATUS_SUCCESS) break;
+                opt_range.def.value = opt_range.current.value;
+                opt_range.def.status_type = OPTION_MANUAL;
+                opt_range.current.status_type = OPTION_MANUAL;
+                opt_range.support_type = OPTION_MANUAL;
+                opt_range.is_supported = true;
                 break;
             case DEVICE_LIGHT:
+                int mode;
+                err = CameraGetStrobeMode(cam_device, &mode);
+                if (err != CAMERA_STATUS_SUCCESS) break;
+                if (mode == STROBE_SYNC_WITH_TRIG_AUTO) {
+                    opt_range.current.status_type = OPTION_AUTO;
+                    opt_range.def.value = STROBE_SYNC_WITH_TRIG_MANUAL;
+                }
+                else {
+                    opt_range.current.status_type = OPTION_MANUAL;
+                    opt_range.def.value = mode;
+                }
+                opt_range.def.status_type = opt_range.current.status_type;
+                opt_range.is_supported = true;
                 break;
             case DEVICE_GAMMA:
+                opt_range.min = m_sCameraInfo.sGammaRange.iMin;
+                opt_range.max = m_sCameraInfo.sGammaRange.iMax;
+                if (opt_range.max - opt_range.min <= 0)break;
+                opt_range.scaled_factor = 1;
+                opt_range.step = 1;
+                err = CameraGetGamma(cam_device, &opt_range.current.value);
+                if (err != CAMERA_STATUS_SUCCESS) break;
+                opt_range.def.value = opt_range.current.value;
+                opt_range.def.status_type = OPTION_MANUAL;
+                opt_range.current.status_type = OPTION_MANUAL;
+                opt_range.support_type = OPTION_MANUAL;
+                opt_range.is_supported = true;
                 break;
             case DEVICE_CONTRAST:
-                break;
-            case DEVICE_HUE:
+                opt_range.min = m_sCameraInfo.sContrastRange.iMin;
+                opt_range.max = m_sCameraInfo.sContrastRange.iMax;
+                if (opt_range.max - opt_range.min <= 0)break;
+                opt_range.scaled_factor = 1;
+                opt_range.step = 1;
+                err = CameraGetContrast(cam_device, &opt_range.current.value);
+                if (err != CAMERA_STATUS_SUCCESS) break;
+                opt_range.def.value = opt_range.current.value;
+                opt_range.def.status_type = OPTION_MANUAL;
+                opt_range.current.status_type = OPTION_MANUAL;
+                opt_range.support_type = OPTION_MANUAL;
+                opt_range.is_supported = true;
                 break;
             case DEVICE_SATURATION:
+                opt_range.min = m_sCameraInfo.sSaturationRange.iMin;
+                opt_range.max = m_sCameraInfo.sSaturationRange.iMax;
+                if (opt_range.max - opt_range.min <= 0)break;
+                opt_range.scaled_factor = 1;
+                opt_range.step = 1;
+                err = CameraGetSaturation(cam_device, &opt_range.current.value);
+                if (err != CAMERA_STATUS_SUCCESS) break;
+                opt_range.def.value = opt_range.current.value;
+                opt_range.def.status_type = OPTION_MANUAL;
+                opt_range.current.status_type = OPTION_MANUAL;
+                opt_range.support_type = OPTION_MANUAL;
+                opt_range.is_supported = true;
                 break;
             case DEVICE_SHARPNESS:
-                break;
-            case DEVICE_BACKLIGHT:
+                opt_range.min = m_sCameraInfo.sSharpnessRange.iMin;
+                opt_range.max = m_sCameraInfo.sSharpnessRange.iMax;
+                if (opt_range.max - opt_range.min <= 0)break;
+                opt_range.scaled_factor = 1;
+                opt_range.step = 1;
+                err = CameraGetSharpness(cam_device, &opt_range.current.value);
+                if (err != CAMERA_STATUS_SUCCESS) break;
+                opt_range.def.value = opt_range.current.value;
+                opt_range.def.status_type = OPTION_MANUAL;
+                opt_range.current.status_type = OPTION_MANUAL;
+                opt_range.support_type = OPTION_MANUAL;
+                opt_range.is_supported = true;
                 break;
             case DEVICE_BRIGHTNESS:
+                opt_range.min = m_sCameraInfo.sExposeDesc.uiTargetMin;
+                opt_range.max = m_sCameraInfo.sExposeDesc.uiTargetMax;
+                if (opt_range.max - opt_range.min <= 0)break;
+                opt_range.scaled_factor = 1;
+                opt_range.step = 1;
+                err = CameraGetAeTarget(cam_device, &opt_range.current.value);
+                if (err != CAMERA_STATUS_SUCCESS) break;
+                opt_range.def.value = opt_range.current.value;
+                opt_range.def.status_type = OPTION_MANUAL;
+                opt_range.current.status_type = OPTION_MANUAL;
+                opt_range.support_type = OPTION_MANUAL;
+                opt_range.is_supported = true;
                 break;
 
             }
+            set_option_range(i, opt_range);
         }
     }
 
     void CameraDeviceMVis::set_option_native(int option, const option_status& value)
     {
+        int err;
         switch (option) {
         case DEVICE_EXPOSURE:
-            if (value.status_type == OPTION_AUTO) {
-                CameraSetAeState(cam_device, 1);
+            if (configurations[option].is_supported && value.status_type != configurations[option].current.status_type) {
+                err = CameraSetAeState(cam_device, value.status_type == OPTION_AUTO? 1:0);
+                if(err == 0)
+                    configurations[option].current.status_type = value.status_type;
             }
-            else {
-                CameraSetAeState(cam_device, 0);
-                double line_time;
-                CameraGetExposureLineTime(cam_device, &line_time);
-                CameraSetExposureTime(cam_device, line_time * value.value);
+            if(configurations[option].is_supported &&  value.status_type != OPTION_AUTO) {
+                err = CameraSetExposureTime(cam_device, (double)value.value/ configurations[option].scaled_factor*1000);
+                if (err == 0)
+                    configurations[option].current.value = value.value;
+            }
+            break;
+        case DEVICE_WHITE_BALANCE:
+            if (configurations[option].is_supported) {
+                err = CameraSetClrTempMode(cam_device, value.value);
+                if (err == 0)
+                    configurations[option].current.value = value.value;
+            }
+            break;
+        case DEVICE_GAIN:
+            if (configurations[option].is_supported) {
+                err = CameraSetAnalogGain(cam_device, value.value);
+                if (err == 0)
+                    configurations[option].current.value = value.value;
+            }
+            break;
+        case DEVICE_LIGHT:
+            if (configurations[option].is_supported) {
+                if (value.status_type == OPTION_AUTO) {
+                    err = CameraSetStrobeMode(cam_device, STROBE_SYNC_WITH_TRIG_AUTO);
+                }
+                else {
+                    err = CameraSetStrobeMode(cam_device, configurations[option].def.value);
+                }
+                if (err == 0)
+                    configurations[option].current.value = value.value;
+            }
+            break;
+        case DEVICE_GAMMA:
+            if (configurations[option].is_supported) {
+                err = CameraSetGamma(cam_device, value.value);
+                if (err == 0)
+                    configurations[option].current.value = value.value;
+            }
+            break;
+        case DEVICE_CONTRAST:
+            if (configurations[option].is_supported) {
+                err = CameraSetContrast(cam_device, value.value);
+                if (err == 0)
+                    configurations[option].current.value = value.value;
+            }
+            break;
+        case DEVICE_SATURATION:
+            if (configurations[option].is_supported) {
+                err = CameraSetSaturation(cam_device, value.value);
+                if (err == 0)
+                    configurations[option].current.value = value.value;
+            }
+            break;
+        case DEVICE_SHARPNESS:
+            if (configurations[option].is_supported) {
+                err = CameraSetSharpness(cam_device, value.value);
+                if (err == 0)
+                    configurations[option].current.value = value.value;
+            }
+            break;
+        case DEVICE_BRIGHTNESS:
+            if (configurations[option].is_supported) {
+                err = CameraSetAeTarget(cam_device, value.value);
+                if (err == 0)
+                    configurations[option].current.value = value.value;
             }
             break;
         }

@@ -290,6 +290,7 @@ namespace capture {
             buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
             buf.memory = V4L2_MEMORY_MMAP;
             buf.index = i;
+            buf.flags |= V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
             
             if (ioctl(fd, VIDIOC_QBUF, &buf) < 0) {
                 std::cerr << "Failed to queue buffer: " << strerror(errno) << std::endl;
@@ -339,7 +340,7 @@ namespace capture {
         sigaction(SIGUSR1, &sa, nullptr);
 
         struct v4l2_buffer buf;
-        
+        long long ts_ofs = -1;
         while (is_running) {
             // Dequeue a buffer
             memset(&buf, 0, sizeof(buf));
@@ -453,7 +454,6 @@ namespace capture {
                 opt_range.step = queryctrl_manual.step;
                 opt_range.scaled_factor = 1;  // No scaling for V4L2
                 opt_range.def.value = queryctrl_manual.default_value;
-                opt_range.current.status_type = OPTION_MANUAL;
 
                 struct v4l2_control control = {v4l2_manual,0};
                 if (manual_support&&ioctl(fd, VIDIOC_G_CTRL, &control) >= 0){
@@ -464,13 +464,49 @@ namespace capture {
 
                 if(auto_support &&queryctrl_auto.maximum>=1){
                     opt_range.support_type = OPTION_AUTO;
-                    opt_range.def.status_type = queryctrl_auto.default_value==0?OPTION_MANUAL:OPTION_AUTO;
+                    switch (option) {
+                    case DEVICE_EXPOSURE:
+                        if (queryctrl_auto.default_value == V4L2_EXPOSURE_MANUAL || queryctrl_auto.default_value == V4L2_EXPOSURE_SHUTTER_PRIORITY)
+                            opt_range.def.status_type = OPTION_MANUAL;
+                        else
+                            opt_range.def.status_type = OPTION_AUTO;
+                        break;
+                    case DEVICE_IRIS:
+                        if (queryctrl_auto.default_value == V4L2_EXPOSURE_MANUAL || queryctrl_auto.default_value == V4L2_EXPOSURE_APERTURE_PRIORITY)
+                            opt_range.def.status_type = OPTION_MANUAL;
+                        else
+                            opt_range.def.status_type = OPTION_AUTO;
+                        break;
+                    default:
+                        opt_range.def.status_type = queryctrl_auto.default_value == 0 ? OPTION_MANUAL : OPTION_AUTO;
+                    }
                 }
-                opt_range.current.status_type = OPTION_MANUAL;
+                else {
+                    opt_range.support_type = OPTION_MANUAL;
+                    opt_range.def.status_type = OPTION_MANUAL;
+                }
 
                 control.id = v4l2_auto;
                 if (auto_support&&ioctl(fd, VIDIOC_G_CTRL, &control) >= 0){
-                    opt_range.current.status_type = (control.value==0?OPTION_MANUAL:OPTION_AUTO);
+                    switch (option) {
+                    case DEVICE_EXPOSURE:
+                        if (control.value == V4L2_EXPOSURE_MANUAL || control.value == V4L2_EXPOSURE_SHUTTER_PRIORITY)
+                            opt_range.current.status_type = OPTION_MANUAL;
+                        else
+                            opt_range.current.status_type = OPTION_AUTO;
+                        break;
+                    case DEVICE_IRIS:
+                        if (control.value == V4L2_EXPOSURE_MANUAL || control.value == V4L2_EXPOSURE_APERTURE_PRIORITY)
+                            opt_range.current.status_type = OPTION_MANUAL;
+                        else
+                            opt_range.current.status_type = OPTION_AUTO;
+                        break;
+                    default:
+                        opt_range.current.status_type = control.value == 0 ? OPTION_MANUAL : OPTION_AUTO;
+                    }
+                }
+                else {
+                    opt_range.current.status_type = OPTION_MANUAL;
                 }
                 
                 
@@ -483,15 +519,40 @@ namespace capture {
         int fd = control_stream->fd;
         auto [v4l2_manual,v4l2_auto]=option_to_v4l2_map[option];
         if(configurations[option].is_supported){
-            if(v4l2_auto !=0 && configurations[option].support_type == OPTION_AUTO){
-                struct v4l2_control control = {v4l2_auto,value.status_type == OPTION_AUTO?1:0};
+            if(v4l2_auto !=0 && configurations[option].support_type == OPTION_AUTO && configurations[option].current.status_type!= value.status_type){
+
+                struct v4l2_control control = { v4l2_auto,0 };
+                switch (option) {
+                case DEVICE_EXPOSURE:
+                    if (value.status_type == OPTION_MANUAL && configurations[DEVICE_IRIS].current.status_type == OPTION_MANUAL)
+                        opt_range.current.status_type = V4L2_EXPOSURE_MANUAL;
+                    else  if (value.status_type == OPTION_MANUAL && configurations[DEVICE_IRIS].current.status_type == OPTION_AUTO)
+                        opt_range.current.status_type = V4L2_EXPOSURE_SHUTTER_PRIORITY;
+                    else  if (value.status_type == OPTION_AUTO && configurations[DEVICE_IRIS].current.status_type == OPTION_MANUAL)
+                        opt_range.current.status_type = V4L2_EXPOSURE_APERTURE_PRIORITY;
+                    else  if (value.status_type == OPTION_AUTO && configurations[DEVICE_IRIS].current.status_type == OPTION_AUTO)
+                        opt_range.current.status_type = V4L2_EXPOSURE_AUTO;
+                    break;
+                case DEVICE_IRIS:
+                    if (value.status_type == OPTION_MANUAL && configurations[DEVICE_EXPOSURE].current.status_type == OPTION_MANUAL)
+                        opt_range.current.status_type = V4L2_EXPOSURE_MANUAL;
+                    else  if (value.status_type == OPTION_MANUAL && configurations[DEVICE_EXPOSURE].current.status_type == OPTION_AUTO)
+                        opt_range.current.status_type = V4L2_EXPOSURE_APERTURE_PRIORITY;
+                    else  if (value.status_type == OPTION_AUTO && configurations[DEVICE_EXPOSURE].current.status_type == OPTION_MANUAL)
+                        opt_range.current.status_type = V4L2_EXPOSURE_SHUTTER_PRIORITY;
+                    else  if (value.status_type == OPTION_AUTO && configurations[DEVICE_EXPOSURE].current.status_type == OPTION_AUTO)
+                        opt_range.current.status_type = V4L2_EXPOSURE_AUTO;
+                    break;
+                default:
+                    control.value = value.status_type == OPTION_AUTO ? 1 : 0;
+                }
                 if(ioctl(fd, VIDIOC_S_CTRL, &control)>=0)
-                configurations[option].current.status_type = value.status_type;
+                    configurations[option].current.status_type = value.status_type;
             }
             if(v4l2_manual !=0 && value.status_type!=OPTION_AUTO){
                 struct v4l2_control control = {v4l2_manual,value.value};
                 if(ioctl(fd, VIDIOC_S_CTRL, &control)>=0)
-                configurations[option].current.value = value.value;
+                    configurations[option].current.value = value.value;
             } 
         }
         

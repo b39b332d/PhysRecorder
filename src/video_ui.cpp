@@ -577,6 +577,8 @@ void VideoUI::connect_option_set(int opt,QSlider** sliders,QCheckBox** checkboxs
         sliders[opt]->setMinimum(opt_range.min);
         sliders[opt]->setMaximum(opt_range.max);
         sliders[opt]->setSingleStep(opt_range.step);
+        int step = opt_range.step;
+        int min = opt_range.min;
         if (current_opt.status_type == capture::OPTION_AUTO) {
             checkboxs[opt]->setChecked(false);
             pushButtons[opt]->setText("AUTO");
@@ -587,11 +589,20 @@ void VideoUI::connect_option_set(int opt,QSlider** sliders,QCheckBox** checkboxs
             checkboxs[opt]->setChecked(true);
             sliders[opt]->setEnabled(true);
             sliders[opt]->setValue(current_opt.value);
-            pushButtons[opt]->setText(QString::number(current_opt.value / factor));
+            pushButtons[opt]->setText(QString::number(current_opt.value / factor, 'g', 5));
         }
-        connect(sliders[opt], &QSlider::valueChanged, this, [pushButtons,opt,this,&cam_option_changed, factor](int val) {
+        connect(sliders[opt], &QSlider::valueChanged, this, [sliders,pushButtons, opt, this, &cam_option_changed, factor, step, min](int val) {
             cam_option_changed |= (1 << opt);
-            pushButtons[opt]->setText(QString::number(val / factor));
+            auto ofs = (val - min) % step;
+            auto grond = ((val - min) / step) * step + min;
+            if (ofs!=0) {
+                if ((float)ofs / step > 0.5)
+                    val = grond + step;
+                else
+                    val = grond;
+            }
+            sliders[opt]->setValue(val);
+            pushButtons[opt]->setText(QString::number(val / factor, 'g', 5));
             if (!cam_option_changed_timer.isActive()) cam_option_changed_timer.start(100);
             });
         if (opt_range.support_type == capture::OPTION_AUTO) {
@@ -602,7 +613,7 @@ void VideoUI::connect_option_set(int opt,QSlider** sliders,QCheckBox** checkboxs
                 if (!status)
                     pushButtons[opt]->setText("AUTO");
                 else
-                    pushButtons[opt]->setText(QString::number(sliders[opt]->value() / factor));
+                    pushButtons[opt]->setText(QString::number(sliders[opt]->value() / factor, 'g', 5));
                 if (!cam_option_changed_timer.isActive()) cam_option_changed_timer.start(100);
                 });
         }
@@ -624,7 +635,7 @@ void VideoUI::connect_option_set(int opt,QSlider** sliders,QCheckBox** checkboxs
                         checkboxs[opt]->setChecked(false);
                 }
                 else {
-                    pushButtons[opt]->setText(QString::number(reset_prop.value / factor));
+                    pushButtons[opt]->setText(QString::number(reset_prop.value / factor, 'g', 5));
                     if (checkboxs[opt]->isChecked() == true)
                         emit checkboxs[opt]->toggled(true);
                     else
