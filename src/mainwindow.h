@@ -28,7 +28,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(QSplashScreen&,QWidget *parent = nullptr);
+    MainWindow(QSplashScreen*,QWidget *parent = nullptr);
     ~MainWindow();
     Ui::MainWindow* ui;
 

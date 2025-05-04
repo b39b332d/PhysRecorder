@@ -63,7 +63,12 @@ set_target_properties(PhysRecorder PROPERTIES
     AUTOMOC ON
     AUTORCC ON
 )
-target_link_libraries(PhysRecorder PRIVATE PhysRecorder_main Qt6::Widgets ${MKL_LIBRARIES} ${delayimp_LIB})
+if(WIN32)
+target_link_libraries(PhysRecorder PRIVATE PhysRecorder_main Qt6::Widgets ${delayimp_LIB})
+else()
+target_link_libraries(PhysRecorder PRIVATE Qt6::Widgets)
+add_dependencies(PhysRecorder PhysRecorder_main)
+endif()
 
 if (MSVC)
     target_link_options(PhysRecorder PRIVATE "/DELAYLOAD:PhysRecorder_main.dll")

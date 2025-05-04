@@ -7,10 +7,13 @@ if(POLICY CMP0135)
   cmake_policy(SET CMP0135 NEW)
 endif()
 
-
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 set(CMAKE_CXX_STANDARD 20)
+if(WIN32)
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/install)
+else()
+set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/install/usr)
+endif()
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_INSTALL_PREFIX}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_INSTALL_PREFIX}/lib)
 list(APPEND CMAKE_BUILD_RPATH "$ORIGIN/../lib")
@@ -275,38 +278,49 @@ if(Porject_BUILD_TYPE STREQUAL "release")
       set_target_properties(generate_boxed_exe PROPERTIES EXCLUDE_FROM_ALL ON)
     endif()
   elseif(UNIX)
-    find_program(APPIMAGE_PACK_EXE appimagetool)
-    if(NOT ${APPIMAGE_PACK_EXE})
-      set(APPIMAGE_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/appimage)
-      ExternalProject_Add(
-        appimage_external
-        GIT_REPOSITORY https://gitcode.com/gh_mirrors/ap/appimagetool.git
-        GIT_TAG origin/main
-        PREFIX ${APPIMAGE_PREFIX}
-        CMAKE_ARGS
-        -DCMAKE_INSTALL_PREFIX=${APPIMAGE_PREFIX}/install # Install prefix for the external project
-        -DCMAKE_BUILD_TYPE=Release # Pass the build type (Debug, Release, etc.)
-        -DCMAKE_INCLUDE_PATH=${CMAKE_INCLUDE_PATH}
-        BUILD_BYPRODUCTS
-        ${APPIMAGE_PREFIX}/bin/appimagetool # Adjust path if needed
-        LOG_CONFIGURE ON # Log the configure step output
-        LOG_BUILD ON # Log the build step output
-        LOG_INSTALL ON # Log the install step output
-        EXCLUDE_FROM_ALL ON
-      )
-      get_property(APPIMAGE_EXE_PATH TARGET appimage_external PROPERTY BINARY_DIR)
-      set(APPIMAGE_EXECUTABLE "${APPIMAGE_EXE_PATH}/bin/appimagetool")
-      set(ENV{PATH} "$ENV{PATH}:${APPIMAGE_EXE_PATH}/bin")
-    endif()
-
-    add_custom_target(generate_boxed_exe
-      COMMAND ${CMAKE_COMMAND} -DEXEC_NAME=PhysRecorder -DUPX_EXE=${UPX_EXE} -DEVB_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}/bin -P ${CMAKE_HOME_DIRECTORY}/cmake/configure_evb_file.cmake
-      COMMAND ${ENIGMAVBCONXOLE_EXE} ${CMAKE_INSTALL_PREFIX}/bin/PhysRecorder.evb
-      DEPENDS install
-      USES_TERMINAL
+    find_program(APPIMAGE_PACK_EXE appimagetool REQUIRED)
+    ExternalProject_Add(
+      appimage_runtime
+      URL https://master.dl.sourceforge.net/project/appimagekit.mirror/13/runtime-x86_64
+      URL_MD5 37d6f0bc41f143c8c0376e874769e20a
+      CONFIGURE_COMMAND ""
+      BUILD_COMMAND  ""
+      INSTALL_COMMAND ""
+      DOWNLOAD_NAME runtime-x86_64
+      PREFIX ${APPIMAGE_PREFIX}
+      EXCLUDE_FROM_ALL ON
+      DOWNLOAD_NO_EXTRACT  ON
     )
-    set_target_properties(generate_boxed_exe PROPERTIES EXCLUDE_FROM_ALL ON)
-    add_dependencies(generate_boxed_exe appimage_external)
+    set(APPIMAGE_RUNTIME --runtime-file ${APPIMAGE_PREFIX}/src/runtime-x86_64)
+    if(NOT APPIMAGE_PACK_EXE)
+      set(APPIMAGE_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/appimage)
+      set(APPIMAGE_PACK_EXE "${APPIMAGE_PREFIX}/src/appimagetool-x86_64.AppImage")
+      ExternalProject_Add(
+        appimage_bin
+        URL https://master.dl.sourceforge.net/project/appimagekit.mirror/13/appimagetool-x86_64.AppImage
+        URL_MD5 8897f478bb7b701fcd107503a08f62c4
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND  ""
+        INSTALL_COMMAND chmod +x ${APPIMAGE_PACK_EXE}
+        DOWNLOAD_NAME appimagetool
+        PREFIX ${APPIMAGE_PREFIX}
+        EXCLUDE_FROM_ALL ON
+        DOWNLOAD_NO_EXTRACT  ON
+      )
+      add_custom_target(generate_boxed_exe
+        COMMAND ${APPIMAGE_PACK_EXE} ./ ./cn.edu.njust.nbslab.PhysRecorder.appimage ${APPIMAGE_RUNTIME}
+        WORKING_DIRECTORY  ${CMAKE_INSTALL_PREFIX}/..
+        USES_TERMINAL
+      )
+      add_dependencies(generate_boxed_exe appimage_bin appimage_runtime)
+    else()
+      add_custom_target(generate_boxed_exe
+        COMMAND ${APPIMAGE_PACK_EXE} ./ ./cn.edu.njust.nbslab.PhysRecorder.appimage ${APPIMAGE_RUNTIME}
+        WORKING_DIRECTORY  ${CMAKE_INSTALL_PREFIX}/..
+        USES_TERMINAL
+      )
+      add_dependencies(generate_boxed_exe appimage_bin)
+    endif()
 
   endif()
 endif()

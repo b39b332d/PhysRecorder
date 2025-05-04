@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+	<id>cn.edu.njust.nbslab.PhysRecorder</id>
+	<metadata_license>MIT</metadata_license>
+	<project_license>MIT</project_license>
+	<name>PhysRecorder</name>
+	<summary>Physiological Signals Recorder for rPPG</summary>
+	<description>
+		<p>Physiological Signals and Cross Platform Video Recorder for rPPG Analysis from Nanjing University of Science and Technology, NBS lab</p>
+	</description>
+	<launchable type="desktop-id">cn.edu.njust.nbslab.PhysRecorder.desktop</launchable>
+	<url type="homepage">https://nbslab.njust.edu.cn/PhysRecorder/</url>
+	<screenshots>
+		<screenshot type="default">
+			<image>https://nbslab.njust.edu.cn/PhysRecorder/icon.png</image>
+		</screenshot>
+	</screenshots>
+	<provides>
+		<id>cn.edu.njust.nbslab.PhysRecorder.desktop</id>
+	</provides>
+	<content_rating type="oars-1.1" /> 
+</component>

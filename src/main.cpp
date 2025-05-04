@@ -6,11 +6,12 @@
 #include <QDir>
 #ifdef _WIN32
   #define DLL_IMPORT __declspec(dllimport)
+  DLL_IMPORT void start_mainwin(QSplashScreen* screen,QString* program_path);
 #else
+  #include <dlfcn.h>
   #define DLL_IMPORT 
 #endif
 
-DLL_IMPORT void start_mainwin(QSplashScreen& screen,QString& program_path);
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
@@ -42,6 +43,22 @@ int main(int argc, char *argv[])
 
     app.setWindowIcon(QIcon(QPixmap(program_path+"data/resources/icon.ico")));
 
-    start_mainwin(splash,program_path);
+    #ifdef _WIN32
+    start_mainwin(&splash,&program_path);
+    #else
+        void *handle;
+        void (*start_mainwin)(QSplashScreen* screen,QString* program_path);
+
+        handle = dlopen ("libPhysRecorder_main.so", RTLD_LAZY);
+        if (!handle) {
+            exit(1);
+        }
+        start_mainwin = (void (*)(QSplashScreen* screen,QString* program_path))dlsym(handle, "start_mainwin");
+        if (dlerror() != NULL)  {
+            exit(1);
+        }
+
+        (*start_mainwin)(&splash,&program_path);
+    #endif
     exit(app.exec());
 }

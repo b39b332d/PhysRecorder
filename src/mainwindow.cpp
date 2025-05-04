@@ -16,6 +16,7 @@ double win_length=8;
 #define EXPORT __declspec(dllexport)
 #else
 #define EXPORT __attribute__((visibility("default")))
+extern "C" void start_mainwin(QSplashScreen* screen,QString* program_path);
 #endif
 
 void MainWindow::refresh_plot() {
@@ -97,13 +98,13 @@ void MainWindow::onSerialHighted(int idx, bool is_highlight) {
 
 }
 
-MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
+MainWindow::MainWindow(QSplashScreen* splash, QWidget* parent)
 //use reference instead of pointer
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , worker(this)
 {
-    splash.showMessage("Setting up UI");
+    splash->showMessage("Setting up UI");
     ui->setupUi(this);
 
     this->setWindowTitle("Remote PhotoPlethysmoGraphy");
@@ -144,9 +145,9 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
             }
         }
         });
-    splash.showMessage("Detecting Realsense Device...");
+    splash->showMessage("Detecting Realsense Device...");
 
-    splash.showMessage("Init Plot...");
+    splash->showMessage("Init Plot...");
 
     refresh_plot_timer = new QTimer(this);
     connect(refresh_plot_timer, &QTimer::timeout, this, &MainWindow::refresh_plot);
@@ -199,14 +200,14 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     signalProcess->moveToThread(th2);
     th2->start();
 
-    splash.showMessage("Creating threads");
+    splash->showMessage("Creating threads");
     connect(signalProcess, &SignalProcess::fftReady, this, &MainWindow::setfft);
 
-    splash.showMessage("Detecting Serial Device...");
+    splash->showMessage("Detecting Serial Device...");
     
     on_actionrefreshSerial_triggered();
 
-    splash.showMessage("Connect signals");
+    splash->showMessage("Connect signals");
 
     ui->actionR->setProperty("channel",  signalProcess->r_channel);
     ui->actionG->setProperty("channel", signalProcess->g_channel);
@@ -248,13 +249,13 @@ MainWindow::MainWindow(QSplashScreen& splash, QWidget* parent)
     watcher.addPath(sharedFilePath);
     QObject::connect(&watcher, &QFileSystemWatcher::fileChanged,this, &MainWindow::onFileChanged);
 
-    splash.showMessage("Init capture");
+    splash->showMessage("Init capture");
     videoui = ui->video_ui;
 
 	videoui->init(ui, signalProcess);
 
     worker.wait();
-    splash.showMessage("Done");
+    splash->showMessage("Done");
 }
 void MainWindow::setSqi(int c, float snr, float sqi) {
     QString v = QString::number(snr, 'f', 2) + "\n" + QString::number(sqi, 'f', 2);
@@ -587,9 +588,9 @@ bool MainWindow::emitFileSignal(bool is_start,QString msg) {
 
 
 std::string std_program_path;
-EXPORT void start_mainwin(QSplashScreen& screen,QString& program_path) {
-    std_program_path = program_path.toStdString();
+EXPORT void start_mainwin(QSplashScreen* screen,QString* program_path) {
+    std_program_path = program_path->toStdString();
     MainWindow *w = new MainWindow(screen);
     w->show();
-    screen.finish(w);
+    screen->finish(w);
 }
