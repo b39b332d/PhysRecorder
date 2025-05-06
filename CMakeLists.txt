@@ -250,7 +250,8 @@ if(Porject_BUILD_TYPE STREQUAL "release")
       set_target_properties(generate_boxed_exe PROPERTIES EXCLUDE_FROM_ALL ON)
     endif()
   elseif(UNIX)
-    find_program(APPIMAGE_PACK_EXE appimagetool REQUIRED)
+    find_program(APPIMAGE_PACK_EXE appimagetool)
+    set(APPIMAGE_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/appimage)
     ExternalProject_Add(
       appimage_runtime
       URL https://master.dl.sourceforge.net/project/appimagekit.mirror/13/runtime-x86_64
@@ -263,10 +264,9 @@ if(Porject_BUILD_TYPE STREQUAL "release")
       EXCLUDE_FROM_ALL ON
       DOWNLOAD_NO_EXTRACT  ON
     )
-    set(APPIMAGE_RUNTIME --runtime-file ${APPIMAGE_PREFIX}/src/runtime-x86_64)
+    set(APPIMAGE_RUNTIME ${APPIMAGE_PREFIX}/src/runtime-x86_64)
     if(NOT APPIMAGE_PACK_EXE)
-      set(APPIMAGE_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/appimage)
-      set(APPIMAGE_PACK_EXE "${APPIMAGE_PREFIX}/src/appimagetool-x86_64.AppImage")
+      set(APPIMAGE_PACK_EXE "${APPIMAGE_PREFIX}/src/appimagetool")
       ExternalProject_Add(
         appimage_bin
         URL https://master.dl.sourceforge.net/project/appimagekit.mirror/13/appimagetool-x86_64.AppImage
@@ -280,18 +280,18 @@ if(Porject_BUILD_TYPE STREQUAL "release")
         DOWNLOAD_NO_EXTRACT  ON
       )
       add_custom_target(generate_boxed_exe
-        COMMAND ${APPIMAGE_PACK_EXE} ./ ./cn.edu.njust.nbslab.PhysRecorder.appimage ${APPIMAGE_RUNTIME}
+        COMMAND ${APPIMAGE_PACK_EXE} ./ ./cn.edu.njust.nbslab.PhysRecorder.appimage --runtime-file ${APPIMAGE_RUNTIME}
         WORKING_DIRECTORY  ${CMAKE_INSTALL_PREFIX}/..
         USES_TERMINAL
       )
       add_dependencies(generate_boxed_exe appimage_bin appimage_runtime)
     else()
       add_custom_target(generate_boxed_exe
-        COMMAND ${APPIMAGE_PACK_EXE} ./ ./cn.edu.njust.nbslab.PhysRecorder.appimage ${APPIMAGE_RUNTIME}
+        COMMAND ${APPIMAGE_PACK_EXE} ./ ./cn.edu.njust.nbslab.PhysRecorder.appimage --runtime-file ${APPIMAGE_RUNTIME}
         WORKING_DIRECTORY  ${CMAKE_INSTALL_PREFIX}/..
         USES_TERMINAL
       )
-      add_dependencies(generate_boxed_exe appimage_bin)
+      add_dependencies(generate_boxed_exe appimage_runtime)
     endif()
 
   endif()
