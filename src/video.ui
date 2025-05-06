@@ -1641,16 +1641,6 @@
              <height>25</height>
             </size>
            </property>
-           <item>
-            <property name="text">
-             <string>OpenVINO</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>DLIB</string>
-            </property>
-           </item>
           </widget>
          </item>
         </layout>

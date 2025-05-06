@@ -30,8 +30,7 @@ if(NOT EXISTS "${DLIB_MODEL_PATH}")
     FetchContent_Declare(
       bz2_build
       URL "https://versaweb.dl.sourceforge.net/project/gnuwin32/bzip2/1.0.5/bzip2-1.0.5-bin.zip"
-      DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-      OVERRIDE_FIND_PACKAGE
+      URL_HASH MD5=a1155c41b1954a2f6da1014c7c1a1263
     )
     FetchContent_MakeAvailable(bz2_build)
     set(bz2_exe ${bz2_build_SOURCE_DIR}/bin/bzip2.exe)

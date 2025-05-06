@@ -35,40 +35,6 @@ function(get_all_dep_recursive tgt var)
 
 endfunction()
 
-unset(debug_postfix)
-if(Porject_BUILD_TYPE STREQUAL debug)
-    set(debug_postfix "d")
-endif()
-if(WIN32)
-    set(shared_prefix "")
-    set(shared_ext ${debug_postfix}.dll)
-else()
-    set(shared_prefix lib)
-    set(shared_ext .so)
-endif()
-
-function(find_all_library)
-    unset(__deps_find_all_library)
-    if(${ARGV1} STREQUAL PATH_SUFFIXES)
-        set(arg_index "3")
-    else()
-        set(arg_index "0")
-    endif()
-    foreach(i RANGE ${arg_index} ${ARGC})
-        unset(lib_file CACHE)
-        if(arg_index EQUAL 3)
-            find_file(lib_file NAMES ${ARGV${i}} PATH_SUFFIXES ${ARGV2} HINTS ${INSTALL_DEP_PATHS} ${CMAKE_LIBRARY_PATH})
-        else()
-            find_file(lib_file NAMES ${ARGV${i}} HINTS ${INSTALL_DEP_PATHS} ${CMAKE_LIBRARY_PATH})
-        endif()
-        if(lib_file)
-            list(APPEND __deps_find_all_library ${lib_file})
-        endif()
-    endforeach()
-    set(${ARGV0} ${__deps_find_all_library} PARENT_SCOPE)
-    unset(lib_file CACHE) 
-endfunction()
-
 function(custom_target_install tgt)
     if(TARGET ${tgt})
         get_all_dep_recursive( ${tgt} tgt_dep_lib)
@@ -119,35 +85,10 @@ function(custom_target_install tgt)
             install(FILES ${TGT_LINK_FILE} TYPE BIN)
         endif()
 
-        if(opencv_core IN_LIST tgt_dep_lib)
-
-            string(REPLACE "." "" OpenCV_VERSION_CP ${OpenCV_VERSION})
-
-            if("opencv_dnn" IN_LIST tgt_dep_lib)
-                if(${OpenCV_VERSION_CP} LESS 480)
-                    set(dnn_dep ${INSTALL_OPENCV_BIN}/inference_engine_ir_reader
-                        ${INSTALL_OPENCV_BIN}/inference_engine_legacy
-                        ${INSTALL_OPENCV_BIN}/inference_engine_lp_transformations
-                        ${INSTALL_OPENCV_BIN}/MKLDNNPlugin
-                        ${INSTALL_OPENCV_BIN}/plugins.xml)
-                    install(FILES ${dnn_dep} TYPE BIN)
-                    install(CODE "list(APPEND _CMAKE_DEPS ${dnn_dep})")
-                else()
-                    find_all_library(openvino_intel_cpu_plugin_lib PATH_SUFFIXES ${OPENVINO_PATH_EXT} 
-                        ${shared_prefix}openvino_intel_cpu_plugin${shared_ext}
-                        ${shared_prefix}openvino_intel_cpu_plugin${shared_ext}.${OpenVINO_VERSION_COMPACT}
-                        ${shared_prefix}openvino_intel_cpu_plugin${shared_ext}.${OpenVINO_VERSION})
-                    list(APPEND dnn_dep_dst ${openvino_intel_cpu_plugin_lib})
-                    find_all_library(openvino_ir_frontend_lib PATH_SUFFIXES ${OPENVINO_PATH_EXT}
-                        ${shared_prefix}openvino_ir_frontend${shared_ext}.${OpenVINO_VERSION_COMPACT}
-                        ${shared_prefix}openvino_ir_frontend${shared_ext}.${OpenVINO_VERSION}
-                        ${shared_prefix}openvino_ir_frontend${shared_ext})
-                    list(APPEND dnn_dep_dst ${openvino_ir_frontend_lib})
-                    install(FILES ${dnn_dep_dst} TYPE LIB)
-                endif()
-            endif()
-
-            install(DIRECTORY ${CMAKE_SOURCE_DIR}/data TYPE BIN PATTERN "styles" EXCLUDE)
+        if(opencv_dnn IN_LIST tgt_dep_lib AND OpenVINOLIB_FOUND)
+            install(FILES ${OpenVINOLIB} TYPE LIB)
         endif()
+
+        install(DIRECTORY ${CMAKE_SOURCE_DIR}/data TYPE BIN PATTERN "styles" EXCLUDE)
     endif()
 endfunction()

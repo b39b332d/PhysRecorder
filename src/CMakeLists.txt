@@ -63,11 +63,14 @@ set_target_properties(PhysRecorder PROPERTIES
     AUTOMOC ON
     AUTORCC ON
 )
+if(OpenVINOLIB_FOUND)
+    target_compile_definitions(PhysRecorder_main PRIVATE HAS_OPENVINO)
+endif()
 if(WIN32)
-target_link_libraries(PhysRecorder PRIVATE PhysRecorder_main Qt6::Widgets ${delayimp_LIB})
+    target_link_libraries(PhysRecorder PRIVATE PhysRecorder_main Qt6::Widgets ${delayimp_LIB})
 else()
-target_link_libraries(PhysRecorder PRIVATE Qt6::Widgets)
-add_dependencies(PhysRecorder PhysRecorder_main)
+    target_link_libraries(PhysRecorder PRIVATE Qt6::Widgets)
+    add_dependencies(PhysRecorder PhysRecorder_main)
 endif()
 
 if (MSVC)

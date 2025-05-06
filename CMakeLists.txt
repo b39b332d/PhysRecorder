@@ -125,16 +125,11 @@ elseif(MINGW)
   endif()
 endif()
 ####### FIND OPENCV
-if(OpenCV_ROOT)
-  set(OpenCV_DIR "${OpenCV_ROOT}/${Porject_BUILD_TYPE}")
-endif()
-find_package(OpenCV QUIET)
+find_package(OpenCV QUIET PATH_SUFFIXES ${Porject_BUILD_TYPE}/build/cmake  ${Porject_BUILD_TYPE}/build build ${Porject_BUILD_TYPE})
 if(NOT OpenCV_FOUND AND DOWNLOAD_URL)
   FetchContent_Declare(
     OpenCV_Build
     URL "${DOWNLOAD_URL}/opencv4/${PHY_RUNTIME}/${Porject_BUILD_TYPE}_${PHY_ARCH}.tar.gz"
-    DOWNLOAD_EXTRACT_TIMESTAMP ON
-    OVERRIDE_FIND_PACKAGE
   )
   FetchContent_MakeAvailable(OpenCV_Build)
   find_package(OpenCV REQUIRED NO_SYSTEM_ENVIRONMENT_PATH HINTS ${opencv_build_SOURCE_DIR})
@@ -144,40 +139,19 @@ if(NOT OpenCV_FOUND)
 endif()
 
 string(TOUPPER ${Porject_BUILD_TYPE} Porject_BUILD_TYPE_UPPER)
-get_target_property(cv_core opencv_core IMPORTED_LOCATION_${Porject_BUILD_TYPE_UPPER})
+get_target_property(cv_core_config opencv_core IMPORTED_CONFIGURATIONS)
+get_target_property(cv_core opencv_core IMPORTED_LOCATION_${cv_core_config})
 get_filename_component(INSTALL_OPENCV_BIN "${cv_core}" DIRECTORY)
 list(APPEND INSTALL_DEP_PATHS ${INSTALL_OPENCV_BIN})
 
 ####### FIND OPENVINO
-find_package(OpenVINO QUIET)
-if(NOT OpenVINO_FOUND AND DOWNLOAD_URL)
-  FetchContent_Declare(
-    OpenVINO_Build
-    URL "${DOWNLOAD_URL}/openvino2450/${PHY_RUNTIME}/${PHY_ARCH}.tar.gz"
-    DOWNLOAD_EXTRACT_TIMESTAMP ON
-    OVERRIDE_FIND_PACKAGE
-  )
-  FetchContent_MakeAvailable(OpenVINO_Build)
-  find_package(OpenVINO REQUIRED NO_SYSTEM_ENVIRONMENT_PATH HINTS ${openvino_build_SOURCE_DIR}/runtime)
-endif()
-if(NOT OpenVINO_FOUND)
-  message(FATAL_ERROR "OpenVINO does not exist! CMake will exit.")
-endif()
-get_target_property(ov_core openvino::runtime IMPORTED_LOCATION_${Porject_BUILD_TYPE_UPPER})
-get_filename_component(INSTALL_OPENVINO_BIN "${ov_core}" DIRECTORY)
-list(APPEND INSTALL_DEP_PATHS ${INSTALL_OPENVINO_BIN})
-
-set(OPENVINO_PATH_EXT "openvino-${OpenVINO_VERSION}")
-string(SUBSTRING ${OpenVINO_VERSION_MAJOR} 2 -1 OpenVINO_VERSION_COMPACT)
-set(OpenVINO_VERSION_COMPACT ${OpenVINO_VERSION_COMPACT}${OpenVINO_VERSION_MINOR}${OpenVINO_VERSION_PATCH})
+find_package(OpenVINOLIB)
 ####### FIND Qt
 find_package(Qt6 COMPONENTS Widgets Gui Core)
 if(NOT Qt6_FOUND AND DOWNLOAD_URL)
   FetchContent_Declare(
     Qt6_BUILD
     URL "${DOWNLOAD_URL}/qt6/${PHY_RUNTIME}/${PHY_ARCH}.tar.gz"
-    DOWNLOAD_EXTRACT_TIMESTAMP ON
-    OVERRIDE_FIND_PACKAGE
     EXCLUDE_FROM_ALL
   )
   FetchContent_MakeAvailable(Qt6_BUILD)
@@ -258,8 +232,6 @@ if(Porject_BUILD_TYPE STREQUAL "release")
         FetchContent_Declare(
           BOX_TOOLS
           URL "${DOWNLOAD_URL}/box_tools.zip"
-          DOWNLOAD_EXTRACT_TIMESTAMP ON
-          OVERRIDE_FIND_PACKAGE
           EXCLUDE_FROM_ALL
         )
         FetchContent_MakeAvailable(BOX_TOOLS)
@@ -353,8 +325,6 @@ if(MSVC)
     FetchContent_Declare(
       libyuv_build
       URL "${DOWNLOAD_URL}/libyuv.zip"
-      DOWNLOAD_EXTRACT_TIMESTAMP ON
-      OVERRIDE_FIND_PACKAGE
     )
     FetchContent_MakeAvailable(libyuv_build)
     find_library(libyuv_build libyuv.dll HINT ${libyuv_build_SOURCE_DIR})
@@ -469,4 +439,9 @@ if(V4L2_FOUND)
   message(STATUS "V4L2 library status:")
   message(STATUS "    library: ${V4L2_LIBRARIES}")
   message(STATUS "    include path: ${V4L2_INCLUDE_DIRS}")
+endif()
+if(OpenVINOLIB_FOUND)
+  message(STATUS "OpenVINO library status:")
+  message(STATUS "    library: ${OpenVINOLIB}")
+  message(STATUS "    cv only: ${OpenVINOLIB_CVONLY}")
 endif()

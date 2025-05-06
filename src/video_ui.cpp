@@ -42,6 +42,14 @@ void VideoUI::init(Ui::MainWindow* main_ui, SignalProcess* signalProcess)
     this->actionrefreshCamera = main_ui->actionrefreshCamera;
     this->actionTracking = main_ui->actionTracking;
     this->toolBarCamera = main_ui->toolBarCamera;
+
+#ifdef HAS_OPENVINO
+    ui->comboBox_inf_method->addItem("OpenVINO");
+#endif
+    ui->comboBox_inf_method->addItem("DLIB");
+    if (ui->comboBox_inf_method->currentIndex() != 0)
+        ui->comboBox_inf_method->setCurrentIndex(0);
+
     actionStartCamera->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
     actionrefreshCamera->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
 
@@ -81,7 +89,11 @@ void VideoUI::init(Ui::MainWindow* main_ui, SignalProcess* signalProcess)
     converter = new Converter(ui->q_video);
     QThread* converterThread = new QThread();
 
-    face_tracking = new ColorExtractor(Inference::get_inference(INF_OPENVINO));
+    if (ui->comboBox_inf_method->currentText() == "DLIB")
+        face_tracking = new ColorExtractor(Inference::get_inference(INF_DLIB));
+    else
+        face_tracking = new ColorExtractor(Inference::get_inference(INF_OPENVINO));
+
     capture = new Capture(face_tracking);
     converter->moveToThread(converterThread);
     connect(capture, &Capture::device_disabled, this, &VideoUI::onCaptureDeviceDisabled);
@@ -236,10 +248,10 @@ void VideoUI::init(Ui::MainWindow* main_ui, SignalProcess* signalProcess)
         worker.run_with_call_back([idx,this]() {
             capture->setInference(nullptr);
             delete face_tracking;
-            if (idx == 0)
-                face_tracking = new ColorExtractor(Inference::get_inference(INF_OPENVINO));
-            else
+            if (ui->comboBox_inf_method->currentText() == "DLIB")
                 face_tracking = new ColorExtractor(Inference::get_inference(INF_DLIB));
+            else
+                face_tracking = new ColorExtractor(Inference::get_inference(INF_OPENVINO));
 
             actionTracking->setChecked(false);
             emit actionTracking->clicked(false);
