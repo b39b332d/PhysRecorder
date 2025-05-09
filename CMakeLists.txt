@@ -36,8 +36,8 @@ if(NOT GENERATOR_IS_MULTI_CONFIG_VAR AND NOT DEFINED CMAKE_BUILD_TYPE)
 endif()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 if(DEFINED ENV{CONDA_PREFIX})
-  list(APPEND CMAKE_LIBRARY_PATH $ENV{CONDA_PREFIX}/lib)
-  list(APPEND CMAKE_INCLUDE_PATH $ENV{CONDA_PREFIX}/include)
+  list(PREPEND CMAKE_LIBRARY_PATH $ENV{CONDA_PREFIX}/lib)
+  list(PREPEND CMAKE_INCLUDE_PATH $ENV{CONDA_PREFIX}/include)
 endif()
 
 project(rPPG LANGUAGES CXX C)
@@ -82,20 +82,18 @@ include("cmake/env.cmake" OPTIONAL)
 set(INSTALL_DEP_PATHS "")
 
 
+if("${CMAKE_GENERATOR}" MATCHES "(Win64|IA64)")
+set(PHY_ARCH "x64")
+elseif("${CMAKE_GENERATOR_PLATFORM}" MATCHES "ARM64")
+set(PHY_ARCH "ARM64")
+elseif("${CMAKE_GENERATOR}" MATCHES "ARM")
+set(PHY_ARCH "ARM")
+elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
+set(PHY_ARCH "x64")
+else()
+set(PHY_ARCH "x86")
+endif()
 if(MSVC)
-  # see Modules/CMakeGenericSystem.cmake
-  if("${CMAKE_GENERATOR}" MATCHES "(Win64|IA64)")
-    set(PHY_ARCH "x64")
-  elseif("${CMAKE_GENERATOR_PLATFORM}" MATCHES "ARM64")
-    set(PHY_ARCH "ARM64")
-  elseif("${CMAKE_GENERATOR}" MATCHES "ARM")
-    set(PHY_ARCH "ARM")
-  elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
-    set(PHY_ARCH "x64")
-  else()
-    set(PHY_ARCH x86)
-  endif()
-
   if(MSVC_VERSION EQUAL 1400)
     set(PHY_RUNTIME vc8)
   elseif(MSVC_VERSION EQUAL 1500)
@@ -177,15 +175,17 @@ elseif(UNIX)
       GIT_TAG origin/master
       PREFIX ${LINUXDEPLOYQT_PREFIX}
       CMAKE_ARGS
-      -DCMAKE_INSTALL_PREFIX=${LINUXDEPLOYQT_PREFIX}/install # Install prefix for the external project
-      -DCMAKE_BUILD_TYPE=Release # Pass the build type (Debug, Release, etc.)
-      INSTALL_BYPRODUCTS
-      ${LINUXDEPLOYQT_PREFIX}/install/bin/linuxdeployqt # Adjust path if needed
-      LOG_CONFIGURE ON # Log the configure step output
-      LOG_BUILD ON # Log the build step output
-      LOG_INSTALL ON # Log the install step output
+      -DCMAKE_BUILD_TYPE=Release
+      -DQT_HOST_PATH=${QT_HOST_PATH}
+      -DQT_REQUIRE_HOST_PATH_CHECK=${QT_REQUIRE_HOST_PATH_CHECK}
+      -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=${LINUXDEPLOYQT_PREFIX}
+      BUILD_BYPRODUCTS ${LINUXDEPLOYQT_PREFIX}/linuxdeployqt
+      INSTALL_COMMAND ""
+      LOG_CONFIGURE ON
+      LOG_BUILD ON
+      LOG_INSTALL ON
     )
-    set(DEPLOYQT_EXECUTABLE "${LINUXDEPLOYQT_PREFIX}/install/bin/linuxdeployqt")
+    set(DEPLOYQT_EXECUTABLE "${LINUXDEPLOYQT_PREFIX}/linuxdeployqt")
   endif()
 endif()
 ####### FIND MKL
@@ -225,6 +225,12 @@ endif()
 
 
 ######### FIND PACKEXE
+
+if(CMAKE_GENERATOR STREQUAL Ninja)
+    set(dep_install DEPENDS install)
+else()
+    set(dep_install COMMAND "${CMAKE_COMMAND}" --build "${PROJECT_BINARY_DIR}" --target install)
+endif()
 if(Porject_BUILD_TYPE STREQUAL "release")
   if(WIN32)
     if(NOT ENIGMAVBCONXOLE_EXE OR NOT UPX_EXE)
@@ -242,34 +248,44 @@ if(Porject_BUILD_TYPE STREQUAL "release")
     endif()
     if(ENIGMAVBCONXOLE_EXE AND UPX_EXE)
       add_custom_target(generate_boxed_exe
+        ${dep_install}
         COMMAND ${CMAKE_COMMAND} -DEXEC_NAME=PhysRecorder -DUPX_EXE=${UPX_EXE} -DEVB_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}/bin -P ${CMAKE_HOME_DIRECTORY}/cmake/configure_evb_file.cmake
         COMMAND ${ENIGMAVBCONXOLE_EXE} ${CMAKE_INSTALL_PREFIX}/bin/PhysRecorder.evb
-        DEPENDS install
         USES_TERMINAL
       )
       set_target_properties(generate_boxed_exe PROPERTIES EXCLUDE_FROM_ALL ON)
     endif()
   elseif(UNIX)
+  if(PHY_ARCH STREQUAL x64)
+  set(rt_file_type x86_64)
+  elseif(PHY_ARCH STREQUAL ARM64)
+  set(rt_file_type aarch64)
+  elseif(PHY_ARCH STREQUAL ARM)
+  set(rt_file_type armhf)
+  elseif(PHY_ARCH STREQUAL x86)
+  set(rt_file_type i686)
+  endif()
+
     find_program(APPIMAGE_PACK_EXE appimagetool)
     set(APPIMAGE_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/appimage)
     ExternalProject_Add(
       appimage_runtime
-      URL https://master.dl.sourceforge.net/project/appimagekit.mirror/13/runtime-x86_64
+      URL https://master.dl.sourceforge.net/project/appimagekit.mirror/13/runtime-${rt_file_type}
       URL_MD5 37d6f0bc41f143c8c0376e874769e20a
       CONFIGURE_COMMAND ""
       BUILD_COMMAND  ""
       INSTALL_COMMAND ""
-      DOWNLOAD_NAME runtime-x86_64
+      DOWNLOAD_NAME runtime
       PREFIX ${APPIMAGE_PREFIX}
       EXCLUDE_FROM_ALL ON
       DOWNLOAD_NO_EXTRACT  ON
     )
-    set(APPIMAGE_RUNTIME ${APPIMAGE_PREFIX}/src/runtime-x86_64)
+    set(APPIMAGE_DEPS  appimage_runtime)
     if(NOT APPIMAGE_PACK_EXE)
       set(APPIMAGE_PACK_EXE "${APPIMAGE_PREFIX}/src/appimagetool")
       ExternalProject_Add(
         appimage_bin
-        URL https://master.dl.sourceforge.net/project/appimagekit.mirror/13/appimagetool-x86_64.AppImage
+        URL https://master.dl.sourceforge.net/project/appimagekit.mirror/13/appimagetool-${rt_file_type}.AppImage
         URL_MD5 8897f478bb7b701fcd107503a08f62c4
         CONFIGURE_COMMAND ""
         BUILD_COMMAND  ""
@@ -279,20 +295,16 @@ if(Porject_BUILD_TYPE STREQUAL "release")
         EXCLUDE_FROM_ALL ON
         DOWNLOAD_NO_EXTRACT  ON
       )
-      add_custom_target(generate_boxed_exe
-        COMMAND ${APPIMAGE_PACK_EXE} ./ ./cn.edu.njust.nbslab.PhysRecorder.appimage --runtime-file ${APPIMAGE_RUNTIME}
-        WORKING_DIRECTORY  ${CMAKE_INSTALL_PREFIX}/..
-        USES_TERMINAL
-      )
-      add_dependencies(generate_boxed_exe appimage_bin appimage_runtime)
-    else()
-      add_custom_target(generate_boxed_exe
-        COMMAND ${APPIMAGE_PACK_EXE} ./ ./cn.edu.njust.nbslab.PhysRecorder.appimage --runtime-file ${APPIMAGE_RUNTIME}
-        WORKING_DIRECTORY  ${CMAKE_INSTALL_PREFIX}/..
-        USES_TERMINAL
-      )
-      add_dependencies(generate_boxed_exe appimage_runtime)
+      list(APPEND APPIMAGE_DEPS appimage_bin)
     endif()
+    add_custom_target(generate_boxed_exe
+        ${dep_install}
+        COMMAND "${CMAKE_COMMAND}" --build "${PROJECT_BINARY_DIR}" --target install
+        COMMAND ${APPIMAGE_PACK_EXE} ./ ./cn.edu.njust.nbslab.PhysRecorder.appimage --runtime-file ${APPIMAGE_PREFIX}/src/runtime
+        WORKING_DIRECTORY  ${CMAKE_INSTALL_PREFIX}/..
+        USES_TERMINAL
+    )
+    add_dependencies(generate_boxed_exe ${APPIMAGE_DEPS})
 
   endif()
 endif()
@@ -308,51 +320,7 @@ if(UNIX)
 endif()
 
 ####### FIND libyuv
-if(MSVC)
-  find_library(libyuv_build_lib libyuv.dll HINT ${LIBYUV_PATH})
-  if(libyuv_build_lib)
-    set(libyuv_dll ${libyuv_build_lib})
-    set(libyuv_include ${LIBYUV_PATH}/include)
-    add_library(yuv SHARED IMPORTED)
-    set_target_properties(yuv PROPERTIES
-      IMPORTED_IMPLIB ${libyuv_build_lib}
-      IMPORTED_LOCATION ${LIBYUV_PATH}/libyuv.dll
-      INTERFACE_INCLUDE_DIRECTORIES ${LIBYUV_PATH}/include
-    )
-    list(APPEND INSTALL_DEP_PATHS "${LIBYUV_PATH}")
-    set(libyuv_status "local")
-  elseif(DOWNLOAD_URL)
-    FetchContent_Declare(
-      libyuv_build
-      URL "${DOWNLOAD_URL}/libyuv.zip"
-    )
-    FetchContent_MakeAvailable(libyuv_build)
-    find_library(libyuv_build libyuv.dll HINT ${libyuv_build_SOURCE_DIR})
-    add_library(yuv SHARED IMPORTED)
-    set_target_properties(yuv PROPERTIES
-      IMPORTED_IMPLIB ${libyuv_build}
-      IMPORTED_LOCATION "${libyuv_build_SOURCE_DIR}/libyuv.dll"
-      INTERFACE_INCLUDE_DIRECTORIES ${libyuv_build_SOURCE_DIR}/include
-    )
-    list(APPEND INSTALL_DEP_PATHS "${libyuv_build_SOURCE_DIR}")
-    set(libyuv_status "download")
-  endif()
-endif()
-if(NOT TARGET yuv)
-  FetchContent_Declare(
-    libyuv
-    GIT_REPOSITORY https://gitcode.com/gh_mirrors/li/libyuv.git
-    GIT_TAG main
-    GIT_SHALLOW ON
-    EXCLUDE_FROM_ALL
-  )
-  if(NOT libyuv_POPULATED)
-    FetchContent_Populate(libyuv)
-    add_subdirectory(${libyuv_SOURCE_DIR} ${libyuv_BINARY_DIR} EXCLUDE_FROM_ALL)
-  endif()
-  target_include_directories(yuv INTERFACE "${libyuv_SOURCE_DIR}/include/")
-  set(libyuv_status ${CMAKE_CXX_COMPILER_ID})
-endif()
+find_package(libyuv)
 
 
 ####### Find serial

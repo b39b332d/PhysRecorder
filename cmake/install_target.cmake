@@ -66,7 +66,7 @@ function(custom_target_install tgt)
                 file(GENERATE
                     OUTPUT "DeployQt.cmake"
                     CONTENT "execute_process(COMMAND \"${DEPLOYQT_EXECUTABLE}\" \
-                                $<TARGET_NAME:${tgt}> -verbose=1 -no-translations -bundle-non-qt-libs -extra-plugins=platforms -qmake=${QMAKE_EXECUTABLE} \
+                                $<TARGET_NAME:${tgt}> -unsupported-allow-new-glibc -verbose=1 -no-translations -bundle-non-qt-libs -extra-plugins=platforms -qmake=${QMAKE_EXECUTABLE} \
                                 WORKING_DIRECTORY ${CMAKE_INSTALL_PREFIX}/bin \
                                 RESULT_VARIABLE result)
                             if(result)

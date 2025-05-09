@@ -26,16 +26,18 @@ endforeach()
 set(DLIB_MODEL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/models/dlib/shape_predictor_68_face_landmarks_GTX.dat)
 if(NOT EXISTS "${DLIB_MODEL_PATH}")
   find_program(bz2_exe bzip2)
-  if(NOT ${bz2_exe} AND WIN32)
-    FetchContent_Declare(
-      bz2_build
-      URL "https://versaweb.dl.sourceforge.net/project/gnuwin32/bzip2/1.0.5/bzip2-1.0.5-bin.zip"
-      URL_HASH MD5=a1155c41b1954a2f6da1014c7c1a1263
-    )
-    FetchContent_MakeAvailable(bz2_build)
-    set(bz2_exe ${bz2_build_SOURCE_DIR}/bin/bzip2.exe)
-  else()
-    message(FATAL_ERROR "no bzip2 program found!")
+  if(NOT bz2_exe)
+      if(WIN32)
+        FetchContent_Declare(
+          bz2_build
+          URL "https://versaweb.dl.sourceforge.net/project/gnuwin32/bzip2/1.0.5/bzip2-1.0.5-bin.zip"
+          URL_HASH MD5=a1155c41b1954a2f6da1014c7c1a1263
+        )
+        FetchContent_MakeAvailable(bz2_build)
+        set(bz2_exe ${bz2_build_SOURCE_DIR}/bin/bzip2.exe)
+      else()
+        message(FATAL_ERROR "no bzip2 program found!")
+      endif()
   endif()
   file(DOWNLOAD "https://raw.gitcode.com/gh_mirrors/dl/dlib-models/raw/master/shape_predictor_68_face_landmarks_GTX.dat.bz2"
     ${DLIB_MODEL_PATH}.bz2 INACTIVITY_TIMEOUT 30 SHOW_PROGRESS)
