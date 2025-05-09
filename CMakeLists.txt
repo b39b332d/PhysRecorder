@@ -72,7 +72,7 @@ set(Qt6_ROOT CACHE PATH "Qt root directory")
 set(Realsense_ROOT CACHE PATH "RealSense root directory")
 set(MVis_ROOT CACHE PATH "MindVision SDK Root directory")
 set(MKL_ROOT CACHE PATH "MKL cmake directory")
-set(LIBYUV_PATH CACHE PATH "libyuv.dll path")
+set(LIBYUV_PATH CACHE PATH "libyuv.dll and include path")
 
 set(ENIGMAVBCONXOLE_EXE CACHE PATH "ENIGMA_BOX executable path")
 set(UPX_EXE CACHE PATH "Ultimate Packer for eXecutables executable path")
@@ -189,7 +189,7 @@ elseif(UNIX)
   endif()
 endif()
 ####### FIND MKL
-if(NOT DEFINED USE_STATIC_MKL)
+if(NOT MKL_FOUND)
   set(USE_STATIC_MKL ON CACHE INTERNAL "")
 endif()
 set(MKL_THREADING SEQ CACHE INTERNAL "")
@@ -304,7 +304,7 @@ find_package(MVis)
 find_package(Realsense)
 ####### Find V4L2
 if(UNIX)
-    find_package(V4L2 REQUIRED)
+    find_package(V4L2)
 endif()
 
 ####### FIND libyuv

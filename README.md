@@ -107,31 +107,35 @@
     cmake --install ./ --config Debug --prefix ./install/debug
   ```
 
-### Installation
+### Build
 
-编译测试通过：MSVC(Visual Studio 2022) Windows x64
-
-未经过测试：MINGW GNU
+编译测试通过：
+- MSVC(Visual Studio 2022) Windows x86-64
+- MINGW 13.1.0 Windows x86-64
+- G++ 11.4.0 Linux x86-64
 
 1. Clone the repo
-   ```powershell
+   ```bash
    git clone https://gitee.com/b39b332d/phy_recorder.git
    ```
 3. Generate Project
-   ```powershell
+   ```bash
    mkdir ./build
    cd ./build
-   cmake ../
+   cmake -DCMAKE_BUILD_TYPE=Release ../
    ```
-4. build and install target PhysRecorder
-   ```powershell
+4. build target PhysRecorder
+   ```bash
    cmake --build ./ --config Release --target PhysRecorder
-   cmake --install ./ --config Release --target PhysRecorder
+   ```
+
+5. generate PhysRecorder exe
+   ```bash
+   cmake --install ./
+   cmake --build ./ --target generate_boxed_exe
    ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 <!-- USAGE EXAMPLES -->
 ## Usage
@@ -165,11 +169,8 @@
 - [x] 添加 README.md
 - [ ] 修改Bug以及完善代码
 - [ ] 添加注释
-- [ ] 增加 Linux 支持
-- [ ] 增加 MINGW 支持
-- [ ] 语言Resource提示支持
-    - [x] English
-    - [ ] Chinese
+- [x] 增加 Linux 支持
+- [x] 增加 MINGW 支持
 
 See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a full list of proposed features (and known issues).
 
