@@ -1095,4 +1095,5 @@ CMakePresets.json
 *.autosave
 !.gitignore
 build
+build*
 cmake/env.cmake

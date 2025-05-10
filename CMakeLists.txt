@@ -234,16 +234,20 @@ endif()
 if(Porject_BUILD_TYPE STREQUAL "release")
   if(WIN32)
     if(NOT ENIGMAVBCONXOLE_EXE OR NOT UPX_EXE)
-      if(${DOWNLOAD_URL})
-        FetchContent_Declare(
+      set(BOX_TOOLS_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/box_tools)
+      if(DOWNLOAD_URL)
+        ExternalProject_Add(
           BOX_TOOLS
           URL "${DOWNLOAD_URL}/box_tools.zip"
+          CONFIGURE_COMMAND ""
+          BUILD_COMMAND  ""
+          INSTALL_COMMAND ""
+          PREFIX ${BOX_TOOLS_PREFIX}
           EXCLUDE_FROM_ALL
         )
-        FetchContent_MakeAvailable(BOX_TOOLS)
 
-        set(ENIGMAVBCONXOLE_EXE "${box_tools_SOURCE_DIR}/enigmavbconsole.exe")
-        set(UPX_EXE "${box_tools_SOURCE_DIR}/upx.exe")
+        set(ENIGMAVBCONXOLE_EXE "${BOX_TOOLS_PREFIX}/src/BOX_TOOLS/enigmavbconsole.exe")
+        set(UPX_EXE "${BOX_TOOLS_PREFIX}/src/BOX_TOOLS/upx.exe")
       endif()
     endif()
     if(ENIGMAVBCONXOLE_EXE AND UPX_EXE)
@@ -254,6 +258,9 @@ if(Porject_BUILD_TYPE STREQUAL "release")
         USES_TERMINAL
       )
       set_target_properties(generate_boxed_exe PROPERTIES EXCLUDE_FROM_ALL ON)
+      if(TARGET BOX_TOOLS)
+        add_dependencies(generate_boxed_exe BOX_TOOLS)
+      endif()
     endif()
   elseif(UNIX)
   if(PHY_ARCH STREQUAL x64)

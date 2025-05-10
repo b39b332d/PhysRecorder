@@ -162,6 +162,9 @@ namespace capture {
                 }
             }
         }
+		if (control_stream == nullptr) {
+			return false;
+		}
         get_all_option_range_native();
         return true;
     }
