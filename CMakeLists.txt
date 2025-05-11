@@ -321,9 +321,10 @@ find_package(MSMF)
 find_package(MVis)
 ####### FIND Realsense
 find_package(Realsense)
-####### Find V4L2
+####### Find V4L2 and libcamera
 if(UNIX)
     find_package(V4L2)
+    find_package(libcamera)
 endif()
 
 ####### FIND libyuv
@@ -414,6 +415,11 @@ if(V4L2_FOUND)
   message(STATUS "V4L2 library status:")
   message(STATUS "    library: ${V4L2_LIBRARIES}")
   message(STATUS "    include path: ${V4L2_INCLUDE_DIRS}")
+endif()
+if(libcamera_FOUND)
+  message(STATUS "libcamera library status:")
+  message(STATUS "    library: ${libcamera_LIBRARIES}")
+  message(STATUS "    include path: ${libcamera_INCLUDE_DIRS}")
 endif()
 if(OpenVINOLIB_FOUND)
   message(STATUS "OpenVINO library status:")
