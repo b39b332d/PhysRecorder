@@ -11,6 +11,8 @@
   #include <dlfcn.h>
   #define DLL_IMPORT 
 #endif
+#include <stdlib.h>
+
 
 int main(int argc, char *argv[])
 {
@@ -48,14 +50,17 @@ int main(int argc, char *argv[])
     #else
         void *handle;
         void (*start_mainwin)(QSplashScreen* screen,QString* program_path);
+        setenv("LIBCAMERA_LOG_LEVELS","*:4",1);
 
         handle = dlopen ("libPhysRecorder_main.so", RTLD_LAZY);
-        if (!handle) {
-            exit(1);
+        if (handle == NULL) {
+            auto dl_err_str = dlerror();
+            throw std::runtime_error(dl_err_str);
         }
         start_mainwin = (void (*)(QSplashScreen* screen,QString* program_path))dlsym(handle, "start_mainwin");
-        if (dlerror() != NULL)  {
-            exit(1);
+        auto dl_err_str = dlerror();
+        if (dl_err_str != NULL)  {
+            throw std::runtime_error(dl_err_str);
         }
 
         (*start_mainwin)(&splash,&program_path);

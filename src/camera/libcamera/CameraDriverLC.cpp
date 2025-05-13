@@ -27,7 +27,9 @@
 #include <libcamera/request.h>
 #include <libcamera/stream.h>
 #include <libcamera/formats.h>
-#include <libcamera/transform.h>
+#include<libcamera/version.h>
+
+
 
 namespace capture {
     CameraProfileLC::CameraProfileLC(CameraStream* stream)
@@ -40,10 +42,10 @@ namespace capture {
     }
 
     // Implementation of CameraStreamV4L2
-    CameraStreamLC::CameraStreamLC(libcamera::Stream* stream, const std::string& stream_name, CameraDevice* device)
-        : CameraStream(stream_name, device),stream(stream)
+    CameraStreamLC::CameraStreamLC(libcamera::StreamConfiguration& stream_conf, const std::string& stream_name, CameraDevice* device)
+        : CameraStream(stream_name, device),stream_conf(stream_conf)
     {
-        auto stream_fmts = stream->configuration().formats();
+        auto stream_fmts = stream_conf.formats();
         for(auto pix_fmt : stream_fmts.pixelformats()){
 
             PIX_TYPE pix_type = (PIX_TYPE)(pix_fmt.fourcc());
@@ -67,16 +69,22 @@ namespace capture {
     {
     }
 
-    libcamera::CameraManager* cm = nullptr;
+    static libcamera::CameraManager* cm = nullptr;
+    static std::string cm_version;
     std::vector<CameraDevice*> EnumerateCamera_LC()
     {
         if(cm == nullptr){
             cm = new libcamera::CameraManager;
             cm->start();
+            cm_version = cm->version();
         }
         std::vector<CameraDevice*> devices;
         for (auto const &camera : cm->cameras()){
+            #if LIBCAMERA_VERSION_MAJOR ==0 &&  LIBCAMERA_VERSION_MINOR <=3
+            CameraDevice* device = new CameraDeviceLC(camera->name());
+            #else
             CameraDevice* device = new CameraDeviceLC(camera->id());
+            #endif
             devices.emplace_back(device);
         }
         return devices;
@@ -90,9 +98,19 @@ namespace capture {
     bool CameraDeviceLC::native_init()
     {
         if(camera->acquire()<0) return false;
-        auto &streams = camera->streams();
-        for (libcamera::Stream *lc_stream : streams) {
-             CameraStreamLC* stream = new CameraStreamLC(lc_stream,lc_stream->configuration().toString(),this);
+        #if LIBCAMERA_VERSION_MAJOR ==0 &&  LIBCAMERA_VERSION_MINOR <=3
+        auto confs = camera->generateConfiguration({libcamera::StreamRole::VideoRecording,
+            libcamera::StreamRole::Viewfinder,
+        libcamera::StreamRole::StillCapture,
+        libcamera::StreamRole::StillCaptureRaw});
+        #else
+        auto confs =camera->generateConfiguration({libcamera::StreamRole::VideoRecording,libcamera::StreamRole::Viewfinder,libcamera::StreamRole::StillCapture,libcamera::StreamRole::Raw});
+        #endif
+        if(confs->empty())
+            return false;
+        auto s = confs->at(0);
+        for (libcamera::StreamConfiguration &stream_conf : *confs) {
+             CameraStreamLC* stream = new CameraStreamLC(stream_conf,stream_conf.toString(),this);
              if(stream->is_valid())
                 streams_map[stream->stream_name] = stream;
             else

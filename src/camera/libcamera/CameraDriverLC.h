@@ -8,7 +8,6 @@
 #include <memory>
 namespace libcamera{
     class Camera;
-    class Stream;
     class StreamConfiguration;
 }
 namespace capture {
@@ -23,14 +22,14 @@ namespace capture {
     };
 
     class CameraStreamLC : public CameraStream {
-        libcamera::Stream* stream;
+        libcamera::StreamConfiguration& stream_conf;
     public:
-        CameraStreamLC(libcamera::Stream* stream,const std::string& stream_name, CameraDevice* device);
+        CameraStreamLC(libcamera::StreamConfiguration& stream_conf,const std::string& stream_name, CameraDevice* device);
         ~CameraStreamLC();
     };
     
     class CameraDeviceLC : public CameraDevice {
-        static std::shared_ptr<libcamera::Camera> camera;
+        std::shared_ptr<libcamera::Camera> camera;
     public:
         CameraDeviceLC(const std::string& device_id);
         
