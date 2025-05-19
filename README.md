@@ -1,7 +1,7 @@
 <br />
 <div align="center">
   <a href="https://gitee.com/b39b332d/phy_recorder/">
-    <img src="https://github.com/b39b332d/phy_recorder/raw/master/data/resources/icon.ico" alt="Logo" width="80" height="80">
+    <img src="https://github.com/b39b332d/physrecorder/raw/master/data/resources/icon.ico" alt="Logo" width="80" height="80">
   </a>
 
   <h3 align="center">PhysRecorder</h3>
