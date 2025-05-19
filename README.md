@@ -1,7 +1,7 @@
 <br />
 <div align="center">
   <a href="https://gitee.com/b39b332d/phy_recorder/">
-    <img src="https://gitee.com/b39b332d/phy_recorder/raw/master/data/resources/icon.png" alt="Logo" width="80" height="80">
+    <img src="https://gitee.com/b39b332d/phy_recorder/raw/master/data/resources/icon.ico" alt="Logo" width="80" height="80">
   </a>
 
   <h3 align="center">PhysRecorder</h3>
@@ -46,9 +46,10 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![Product Name Screen Shot][product-screenshot]](https://gitee.com/b39b332d/phy_recorder/)
+[![Product Screenshot][product-screenshot]](https://gitee.com/b39b332d/phy_recorder/)
 
-该软件编写时仅为完成个人实验要求，时间较早，代码并不规范，欢迎大家完善指正！
+**PhysRecorder** is a cross-platform tool for recording physiological signals and video streams (including RealSense cameras) with precise timestamp synchronization. It is designed to standardize experimental data collection, ensure reproducibility, and simplify the workflow for researchers and engineers.
+
 支持的编码器: MJPG,HuffYUV,Raw
 支持的摄像头驱动: MSMF, Realsense
 
@@ -60,15 +61,22 @@
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
+### Features
+
+- Record video and multiple physiological signals (PPG, respiration, serial data) with synchronized timestamps.
+- Support for various video encoders: MJPG, HuffYUV, Raw.
+- Support for multiple camera drivers: MSMF, RealSense, V4L2.
+- Output data in standardized formats for easy analysis.
+- Cross-platform build support (Windows and Linux).
+- Modern C++20 codebase, CMake build system, Ninja generator support.
+
 
 ### Built With
 
-以下为该软件依赖的库以及构建工具
-
 * C++
 * CMake
-* [Qt 6.3.1](https://www.qt.io/)
-* [OpenCV 4.10.0](https://opencv.org/) With [OpenVINO 2024.5](https://storage.openvinotoolkit.org/repositories/openvino/packages/2023.1/windows) DL
+* [Qt 6](https://www.qt.io/)
+* [OpenCV 4](https://opencv.org/) With [OpenVINO](https://storage.openvinotoolkit.org/repositories/openvino/packages/2023.1/windows) DL
 * [RealSense SDK 2](https://www.intelrealsense.com/sdk-2/)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -78,12 +86,10 @@
 <!-- GETTING STARTED -->
 ## Getting Started
 
-该软件目前构建仅支持Windows平台。
-
+You can choose Download Dependencies from Conda or build them yourself. The following instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 ### Prerequisites
 
-构建依赖库。
-
+#### Build Dependencies
 * OpenCV
   ```Powershell
     cmake -G "Visual Studio 17 2022" -A "x64" `
@@ -92,9 +98,8 @@
 		-DWITH_IPP=ON -DBUILD_WITH_DYNAMIC_IPP=ON `
 		-DOPENCV_IPP_ENABLE_ALL=ON -DBUILD_WITH_DYNAMIC_IPP=ON `
 		-DOPENCV_DNN_OPENVINO=ON -DWITH_OPENVINO=ON `
-		-DOpenVINO_DIR="D:\Users\b39b3\Source\opencv\w_openvino_toolkit_windows_2024.5.0.17288.7975fa5da0c_x86_64\runtime\cmake" `
-		-DMKL_ROOT_DIR="C:\Program Files (x86)\Intel\oneAPI\mkl\2024.2" `
-		-DEigen3_DIR="D:/Users/b39b3/Source/SRC/SignalProcessor/eigen-master/INSTALL/share/eigen3/cmake" `
+		-DOpenVINO_DIR="w_openvino_toolkit_windows_2024.5.0.17288.7975fa5da0c_x86_64\runtime\cmake" `
+		-DMKL_ROOT_DIR="oneAPI\mkl\2024.2" `
 		-DENABLE_CXX11=ON `
 		-DCPU_BASELINE=AVX2 `
 		-DBUILD_PERF_TESTS=OFF `
@@ -107,12 +112,20 @@
     cmake --install ./ --config Debug --prefix ./install/debug
   ```
 
+#### Download Dependencies from Conda
+
+```bash
+apt install cmake gcc g++ v4l2-utils
+conda create -n qt_env 
+conda activate qt_env
+conda install -c conda-forge librealsense libopencv=4.10.0  qt6-main pkg-config tbb-devel libopenvino mkl-devel cxx-compiler=1.7.0 libopengl
+```
 ### Build
 
 编译测试通过：
 - MSVC(Visual Studio 2022) Windows x86-64
 - MINGW 13.1.0 Windows x86-64
-- G++ 11.4.0 Linux x86-64
+- G++ 11.4.0 Linux x86-64/aarch64
 
 1. Clone the repo
    ```bash
@@ -140,22 +153,22 @@
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-建议使用[Enigma Virtual Box](https://enigmaprotector.com/en/aboutvb.html)打包。
-
-注意，打包时请勿打包工作路径下的rec目录。
 
 录制文件在工作路径的rec目录下的录制时刻UNIX时间戳文件夹内
 
-| 文件名        | 文件内容           | 内容格式  |
+| 文件名        | File Content           | Format  |
 | ------------- |:-------------:| -----:|
-| `vid.avi`      | 视频文件 | MJPEG |
-| `vid_ts.npy`      | 视频时间戳 | UNIX timestamp (s) |
-| `ppg_sig.npy`    | PPG信号      |   uint16_t |
-| `ppg_ts.npy` | PPG时间戳      |    UNIX timestamp (s) |
-| `respi_sig.npy` | 呼吸信号      |    uint8_t |
-| `respi_ts.npy` | 呼吸信号时间戳      |    UNIX timestamp (s) |
-| `seral_sig.npy` | 串口信号      |    uint32_t |
-| `seral_ts.npy` | 串口信号时间戳      |   UNIX timestamp (s) |
+| `vid.avi`      | Video File | Video |
+| `vid_ts.npy`      | Video Timestamp | UNIX timestamp (s) |
+| `ppg_sig.npy`    | PPG Signal      |   uint16_t |
+| `ppg_ts.npy` | PPG Timestamp      |    UNIX timestamp (s) |
+| `respi_sig.npy` | Breath Signal      |    uint8_t |
+| `respi_ts.npy` | Breath Timestamp      |    UNIX timestamp (s) |
+| `seral_sig.npy` | Serial Signal      |    uint32_t |
+| `seral_ts.npy` | Serial Timestamp      |   UNIX timestamp (s) |
+
+- PPG and respiration signals are from Huake devices.
+- Custom serial signal format: unsigned integer string, separated by `\r\n`.
 
 其中PPG与呼吸信号为华科设备，自定义的串口信号读入格式为无符号整数的字符串格式，换行符号`\r\n`
 
@@ -166,13 +179,12 @@
 <!-- ROADMAP -->
 ## Roadmap
 
-- [x] 添加 README.md
-- [ ] 修改Bug以及完善代码
-- [ ] 添加注释
-- [x] 增加 Linux 支持
-- [x] 增加 MINGW 支持
+- [x] Add README.md
+- [ ] Add Comments
+- [ ] add libcamera support
+- [x] add clang support
 
-See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a full list of proposed features (and known issues).
+See the [open issues](https://gitee.com/b39b332d/phy_recorder/issues) for a full list of proposed features (and known issues).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -210,7 +222,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
-[NBSLab](https://nbslab-njust.feishu.cn/) - [Xingyan](https://www.b39b332d.cn/) - 122104010655@njust.edu.cn - 
+[NBSLab](https://nbslab.njust.edu.cn/) - [Xingyan](https://www.b39b332d.cn/) - 122104010655@njust.edu.cn - 
 
 Project Link: https://gitee.com/b39b332d/phy_recorder
 
