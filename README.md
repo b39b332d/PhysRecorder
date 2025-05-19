@@ -1,7 +1,7 @@
 <br />
 <div align="center">
   <a href="https://gitee.com/b39b332d/phy_recorder/">
-    <img src="https://gitee.com/b39b332d/phy_recorder/raw/master/data/resources/icon.ico" alt="Logo" width="80" height="80">
+    <img src="https://github.com/b39b332d/phy_recorder/raw/master/data/resources/icon.ico" alt="Logo" width="80" height="80">
   </a>
 
   <h3 align="center">PhysRecorder</h3>
@@ -48,7 +48,7 @@
 
 [![Product Screenshot][product-screenshot]](https://gitee.com/b39b332d/phy_recorder/)
 
-**PhysRecorder** is a cross-platform tool for recording physiological signals and video streams (including RealSense cameras) with precise timestamp synchronization. It is designed to standardize experimental data collection, ensure reproducibility, and simplify the workflow for researchers and engineers.
+**PhysRecorder** is a cross-platform tool for recording physiological signals and video streams (including RealSense cameras) with precise timestamp synchronization. It is designed to standardize experimental data collection, ensure reproducibility, and simplify the workflow for researchers and engineers in **rPPG** and physiological signal analysis.
 
 支持的编码器: MJPG,HuffYUV,Raw
 支持的摄像头驱动: MSMF, Realsense
