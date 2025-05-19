@@ -191,6 +191,7 @@ MainWindow::MainWindow(QSplashScreen* splash, QWidget* parent)
     signalProcess->graph_pos->setPen(QPen(QColorConstants::Magenta));
     signalProcess->graph_pos_end->setPen(QPen(QColorConstants::Magenta));
     signalProcess->graph_ppg->setPen(QPen(QColorConstants::Cyan));
+    signalProcess->graph_ppg->selectionDecorator()->setPen(QPen(QColor(0, 255, 255)));
     // signalProcess thread takes control plot on graph algorithm, main thread used for refresh realtime
 
     ui->plot_interp->xAxis2->setVisible(true);
