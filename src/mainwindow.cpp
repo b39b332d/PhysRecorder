@@ -10,6 +10,7 @@
 #include <MultiSelectComboBox.h>
 #include "signalprocess.h"
 #include <video_ui.h>
+#include <MaterialColorManager.hpp>
 double win_length=8;
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -18,6 +19,8 @@ double win_length=8;
 #define EXPORT __attribute__((visibility("default")))
 extern "C" void start_mainwin(QSplashScreen* screen,QString* program_path);
 #endif
+
+#define SELECTED_COLOR QColor(0,255,255)
 
 void MainWindow::refresh_plot() {
 
@@ -148,6 +151,7 @@ MainWindow::MainWindow(QSplashScreen* splash, QWidget* parent)
     splash->showMessage("Detecting Realsense Device...");
 
     splash->showMessage("Init Plot...");
+    color_manager = new MaterialColorManager;
 
     refresh_plot_timer = new QTimer(this);
     connect(refresh_plot_timer, &QTimer::timeout, this, &MainWindow::refresh_plot);
@@ -166,6 +170,8 @@ MainWindow::MainWindow(QSplashScreen* splash, QWidget* parent)
     ui->plot_ppg->legend->setFont(legendFont);
     ui->plot_ppg->legend->setSelectedFont(legendFont);
     ui->plot_ppg->legend->setSelectableParts(QCPLegend::spItems);
+	ui->plot_ppg->legend->setSelectedTextColor(SELECTED_COLOR);
+    ui->plot_ppg->legend->setSelectedIconBorderPen(QPen(SELECTED_COLOR));
     connect(ui->plot_ppg, &QCustomPlot::selectionChangedByUser, this, &MainWindow::onSerialGraphSelectionChanged);
 
 
@@ -191,7 +197,7 @@ MainWindow::MainWindow(QSplashScreen* splash, QWidget* parent)
     signalProcess->graph_pos->setPen(QPen(QColorConstants::Magenta));
     signalProcess->graph_pos_end->setPen(QPen(QColorConstants::Magenta));
     signalProcess->graph_ppg->setPen(QPen(QColorConstants::Cyan));
-    signalProcess->graph_ppg->selectionDecorator()->setPen(QPen(QColor(0, 255, 255)));
+    signalProcess->graph_ppg->selectionDecorator()->setPen(QPen(SELECTED_COLOR));
     // signalProcess thread takes control plot on graph algorithm, main thread used for refresh realtime
 
     ui->plot_interp->xAxis2->setVisible(true);
@@ -333,9 +339,11 @@ void MainWindow::onSerialSelected(int idx,bool selected) {
     static bool is_stop_successed = false;
     if (selected) {
         auto graph = ui->plot_ppg->addGraph();
+        graph->selectionDecorator()->setPen(QPen(SELECTED_COLOR));
         graph->setValueAxis(ui->plot_ppg->yAxis);
         graph->setPen(QPen(QColor(255, 110, 40)));
         graph->setName(QString::fromStdString(serial_reader->friendly_name));
+        graph->setPen(QPen(color_manager->getNextDifferentiatedColor()));
         serial_reader->graph = graph;
         connect(serial_reader, &SerialReader::serial_stopped,
             this, &MainWindow::onSerialStopped);

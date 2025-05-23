@@ -23,6 +23,7 @@ class MultiSelectComboBox;
 class SignalProcess;
 class SerialReader;
 class VideoUI;
+class MaterialColorManager;
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -31,6 +32,8 @@ public:
     MainWindow(QSplashScreen*,QWidget *parent = nullptr);
     ~MainWindow();
     Ui::MainWindow* ui;
+
+    MaterialColorManager* color_manager;
 
     std::unordered_set<SerialReader*> rec_SerialReaders;
     MultiSelectComboBox* comboBox_serial;
