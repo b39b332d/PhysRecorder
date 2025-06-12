@@ -1,8 +1,8 @@
 set(libyuv_FOUND TRUE)
 
 
-find_library(libyuv_build_lib yuv libyuv.dll libyuv.so libyuv.so.0 HINT ${LIBYUV_PATH})
-find_path(libyuv_include libyuv.h PATH_SUFFIXES include HINT ${LIBYUV_PATH})
+find_library(libyuv_build_lib yuv libyuv.dll libyuv.so libyuv.so.0 HINTS ${LIBYUV_PATH})
+find_path(libyuv_include libyuv.h PATH_SUFFIXES include HINTS ${LIBYUV_PATH})
 if(libyuv_build_lib AND libyuv_include)
     add_library(yuv SHARED IMPORTED)
     set_target_properties(yuv PROPERTIES
@@ -18,7 +18,7 @@ elseif(MSVC AND DOWNLOAD_URL)
         URL "${DOWNLOAD_URL}/libyuv.zip"
     )
     FetchContent_MakeAvailable(libyuv_build)
-    find_library(libyuv_build libyuv HINT ${libyuv_build_SOURCE_DIR})
+    find_library(libyuv_build libyuv.dll HINTS ${libyuv_build_SOURCE_DIR} REQUIRED)
     add_library(yuv SHARED IMPORTED)
     set_target_properties(yuv PROPERTIES
         IMPORTED_IMPLIB ${libyuv_build}
